@@ -22,7 +22,7 @@ import {
 import { useParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { financeService } from "@/services/financeService";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, FileText, Loader2, Printer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +52,7 @@ export default function StudentFeeDetailPage() {
   const [method, setMethod] = useState("cash");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const { data: studentFee, isLoading } = useQuery({
     queryKey: ["finance", "student-fee", id],
@@ -83,6 +84,64 @@ export default function StudentFeeDetailPage() {
       alert(err instanceof Error ? err.message : "Failed to record payment");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    if (!id) return;
+    setDownloading("invoice");
+    try {
+      const blob = await financeService.downloadInvoicePdf(id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice_${studentFee?.fee_structure_name?.replace(/\s+/g, "_") ?? id}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to download invoice");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handleDownloadReceipt = async (paymentId: string) => {
+    setDownloading(paymentId);
+    try {
+      const blob = await financeService.downloadReceiptPdf(paymentId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `receipt_${paymentId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to download receipt");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handlePrintInvoice = async () => {
+    if (!id) return;
+    setDownloading("invoice-print");
+    try {
+      await (financeService as typeof financeService & { printInvoice: (id: string) => Promise<void> }).printInvoice(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to load invoice for print");
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  const handlePrintReceipt = async (paymentId: string) => {
+    setDownloading(`${paymentId}-print`);
+    try {
+      await (financeService as typeof financeService & { printReceipt: (id: string) => Promise<void> }).printReceipt(paymentId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to load receipt for print");
+    } finally {
+      setDownloading(null);
     }
   };
 
@@ -127,9 +186,37 @@ export default function StudentFeeDetailPage() {
             </p>
           </div>
         </div>
-        {outstanding > 0 && (
-          <Button onClick={() => setPaymentOpen(true)}>Record Payment</Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadInvoice}
+            disabled={!!downloading}
+          >
+            {downloading === "invoice" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            <span className="ml-2">Download Invoice</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrintInvoice}
+            disabled={!!downloading}
+          >
+            {downloading === "invoice-print" ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Printer className="size-4" />
+            )}
+            <span className="ml-2">Print Invoice</span>
+          </Button>
+          {outstanding > 0 && (
+            <Button onClick={() => setPaymentOpen(true)}>Record Payment</Button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -199,18 +286,46 @@ export default function StudentFeeDetailPage() {
         <Card>
           <CardHeader>
             <CardTitle>Payments</CardTitle>
+            <CardDescription>Download or print receipt for each payment</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {studentFee.payments.map((p) => (
                 <li
                   key={p.id}
-                  className="flex justify-between text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 text-sm"
                 >
                   <span>
                     {formatAmount(p.amount)} • {p.method} •{" "}
                     {formatDate(p.created_at)}
                   </span>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDownloadReceipt(p.id)}
+                      disabled={!!downloading}
+                    >
+                      {downloading === p.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <FileText className="size-4" />
+                      )}
+                      <span className="ml-1">Receipt</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePrintReceipt(p.id)}
+                      disabled={!!downloading}
+                    >
+                      {downloading === `${p.id}-print` ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Printer className="size-4" />
+                      )}
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

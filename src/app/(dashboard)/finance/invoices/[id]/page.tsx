@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { feesService } from "@/services/feesService";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Printer } from "lucide-react";
 
 function formatAmount(n: number) {
   return `₹${Number(n).toLocaleString()}`;
@@ -29,6 +29,7 @@ function formatDate(s: string) {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const id = params?.id as string | undefined;
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["fees", "invoice", id],

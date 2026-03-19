@@ -110,6 +110,32 @@ export const apiGet = async <T>(endpoint: string): Promise<T> => {
   return handleResponse<T>(response);
 };
 
+/** Fetch binary response (e.g. PDF) as Blob. Use for download-invoice, download-receipt. */
+export const apiGetBlob = async (endpoint: string): Promise<Blob> => {
+  const response = await apiRequest(endpoint, { method: "GET" });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiException(
+      text || `Request failed (${response.status})`,
+      response.status
+    );
+  }
+  return response.blob();
+};
+
+/** Fetch a text/HTML response. Use for print-invoice, print-receipt endpoints. */
+export const apiGetText = async (endpoint: string): Promise<string> => {
+  const response = await apiRequest(endpoint, { method: "GET" });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiException(
+      text || `Request failed (${response.status})`,
+      response.status
+    );
+  }
+  return response.text();
+};
+
 export const apiPost = async <T>(endpoint: string, body?: unknown): Promise<T> => {
   const response = await apiRequest(endpoint, {
     method: "POST",

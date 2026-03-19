@@ -1,4 +1,13 @@
-import { apiGet, apiPost } from "@/services/api";
+import { apiGet, apiPost, apiGetBlob } from "@/services/api";
+
+export interface FeePayment {
+  id: string;
+  amount: number;
+  payment_method: string;
+  payment_reference?: string;
+  created_at?: string;
+  payment_date?: string;
+}
 
 export interface FeeInvoice {
   id: string;
@@ -15,6 +24,7 @@ export interface FeeInvoice {
   amount_paid: number;
   remaining_balance: number;
   created_at: string;
+  payments?: FeePayment[];
 }
 
 export const feesService = {
@@ -37,4 +47,12 @@ export const feesService = {
 
   sendReminder: async (invoiceId: string) =>
     apiPost(`/api/fees/invoices/${invoiceId}/send-reminder`, {}),
+
+  /** Download invoice PDF. Returns blob for save/print. */
+  downloadInvoicePdf: async (invoiceId: string): Promise<Blob> =>
+    apiGetBlob(`/api/fees/invoices/${invoiceId}/download`),
+
+  /** Download receipt PDF for a payment. Returns blob for save/print. */
+  downloadReceiptPdf: async (paymentId: string): Promise<Blob> =>
+    apiGetBlob(`/api/fees/receipts/${paymentId}/download`),
 };

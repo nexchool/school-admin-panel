@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
+import { apiGet, apiPost, apiPut, apiDelete, apiGetBlob, apiGetText } from "@/services/api";
 
 export interface FeeStructure {
   id: string;
@@ -127,5 +127,41 @@ export const financeService = {
       reference_number: data.reference_number ?? null,
       notes: data.notes ?? null,
     });
+  },
+
+  /** Download invoice PDF for a student fee. Returns blob for save/print. */
+  downloadInvoicePdf: async (studentFeeId: string): Promise<Blob> =>
+    apiGetBlob(`/api/finance/student-fees/${studentFeeId}/download-invoice`),
+
+  /** Download receipt PDF for a payment. Returns blob for save/print. */
+  downloadReceiptPdf: async (paymentId: string): Promise<Blob> =>
+    apiGetBlob(`/api/finance/payments/${paymentId}/download-receipt`),
+
+  /** Open dual-copy print page for an invoice (office copy + student copy, no auto-note). */
+  printInvoice: async (studentFeeId: string): Promise<void> => {
+    const html = await apiGetText(`/api/finance/student-fees/${studentFeeId}/print-invoice`);
+    const blob = new Blob([html], { type: "text/html" });
+    const blobUrl = URL.createObjectURL(blob);
+    const w = window.open(blobUrl, "_blank");
+    if (w) {
+      w.onload = () => { w.print(); setTimeout(() => URL.revokeObjectURL(blobUrl), 2000); };
+    } else {
+      window.open(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    }
+  },
+
+  /** Open dual-copy print page for a receipt (office copy + student copy, no auto-note). */
+  printReceipt: async (paymentId: string): Promise<void> => {
+    const html = await apiGetText(`/api/finance/payments/${paymentId}/print-receipt`);
+    const blob = new Blob([html], { type: "text/html" });
+    const blobUrl = URL.createObjectURL(blob);
+    const w = window.open(blobUrl, "_blank");
+    if (w) {
+      w.onload = () => { w.print(); setTimeout(() => URL.revokeObjectURL(blobUrl), 2000); };
+    } else {
+      window.open(blobUrl);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    }
   },
 };
