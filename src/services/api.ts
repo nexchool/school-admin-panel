@@ -1,4 +1,5 @@
 import { getApiUrl } from "@/lib/constants";
+import { isPublicAuthApiUrl } from "@/lib/auth-api";
 import {
   getAccessToken,
   getRefreshToken,
@@ -58,21 +59,58 @@ const apiRequest = async (
 
     return response;
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Network error";
-    throw new ApiException(`Cannot connect to server. ${msg}`, 0, { originalError: msg, url });
+    const msg = err instanceof Error ? err.message : String(err);
+    const isNetworkFail =
+      msg === "Failed to fetch" ||
+      msg === "Load failed" ||
+      msg.includes("NetworkError when attempting to fetch");
+    const friendly = isNetworkFail
+      ? "Cannot reach the server. Make sure Docker is up and open the app via nginx (e.g. http://localhost:8080) if you use direct Next ports."
+      : msg;
+    throw new ApiException(friendly, 0, { originalError: msg, url });
   }
 };
 
-const handleResponse = async <T>(response: Response): Promise<T> => {
-  const isJson = response.headers
-    .get("content-type")
-    ?.includes("application/json");
+function extractErrorMessage(data: unknown, fallback: string): string {
+  if (typeof data === "object" && data !== null) {
+    const o = data as Record<string, unknown>;
+    if (typeof o.message === "string" && o.message.trim()) return o.message;
+    if (typeof o.error === "string" && o.error.trim()) return o.error;
+  }
+  if (typeof data === "string" && data.trim()) {
+    const t = data.trim();
+    if (t.startsWith("<!DOCTYPE") || t.toLowerCase().startsWith("<html"))
+      return "Server returned a web page instead of JSON — check the API URL.";
+    return t.length > 280 ? `${t.slice(0, 280)}…` : t;
+  }
+  return fallback || "An error occurred";
+}
 
-  let data: unknown;
-  try {
-    data = isJson ? await response.json() : await response.text();
-  } catch {
-    throw new ApiException("Failed to parse response", response.status);
+const handleResponse = async <T>(response: Response): Promise<T> => {
+  const text = await response.text();
+  let data: unknown = text;
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      data = JSON.parse(text) as unknown;
+    } catch {
+      data = text;
+    }
+  }
+
+  const responseUrl = response.url || "";
+
+  if (response.status === 401 && typeof window !== "undefined") {
+    if (!isPublicAuthApiUrl(responseUrl)) {
+      const { clearAuth } = await import("@/lib/storage");
+      await clearAuth();
+      window.location.replace("/login");
+      throw new ApiException(
+        "Your session has expired or you are not signed in. Please log in again.",
+        401,
+        data
+      );
+    }
   }
 
   if (data && typeof data === "object" && "success" in data) {
@@ -87,16 +125,15 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
       return resultData as T;
     }
     throw new ApiException(
-      res.message || (res.error as string) || "An error occurred",
+      extractErrorMessage(data, "An error occurred"),
       response.status,
       data
     );
   }
 
   if (!response.ok) {
-    const err = data as { message?: string; error?: string };
     throw new ApiException(
-      err?.message || err?.error || "An error occurred",
+      extractErrorMessage(data, response.statusText),
       response.status,
       data
     );
