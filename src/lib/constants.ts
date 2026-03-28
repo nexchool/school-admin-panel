@@ -19,7 +19,7 @@ function resolveApiBaseUrl(): string {
 
   const gw = (process.env.NEXT_PUBLIC_GATEWAY_ORIGIN ?? "").trim().replace(/\/$/, "");
   if (gw) return gw;
-  return `${window.location.protocol}//${window.location.hostname}:8080`;
+  return `${window.location.protocol}//${window.location.hostname}:80`;
 }
 
 // Legacy: env-only; prefer getApiUrl() which applies gateway when on :3000/:3001.

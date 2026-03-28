@@ -65,7 +65,7 @@ const apiRequest = async (
       msg === "Load failed" ||
       msg.includes("NetworkError when attempting to fetch");
     const friendly = isNetworkFail
-      ? "Cannot reach the server. Make sure Docker is up and open the app via nginx (e.g. http://localhost:8080) if you use direct Next ports."
+      ? "Cannot reach the server. Make sure Docker is up and open the app via nginx (e.g. http://localhost:80) if you use direct Next ports."
       : msg;
     throw new ApiException(friendly, 0, { originalError: msg, url });
   }
