@@ -38,7 +38,9 @@ export function FeeStructureFormModal({
   initialData,
   onSuccess,
 }: FeeStructureFormModalProps) {
-  const { data: academicYears = [] } = useAcademicYears(false);
+  const { data: academicYears = [] } = useAcademicYears(false, {
+    enabled: open,
+  });
   const [name, setName] = useState(initialData?.name ?? "");
   const [academicYearId, setAcademicYearId] = useState(
     initialData?.academic_year_id ?? ""

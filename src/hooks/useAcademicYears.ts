@@ -7,9 +7,13 @@ export const academicYearsKeys = {
     [...academicYearsKeys.all, "list", activeOnly] as const,
 };
 
-export function useAcademicYears(activeOnly = false) {
+export function useAcademicYears(
+  activeOnly = false,
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: academicYearsKeys.list(activeOnly),
     queryFn: () => academicYearsService.getAcademicYears(activeOnly),
+    enabled: options?.enabled ?? true,
   });
 }
