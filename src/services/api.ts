@@ -149,7 +149,7 @@ export const apiGet = async <T>(endpoint: string): Promise<T> => {
 
 /** Fetch binary response (e.g. PDF) as Blob. Use for download-invoice, download-receipt. */
 export const apiGetBlob = async (endpoint: string): Promise<Blob> => {
-  const response = await apiRequest(endpoint, { method: "GET" });
+  const response = await apiRequest(endpoint, { method: "GET" }, true);
   if (!response.ok) {
     const text = await response.text();
     throw new ApiException(

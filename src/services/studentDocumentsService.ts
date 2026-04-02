@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPostForm } from "@/services/api";
+import { apiDelete, apiGet, apiGetBlob, apiPostForm } from "@/services/api";
 
 export interface StudentDocument {
   id: string;
@@ -6,7 +6,10 @@ export interface StudentDocument {
   document_type: string;
   document_type_label?: string;
   original_filename: string;
-  cloudinary_url: string;
+  /** @deprecated Direct URLs are no longer returned — use authenticated viewUrl. */
+  cloudinary_url?: string | null;
+  /** Path relative to API origin; open via apiGetBlob with auth headers. */
+  view_url?: string;
   mime_type?: string;
   file_size_bytes?: number;
   uploaded_by?: { id: string; name: string } | null;
@@ -58,5 +61,15 @@ export const studentDocumentsService = {
     documentId: string
   ): Promise<void> => {
     await apiDelete(`/api/students/${studentId}/documents/${documentId}`);
+  },
+
+  /** Download document bytes (requires session; not a public URL). */
+  downloadDocumentBlob: async (
+    studentId: string,
+    documentId: string
+  ): Promise<Blob> => {
+    return apiGetBlob(
+      `/api/students/${studentId}/documents/${documentId}/file`
+    );
   },
 };

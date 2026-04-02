@@ -39,5 +39,11 @@ export const API_ENDPOINTS = {
 } as const;
 
 export function getApiUrl(endpoint: string): string {
-  return `${resolveApiBaseUrl()}${endpoint}`;
+  const base = resolveApiBaseUrl().replace(/\/+$/, "");
+  const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  if (base.endsWith("/api") && path.startsWith("/api")) {
+    const rest = path.replace(/^\/api/, "") || "/";
+    return `${base}${rest}`;
+  }
+  return `${base}${path}`;
 }

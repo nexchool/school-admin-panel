@@ -83,7 +83,10 @@ export interface StudentDocument {
   document_type: string;
   document_type_label?: string;
   original_filename: string;
-  cloudinary_url: string;
+  /** @deprecated Not exposed — use authenticated file endpoint. */
+  cloudinary_url?: string | null;
+  /** Relative API path; prefer downloadDocumentBlob(studentId, id). */
+  view_url?: string;
   mime_type?: string;
   file_size_bytes?: number;
   uploaded_by?: { id: string; name: string } | null;
