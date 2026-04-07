@@ -106,6 +106,9 @@ export default function StudentDetailPage() {
             <InfoRow label="Academic Year" value={student.academic_year ?? "—"} />
             <InfoRow label="Gender" value={student.gender} />
             <InfoRow label="Date of Birth" value={student.date_of_birth} />
+            <InfoRow label="Admission Date" value={student.admission_date} />
+            <InfoRow label="House" value={student.house_name} />
+            <InfoRow label="Status" value={student.student_status} />
           </CardContent>
         </Card>
 
@@ -118,6 +121,7 @@ export default function StudentDetailPage() {
             <InfoRow label="Email" value={student.email} />
             <InfoRow label="Phone" value={student.phone} />
             <InfoRow label="Address" value={student.address} />
+            <InfoRow label="Guardian Address" value={student.guardian_address} />
           </CardContent>
         </Card>
 
@@ -131,6 +135,8 @@ export default function StudentDetailPage() {
             <InfoRow label="Relationship" value={student.guardian_relationship} />
             <InfoRow label="Guardian Phone" value={student.guardian_phone} />
             <InfoRow label="Guardian Email" value={student.guardian_email} />
+            <InfoRow label="Guardian Occupation" value={student.guardian_occupation} />
+            <InfoRow label="Guardian Aadhar" value={student.guardian_aadhar_number} />
           </CardContent>
         </Card>
 
@@ -145,6 +151,113 @@ export default function StudentDetailPage() {
               label="Roll Number"
               value={student.roll_number?.toString() ?? "—"}
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Parent / Family</CardTitle>
+            <CardDescription>Father and mother details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <InfoRow label="Father Name" value={student.father_name} />
+            <InfoRow label="Father Phone" value={student.father_phone} />
+            <InfoRow label="Father Email" value={student.father_email} />
+            <InfoRow label="Father Occupation" value={student.father_occupation} />
+            <InfoRow
+              label="Father Annual Income"
+              value={student.father_annual_income != null ? String(student.father_annual_income) : null}
+            />
+            <InfoRow label="Mother Name" value={student.mother_name} />
+            <InfoRow label="Mother Phone" value={student.mother_phone} />
+            <InfoRow label="Mother Email" value={student.mother_email} />
+            <InfoRow label="Mother Occupation" value={student.mother_occupation} />
+            <InfoRow
+              label="Mother Annual Income"
+              value={student.mother_annual_income != null ? String(student.mother_annual_income) : null}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Health</CardTitle>
+            <CardDescription>Health and physical info</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <InfoRow label="Blood Group" value={student.blood_group} />
+            <InfoRow label="Height (cm)" value={student.height_cm != null ? String(student.height_cm) : null} />
+            <InfoRow label="Weight (kg)" value={student.weight_kg != null ? String(student.weight_kg) : null} />
+            <InfoRow label="Allergies" value={student.medical_allergies} />
+            <InfoRow label="Conditions" value={student.medical_conditions} />
+            <InfoRow label="Disability" value={student.disability_details} />
+            <InfoRow label="Identification Marks" value={student.identification_marks} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Identity</CardTitle>
+            <CardDescription>Identity & demographics</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <InfoRow label="Aadhar" value={student.aadhar_number} />
+            <InfoRow label="APAAR ID" value={student.apaar_id} />
+            <InfoRow label="EMIS Number" value={student.emis_number} />
+            <InfoRow label="UDISE Student ID" value={student.udise_student_id} />
+            <InfoRow label="Religion" value={student.religion} />
+            <InfoRow label="Category" value={student.category} />
+            <InfoRow label="Caste" value={student.caste} />
+            <InfoRow label="Nationality" value={student.nationality} />
+            <InfoRow label="Mother Tongue" value={student.mother_tongue} />
+            <InfoRow label="Place of Birth" value={student.place_of_birth} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Residence</CardTitle>
+            <CardDescription>Current and permanent addresses</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <InfoRow label="Same as Permanent" value={student.is_same_as_permanent_address != null ? (student.is_same_as_permanent_address ? "Yes" : "No") : null} />
+            <InfoRow label="Current Address" value={student.current_address} />
+            <InfoRow label="Current City" value={student.current_city} />
+            <InfoRow label="Current State" value={student.current_state} />
+            <InfoRow label="Current Pincode" value={student.current_pincode} />
+            <InfoRow label="Permanent Address" value={student.permanent_address} />
+            <InfoRow label="Permanent City" value={student.permanent_city} />
+            <InfoRow label="Permanent State" value={student.permanent_state} />
+            <InfoRow label="Permanent Pincode" value={student.permanent_pincode} />
+            <InfoRow label="Outstation Commute" value={student.is_commuting_from_outstation != null ? (student.is_commuting_from_outstation ? "Yes" : "No") : null} />
+            <InfoRow label="Commute Location" value={student.commute_location} />
+            <InfoRow label="Commute Notes" value={student.commute_notes} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Emergency Contact</CardTitle>
+            <CardDescription>Emergency contact information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <InfoRow label="Name" value={student.emergency_contact_name} />
+            <InfoRow label="Relationship" value={student.emergency_contact_relationship} />
+            <InfoRow label="Phone" value={student.emergency_contact_phone} />
+            <InfoRow label="Alt Phone" value={student.emergency_contact_alt_phone} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Previous School</CardTitle>
+            <CardDescription>Previous school details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <InfoRow label="School Name" value={student.previous_school_name} />
+            <InfoRow label="Class" value={student.previous_school_class} />
+            <InfoRow label="Board" value={student.last_school_board} />
+            <InfoRow label="TC Number" value={student.tc_number} />
           </CardContent>
         </Card>
       </div>

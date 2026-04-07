@@ -18,6 +18,74 @@ export interface Student {
   guardian_relationship?: string;
   guardian_phone?: string;
   guardian_email?: string;
+  // Health / Physical
+  blood_group?: string;
+  height_cm?: number;
+  weight_kg?: number;
+  medical_allergies?: string;
+  medical_conditions?: string;
+  disability_details?: string;
+  identification_marks?: string;
+
+  // Parent / Family
+  father_name?: string;
+  father_phone?: string;
+  father_email?: string;
+  father_occupation?: string;
+  father_annual_income?: number;
+
+  mother_name?: string;
+  mother_phone?: string;
+  mother_email?: string;
+  mother_occupation?: string;
+  mother_annual_income?: number;
+
+  guardian_address?: string;
+  guardian_occupation?: string;
+  guardian_aadhar_number?: string;
+
+  // Identity / Demographic
+  aadhar_number?: string;
+  apaar_id?: string;
+  emis_number?: string;
+  udise_student_id?: string;
+  religion?: string;
+  category?: string;
+  caste?: string;
+  nationality?: string;
+  mother_tongue?: string;
+  place_of_birth?: string;
+
+  // Residence / Address
+  current_address?: string;
+  current_city?: string;
+  current_state?: string;
+  current_pincode?: string;
+
+  permanent_address?: string;
+  permanent_city?: string;
+  permanent_state?: string;
+  permanent_pincode?: string;
+
+  is_same_as_permanent_address?: boolean;
+  is_commuting_from_outstation?: boolean;
+  commute_location?: string;
+  commute_notes?: string;
+
+  // Emergency
+  emergency_contact_name?: string;
+  emergency_contact_relationship?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_alt_phone?: string;
+
+  // Academic / School internal
+  admission_date?: string;
+  previous_school_name?: string;
+  previous_school_class?: string;
+  last_school_board?: string;
+  tc_number?: string;
+  house_name?: string;
+  student_status?: string;
   created_at?: string;
 }
 
@@ -36,6 +104,75 @@ export interface CreateStudentInput {
   roll_number?: number;
   address?: string;
   guardian_email?: string;
+
+  // Health / Physical
+  blood_group?: string;
+  height_cm?: number | string;
+  weight_kg?: number | string;
+  medical_allergies?: string;
+  medical_conditions?: string;
+  disability_details?: string;
+  identification_marks?: string;
+
+  // Parent / Family
+  father_name?: string;
+  father_phone?: string;
+  father_email?: string;
+  father_occupation?: string;
+  father_annual_income?: number | string;
+
+  mother_name?: string;
+  mother_phone?: string;
+  mother_email?: string;
+  mother_occupation?: string;
+  mother_annual_income?: number | string;
+
+  guardian_address?: string;
+  guardian_occupation?: string;
+  guardian_aadhar_number?: string;
+
+  // Identity / Demographic
+  aadhar_number?: string;
+  apaar_id?: string;
+  emis_number?: string;
+  udise_student_id?: string;
+  religion?: string;
+  category?: string;
+  caste?: string;
+  nationality?: string;
+  mother_tongue?: string;
+  place_of_birth?: string;
+
+  // Residence / Address
+  current_address?: string;
+  current_city?: string;
+  current_state?: string;
+  current_pincode?: string;
+
+  permanent_address?: string;
+  permanent_city?: string;
+  permanent_state?: string;
+  permanent_pincode?: string;
+
+  is_same_as_permanent_address?: boolean;
+  is_commuting_from_outstation?: boolean;
+  commute_location?: string;
+  commute_notes?: string;
+
+  // Emergency
+  emergency_contact_name?: string;
+  emergency_contact_relationship?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_alt_phone?: string;
+
+  // Academic / School internal
+  admission_date?: string;
+  previous_school_name?: string;
+  previous_school_class?: string;
+  last_school_board?: string;
+  tc_number?: string;
+  house_name?: string;
+  student_status?: string;
 }
 
 export interface UpdateStudentInput extends Partial<CreateStudentInput> {}
