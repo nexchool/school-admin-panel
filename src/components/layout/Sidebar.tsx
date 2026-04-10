@@ -17,6 +17,7 @@ import {
   Calendar,
   BookMarked,
   School,
+  Bus,
 } from "lucide-react";
 
 const navItems = [
@@ -32,6 +33,15 @@ const navItems = [
   { href: "/profile", label: "Profile", icon: User },
 ] as const;
 
+const TRANSPORT_NAV_PERMS = [
+  "transport.buses.read",
+  "transport.enrollment.read",
+  "transport.dashboard.read",
+  "transport.drivers.manage",
+  "transport.routes.manage",
+  "transport.assignments.manage",
+];
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -41,7 +51,17 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, isFeatureEnabled, hasAnyPermission } = useAuth();
+
+  const showTransport =
+    isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
+
+  const allNavItems = showTransport
+    ? [
+        ...navItems,
+        { href: "/dashboard/transport", label: "Transport", icon: Bus },
+      ]
+    : [...navItems];
 
   const handleLogout = () => {
     logout();
@@ -77,7 +97,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
 
       <nav className="flex flex-1 flex-col p-4">
         <div className="space-y-1">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {allNavItems.map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href || pathname.startsWith(`${href}/`);
             return (
               <Link

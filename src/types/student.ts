@@ -86,6 +86,15 @@ export interface Student {
   tc_number?: string;
   house_name?: string;
   student_status?: string;
+  is_transport_opted?: boolean;
+  transport?: {
+    bus?: Record<string, unknown> | null;
+    driver?: Record<string, unknown> | null;
+    route?: Record<string, unknown> | null;
+    pickup_point?: string | null;
+    drop_point?: string | null;
+    monthly_fee?: number | null;
+  } | null;
   created_at?: string;
 }
 
