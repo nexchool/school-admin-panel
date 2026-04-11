@@ -12,8 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStudents } from "@/hooks/useStudents";
-import { useClasses } from "@/hooks/useClasses";
 import { useCreateStudent } from "@/hooks/useStudents";
+import { useClasses } from "@/hooks/useClasses";
 import { BulkImportStudents } from "@/components/students/BulkImportStudents";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
@@ -31,10 +31,6 @@ export default function StudentsPage() {
   const { data: students = [], isLoading } = useStudents({ search: search || undefined });
   const { data: classes = [] } = useClasses();
   const createMutation = useCreateStudent();
-
-  const existingAdmissionNumbers = new Set(
-    students.map((s) => s.admission_number).filter(Boolean)
-  );
 
   const paginatedData = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -118,12 +114,7 @@ export default function StudentsPage() {
         </CardContent>
       </Card>
 
-      <BulkImportStudents
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        classes={classes}
-        existingAdmissionNumbers={existingAdmissionNumbers}
-      />
+      <BulkImportStudents open={importOpen} onOpenChange={setImportOpen} />
 
       <StudentFormModal
         open={createOpen}

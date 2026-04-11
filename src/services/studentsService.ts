@@ -1,6 +1,7 @@
 import {
   apiGet,
   apiPost,
+  apiPostForm,
   apiPut,
   apiDelete,
 } from "@/services/api";
@@ -10,6 +11,34 @@ import type {
   UpdateStudentInput,
   CreateStudentResponse,
 } from "@/types/student";
+
+export type BulkImportPreviewRow = {
+  row_number: number;
+  values: Record<string, unknown>;
+  errors: string[];
+  warnings: string[];
+  valid: boolean;
+};
+
+export type BulkImportPreviewResult = {
+  preview: BulkImportPreviewRow[];
+  errors: unknown[];
+  summary: { valid: number; invalid: number; total: number };
+  headers: string[];
+};
+
+export type BulkImportFailedRow = {
+  row_number: number;
+  email: string;
+  errors: string[];
+};
+
+export type BulkImportResult = {
+  total: number;
+  success: number;
+  failed: number;
+  failed_rows: BulkImportFailedRow[];
+};
 
 export const studentsService = {
   getStudents: async (params?: {
@@ -61,5 +90,18 @@ export const studentsService = {
 
   deleteStudent: async (id: string): Promise<void> => {
     await apiDelete(`/api/students/${id}`);
+  },
+
+  bulkImportPreview: async (
+    formData: FormData
+  ): Promise<BulkImportPreviewResult> => {
+    return apiPostForm<BulkImportPreviewResult>(
+      "/api/students/bulk-import/preview",
+      formData
+    );
+  },
+
+  bulkImport: async (formData: FormData): Promise<BulkImportResult> => {
+    return apiPostForm<BulkImportResult>("/api/students/bulk-import", formData);
   },
 };
