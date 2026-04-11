@@ -13,13 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTeachers, useCreateTeacher } from "@/hooks/useTeachers";
 import { TeacherFormModal } from "@/components/teachers/TeacherFormModal";
+import { BulkImportTeachers } from "@/components/teachers/BulkImportTeachers";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import type { Teacher } from "@/types/teacher";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Upload } from "lucide-react";
 
 export default function TeachersPage() {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [search, setSearch] = useState("");
   const { data: teachers = [], isLoading } = useTeachers({
     search: search || undefined,
@@ -48,10 +50,20 @@ export default function TeachersPage() {
             Manage teaching staff and assignments.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="size-4" />
-          Add Teacher
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+            className="gap-2"
+          >
+            <Upload className="size-4" />
+            Bulk import
+          </Button>
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="size-4" />
+            Add Teacher
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -89,6 +101,7 @@ export default function TeachersPage() {
         onOpenChange={setCreateOpen}
         onSubmit={handleCreate}
       />
+      <BulkImportTeachers open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 }

@@ -1,9 +1,17 @@
 import {
   apiGet,
   apiPost,
+  apiPostForm,
   apiPut,
   apiDelete,
 } from "@/services/api";
+import type {
+  BulkImportPreviewRow,
+  BulkImportPreviewResult,
+  BulkImportResult,
+} from "@/services/studentsService";
+
+export type { BulkImportPreviewRow, BulkImportPreviewResult, BulkImportResult };
 import type {
   Teacher,
   CreateTeacherInput,
@@ -49,5 +57,18 @@ export const teachersService = {
 
   deleteTeacher: async (id: string): Promise<void> => {
     await apiDelete(`/api/teachers/${id}`);
+  },
+
+  bulkImportPreview: async (
+    formData: FormData
+  ): Promise<BulkImportPreviewResult> => {
+    return apiPostForm<BulkImportPreviewResult>(
+      "/api/teachers/bulk-import/preview",
+      formData
+    );
+  },
+
+  bulkImport: async (formData: FormData): Promise<BulkImportResult> => {
+    return apiPostForm<BulkImportResult>("/api/teachers/bulk-import", formData);
   },
 };
