@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 
-const navItems = [
+/** Everything above Profile; Transport is inserted here when enabled (before Profile). */
+const SIDEBAR_NAV_CORE = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/academics", label: "Academics", icon: School },
   { href: "/students", label: "Students", icon: GraduationCap },
@@ -32,9 +33,15 @@ const navItems = [
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck },
   { href: "/finance", label: "Finance", icon: Wallet },
   { href: "/holidays", label: "Holidays", icon: Calendar },
-  { href: "/profile", label: "Profile", icon: User },
-  
 ] as const;
+
+const SIDEBAR_NAV_PROFILE = { href: "/profile", label: "Profile", icon: User } as const;
+
+const SIDEBAR_NAV_TRANSPORT = {
+  href: "/dashboard/transport",
+  label: "Transport",
+  icon: Bus,
+} as const;
 
 const TRANSPORT_NAV_PERMS = [
   "transport.buses.read",
@@ -45,6 +52,13 @@ const TRANSPORT_NAV_PERMS = [
   "transport.assignments.manage",
 ];
 
+/** Prefix match for nested routes, except Dashboard: `/dashboard/transport` must not light up Dashboard. */
+function isSidebarNavActive(pathname: string, href: string): boolean {
+  if (pathname === href) return true;
+  if (href === "/dashboard") return false;
+  return pathname.startsWith(`${href}/`);
+}
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -54,21 +68,14 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, isFeatureEnabled, hasAnyPermission, hasPermission } = useAuth();
+  const { logout, isFeatureEnabled, hasAnyPermission } = useAuth();
 
   const showTransport =
     isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
 
-  const profileIdx = navItems.findIndex(item => item.href === "/profile");
-  const navWithTransport =
-    showTransport && profileIdx !== -1
-      ? [
-          ...navItems.slice(0, profileIdx),
-          { href: "/dashboard/transport", label: "Transport", icon: Bus },
-          ...navItems.slice(profileIdx),
-        ]
-      : navItems;
-  const allNavItems = navWithTransport;
+  const allNavItems = showTransport
+    ? [...SIDEBAR_NAV_CORE, SIDEBAR_NAV_TRANSPORT, SIDEBAR_NAV_PROFILE]
+    : [...SIDEBAR_NAV_CORE, SIDEBAR_NAV_PROFILE];
 
   const handleLogout = () => {
     logout();
@@ -105,7 +112,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
       <nav className="flex flex-1 flex-col p-4">
         <div className="space-y-1">
           {allNavItems.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href || pathname.startsWith(`${href}/`);
+            const isActive = isSidebarNavActive(pathname, href);
             return (
               <Link
                 key={href}
