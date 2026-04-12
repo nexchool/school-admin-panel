@@ -33,6 +33,7 @@ const navItems = [
   { href: "/finance", label: "Finance", icon: Wallet },
   { href: "/holidays", label: "Holidays", icon: Calendar },
   { href: "/profile", label: "Profile", icon: User },
+  
 ] as const;
 
 const TRANSPORT_NAV_PERMS = [
@@ -58,12 +59,16 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const showTransport =
     isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
 
-  const allNavItems = [
-    ...navItems,
-    ...(showTransport
-      ? [{ href: "/dashboard/transport", label: "Transport", icon: Bus }] as const
-      : []),
-  ];
+  const profileIdx = navItems.findIndex(item => item.href === "/profile");
+  const navWithTransport =
+    showTransport && profileIdx !== -1
+      ? [
+          ...navItems.slice(0, profileIdx),
+          { href: "/dashboard/transport", label: "Transport", icon: Bus },
+          ...navItems.slice(profileIdx),
+        ]
+      : navItems;
+  const allNavItems = navWithTransport;
 
   const handleLogout = () => {
     logout();
