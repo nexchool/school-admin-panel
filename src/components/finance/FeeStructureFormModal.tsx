@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { financeService } from "@/services/financeService";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useCreateFeeStructure, useUpdateFeeStructure } from "@/hooks/useFeeStructures";
 import type { FeeStructure, CreateStructureInput } from "@/services/financeService";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -61,7 +61,9 @@ export function FeeStructureFormModal({
   const [availableClasses, setAvailableClasses] = useState<
     { id: string; name: string; section?: string }[]
   >([]);
-  const [submitting, setSubmitting] = useState(false);
+  const { mutate: createStructure, isPending: creating } = useCreateFeeStructure();
+  const { mutate: updateStructure, isPending: updating } = useUpdateFeeStructure();
+  const submitting = creating || updating;
 
   useEffect(() => {
     if (open) {
@@ -147,26 +149,29 @@ export function FeeStructureFormModal({
       alert("Add at least one component");
       return;
     }
-    setSubmitting(true);
-    try {
-      const payload: CreateStructureInput = {
-        name: name.trim(),
-        academic_year_id: academicYearId || initialData!.academic_year_id,
-        due_date: dueDate.trim(),
-        components: comps,
-        class_ids: classIds.length > 0 ? classIds : undefined,
-      };
-      if (mode === "edit" && initialData) {
-        await financeService.updateStructure(initialData.id, payload);
-      } else {
-        await financeService.createStructure(payload);
-      }
+    const payload: CreateStructureInput = {
+      name: name.trim(),
+      academic_year_id: academicYearId || initialData!.academic_year_id,
+      due_date: dueDate.trim(),
+      components: comps,
+      class_ids: classIds.length > 0 ? classIds : undefined,
+    };
+
+    const onMutationSuccess = () => {
       onSuccess?.();
       onOpenChange(false);
-    } catch (err) {
+    };
+    const onMutationError = (err: Error) => {
       alert(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSubmitting(false);
+    };
+
+    if (mode === "edit" && initialData) {
+      updateStructure(
+        { id: initialData.id, data: payload },
+        { onSuccess: onMutationSuccess, onError: onMutationError }
+      );
+    } else {
+      createStructure(payload, { onSuccess: onMutationSuccess, onError: onMutationError });
     }
   };
 

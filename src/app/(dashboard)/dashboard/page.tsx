@@ -115,7 +115,7 @@ export default function DashboardPage() {
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/finance" className="gap-2">
+              <Link href="/dashboard/finance" className="gap-2">
                 <Wallet className="size-4" />
                 Finance
               </Link>

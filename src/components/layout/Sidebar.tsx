@@ -31,7 +31,7 @@ const SIDEBAR_NAV_CORE = [
   { href: "/classes", label: "Classes", icon: BookOpen },
   { href: "/timetable", label: "Timetable", icon: CalendarDays },
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck },
-  { href: "/finance", label: "Finance", icon: Wallet },
+  { href: "/dashboard/finance", label: "Finance", icon: Wallet },
   { href: "/holidays", label: "Holidays", icon: Calendar },
 ] as const;
 
@@ -52,11 +52,14 @@ const TRANSPORT_NAV_PERMS = [
   "transport.assignments.manage",
 ];
 
-/** Prefix match for nested routes, except Dashboard: `/dashboard/transport` must not light up Dashboard. */
+/**
+ * Prefix match for nested routes.
+ * "/dashboard" only lights up on exact match (prevents it highlighting for /dashboard/finance etc).
+ */
 function isSidebarNavActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   if (href === "/dashboard") return false;
-  return pathname.startsWith(`${href}/`);
+  return pathname.startsWith(`${href}/`) || pathname === href;
 }
 
 interface SidebarProps {
