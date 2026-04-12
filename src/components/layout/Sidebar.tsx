@@ -15,9 +15,9 @@ import {
   X,
   Wallet,
   Calendar,
-  BookMarked,
   School,
   Bus,
+  CalendarDays,
 } from "lucide-react";
 
 const navItems = [
@@ -26,7 +26,7 @@ const navItems = [
   { href: "/students", label: "Students", icon: GraduationCap },
   { href: "/teachers", label: "Teachers", icon: Users },
   { href: "/classes", label: "Classes", icon: BookOpen },
-  { href: "/subjects", label: "Subjects", icon: BookMarked },
+  { href: "/timetable", label: "Timetable", icon: CalendarDays },
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck },
   { href: "/finance", label: "Finance", icon: Wallet },
   { href: "/holidays", label: "Holidays", icon: Calendar },
@@ -51,17 +51,17 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, isFeatureEnabled, hasAnyPermission } = useAuth();
+  const { logout, isFeatureEnabled, hasAnyPermission, hasPermission } = useAuth();
 
   const showTransport =
     isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
 
-  const allNavItems = showTransport
-    ? [
-        ...navItems,
-        { href: "/dashboard/transport", label: "Transport", icon: Bus },
-      ]
-    : [...navItems];
+  const allNavItems = [
+    ...navItems,
+    ...(showTransport
+      ? [{ href: "/dashboard/transport", label: "Transport", icon: Bus }] as const
+      : []),
+  ];
 
   const handleLogout = () => {
     logout();

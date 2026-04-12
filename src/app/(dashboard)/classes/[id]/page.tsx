@@ -17,16 +17,28 @@ import { classesService } from "@/services/classesService";
 import { ClassFormModal } from "@/components/classes/ClassFormModal";
 import { ClassAssignStudentModal } from "@/components/classes/ClassAssignStudentModal";
 import { ClassAssignTeacherModal } from "@/components/classes/ClassAssignTeacherModal";
-import { ClassSubjectLoadSection } from "@/components/classes/ClassSubjectLoadSection";
+import { ClassSubjectsSection } from "@/modules/classes/components/ClassSubjectsSection";
+import { ClassTimetableReadOnly } from "@/components/timetable/ClassTimetableReadOnly";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { classesKeys } from "@/hooks/useClasses";
-import { ArrowLeft, Pencil, Trash2, Loader2, Plus, UserMinus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Pencil, Trash2, Loader2, Plus, UserMinus, CalendarDays } from "lucide-react";
 import { useState } from "react";
+
+type ClassDetailTab = "students" | "teachers" | "subjects" | "timetable";
 
 export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { hasAnyPermission } = useAuth();
   const id = params?.id as string | undefined;
+  const showSubjectsTab = hasAnyPermission([
+    "class_subject.read",
+    "class_subject.manage",
+    "class.manage",
+  ]);
+  const [detailTab, setDetailTab] = useState<ClassDetailTab>("students");
   const { data: cls, isLoading } = useClass(id ?? null);
   const { data: academicYears = [] } = useAcademicYears(false);
   const [availableTeachers, setAvailableTeachers] = useState<{ id: string; name: string; employee_id: string }[]>([]);
@@ -150,7 +162,7 @@ export default function ClassDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Class Information</CardTitle>
@@ -164,105 +176,188 @@ export default function ClassDetailPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle>Students</CardTitle>
-              <CardDescription>
-                {cls.students?.length ?? 0} students enrolled
-              </CardDescription>
-            </div>
-            <Button size="sm" onClick={() => setStudentPickerOpen(true)} className="gap-1">
-              <Plus className="size-4" />
-              Add
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {cls.students && cls.students.length > 0 ? (
-              <ul className="space-y-2">
-                {cls.students.map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex items-center justify-between rounded-lg border border-border p-3"
-                  >
-                    <div>
-                      <p className="font-medium">{s.name}</p>
-                      <p className="text-xs text-muted-foreground">{s.admission_number}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleRemoveStudent(s.id)}
-                      disabled={removingStudent === s.id}
-                    >
-                      {removingStudent === s.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <UserMinus className="size-4" />
-                      )}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">No students assigned yet.</p>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-1 border-b border-border">
+            <button
+              type="button"
+              className={cn(
+                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                detailTab === "students"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setDetailTab("students")}
+            >
+              Students
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                detailTab === "teachers"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setDetailTab("teachers")}
+            >
+              Teachers
+            </button>
+            {showSubjectsTab && (
+              <button
+                type="button"
+                className={cn(
+                  "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                  detailTab === "subjects"
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setDetailTab("subjects")}
+              >
+                Subjects
+              </button>
             )}
-          </CardContent>
-        </Card>
+            <button
+              type="button"
+              className={cn(
+                "-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                detailTab === "timetable"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setDetailTab("timetable")}
+            >
+              <CalendarDays className="size-3.5" />
+              Timetable
+            </button>
+          </div>
 
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle>Teachers</CardTitle>
-              <CardDescription>
-                Subject teachers assigned to this class
-              </CardDescription>
-            </div>
-            <Button size="sm" onClick={() => setTeacherPickerOpen(true)} className="gap-1">
-              <Plus className="size-4" />
-              Add
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {cls.teachers && cls.teachers.length > 0 ? (
-              <ul className="space-y-2">
-                {cls.teachers.map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex items-center justify-between rounded-lg border border-border p-3"
+          {detailTab === "students" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Students</CardTitle>
+                  <CardDescription>
+                    {cls.students?.length ?? 0} students enrolled
+                  </CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setStudentPickerOpen(true)} className="gap-1">
+                  <Plus className="size-4" />
+                  Add
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {cls.students && cls.students.length > 0 ? (
+                  <ul className="space-y-2">
+                    {cls.students.map((s) => (
+                      <li
+                        key={s.id}
+                        className="flex items-center justify-between rounded-lg border border-border p-3"
+                      >
+                        <div>
+                          <p className="font-medium">{s.name}</p>
+                          <p className="text-xs text-muted-foreground">{s.admission_number}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleRemoveStudent(s.id)}
+                          disabled={removingStudent === s.id}
+                        >
+                          {removingStudent === s.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <UserMinus className="size-4" />
+                          )}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No students assigned yet.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {detailTab === "teachers" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Teachers</CardTitle>
+                  <CardDescription>
+                    Subject teachers assigned to this class
+                  </CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setTeacherPickerOpen(true)} className="gap-1">
+                  <Plus className="size-4" />
+                  Add
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {cls.teachers && cls.teachers.length > 0 ? (
+                  <ul className="space-y-2">
+                    {cls.teachers.map((t) => (
+                      <li
+                        key={t.id}
+                        className="flex items-center justify-between rounded-lg border border-border p-3"
+                      >
+                        <div>
+                          <p className="font-medium">{t.teacher_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {t.subject_name ?? "Subject"}
+                            {t.teacher_employee_id && ` • ${t.teacher_employee_id}`}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleRemoveTeacher(t.teacher_id)}
+                          disabled={removingTeacher === t.teacher_id}
+                        >
+                          {removingTeacher === t.teacher_id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <UserMinus className="size-4" />
+                          )}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No teachers assigned yet.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {showSubjectsTab && detailTab === "subjects" && id && (
+            <ClassSubjectsSection classId={id} onRefresh={refreshClass} />
+          )}
+
+          {detailTab === "timetable" && id && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle>Timetable</CardTitle>
+                  <CardDescription>Active schedule for this class</CardDescription>
+                </div>
+                <Link href={`/timetable/${id}`}>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
                   >
-                    <div>
-                      <p className="font-medium">{t.teacher_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {t.subject_name ?? "Subject"}
-                        {t.teacher_employee_id && ` • ${t.teacher_employee_id}`}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleRemoveTeacher(t.teacher_id)}
-                      disabled={removingTeacher === t.teacher_id}
-                    >
-                      {removingTeacher === t.teacher_id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <UserMinus className="size-4" />
-                      )}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">No teachers assigned yet.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="lg:col-span-2">
-          <ClassSubjectLoadSection classId={id} onRefresh={refreshClass} />
+                    <CalendarDays className="size-3.5" />
+                    Manage timetable
+                  </button>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                <ClassTimetableReadOnly classId={id} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

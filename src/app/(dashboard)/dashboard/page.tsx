@@ -20,8 +20,11 @@ import {
   Wallet,
   Calendar,
 } from "lucide-react";
+import { useAuth } from "@/hooks";
 
 export default function DashboardPage() {
+  const { hasPermission } = useAuth();
+  const canManageSubjectCatalog = hasPermission("subject.manage");
   const { data: students = [] } = useStudents();
   const { data: teachers = [] } = useTeachers();
   const { data: classes = [] } = useClasses();
@@ -97,12 +100,14 @@ export default function DashboardPage() {
                 Classes
               </Link>
             </Button>
-            <Button asChild variant="outline">
-              <Link href="/subjects" className="gap-2">
-                <BookOpen className="size-4" />
-                Subjects
-              </Link>
-            </Button>
+            {canManageSubjectCatalog && (
+              <Button asChild variant="outline">
+                <Link href="/dashboard/settings/subjects" className="gap-2">
+                  <BookOpen className="size-4" />
+                  Subject catalog
+                </Link>
+              </Button>
+            )}
             <Button asChild variant="outline">
               <Link href="/attendance" className="gap-2">
                 <ClipboardCheck className="size-4" />

@@ -11,8 +11,12 @@ import type {
 } from "@/types/subject";
 
 export const subjectsService = {
-  getSubjects: async (): Promise<Subject[]> => {
-    const data = await apiGet<Subject[]>("/api/subjects/");
+  getSubjects: async (opts?: {
+    includeInactive?: boolean;
+  }): Promise<Subject[]> => {
+    const q =
+      opts?.includeInactive === true ? "?include_inactive=true" : "";
+    const data = await apiGet<Subject[]>(`/api/subjects/${q}`);
     return Array.isArray(data) ? data : [];
   },
 
