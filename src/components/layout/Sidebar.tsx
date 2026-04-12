@@ -18,7 +18,9 @@ import {
   School,
   Bus,
   CalendarDays,
+  HelpCircle,
 } from "lucide-react";
+import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -118,7 +120,39 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
           })}
         </div>
 
-        <div className="mt-auto border-t border-border pt-4">
+        <div className="mt-auto space-y-3 border-t border-border pt-4">
+          <Link
+            href="/help"
+            onClick={handleNavClick}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              pathname === "/help" || pathname.startsWith("/help/")
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <HelpCircle className="h-5 w-5 shrink-0" />
+            Help &amp; support
+          </Link>
+          <div className="px-3 pb-1 text-[11px] leading-snug text-muted-foreground">
+            <a
+              href={NEXCHOOL_TERMS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Terms
+            </a>
+            <span className="px-1.5 text-border">·</span>
+            <a
+              href={NEXCHOOL_PRIVACY_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Privacy
+            </a>
+          </div>
           <button
             type="button"
             onClick={handleLogout}

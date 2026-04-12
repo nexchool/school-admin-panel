@@ -9,6 +9,7 @@ const KEYS = {
   USER_DATA: "user_data",
   PERMISSIONS: "permissions",
   ENABLED_FEATURES: "enabled_features",
+  USER_ROLES: "user_roles",
   TENANT_ID: "tenant_id",
 } as const;
 
@@ -38,6 +39,8 @@ export async function getUserData(): Promise<{
   name?: string;
   email_verified?: boolean;
   profile_picture_url?: string;
+  last_login_at?: string | null;
+  created_at?: string;
 } | null> {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(KEYS.USER_DATA);
@@ -86,6 +89,29 @@ export async function getEnabledFeatures(): Promise<string[]> {
 export async function setEnabledFeatures(features: string[]): Promise<void> {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEYS.ENABLED_FEATURES, JSON.stringify(features));
+}
+
+export interface StoredRole {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+export async function getRoles(): Promise<StoredRole[]> {
+  if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem(KEYS.USER_ROLES);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as StoredRole[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setRoles(roles: StoredRole[]): Promise<void> {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(KEYS.USER_ROLES, JSON.stringify(roles));
 }
 
 export async function getTenantId(): Promise<string | null> {

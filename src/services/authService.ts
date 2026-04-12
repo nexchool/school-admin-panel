@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut } from "./api";
+import { apiGet, apiPost, apiPostForm, apiPut } from "./api";
 import { API_ENDPOINTS } from "@/lib/constants";
 
 export interface TenantChoice {
@@ -47,10 +47,39 @@ export interface ProfileUser {
   name?: string;
   email_verified?: boolean;
   profile_picture_url?: string;
+  last_login_at?: string | null;
+  created_at?: string;
 }
 
-export const getProfile = () =>
-  apiGet<ProfileUser>(API_ENDPOINTS.PROFILE);
+export interface ProfileRole {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+/** GET /api/auth/profile — nested user, roles, permissions, enabled_features */
+export interface ProfileResponse {
+  user: ProfileUser;
+  roles: ProfileRole[];
+  permissions: string[];
+  enabled_features: string[];
+}
+
+export const getProfile = () => apiGet<ProfileResponse>(API_ENDPOINTS.PROFILE);
+
+export interface UpdateProfileResponse {
+  user: ProfileUser;
+  message?: string;
+}
 
 export const updateProfile = (data: { name?: string; profile_picture_url?: string }) =>
-  apiPut<ProfileUser>(API_ENDPOINTS.PROFILE, data);
+  apiPut<UpdateProfileResponse>(API_ENDPOINTS.PROFILE, data);
+
+export const uploadProfilePicture = (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiPostForm<{ profile_picture_url: string; message?: string }>(
+    API_ENDPOINTS.UPLOAD_PROFILE_PICTURE,
+    formData
+  );
+};

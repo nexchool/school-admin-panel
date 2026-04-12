@@ -16,6 +16,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  NEXCHOOL_PRIVACY_URL,
+  NEXCHOOL_TERMS_URL,
+  SUPPORT_EMAIL,
+} from "@/lib/externalLinks";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -131,6 +136,33 @@ export default function LoginPage() {
           </form>
         </CardContent>
       </Card>
+
+      <p className="mt-6 max-w-md text-center text-xs text-muted-foreground">
+        <a
+          href={NEXCHOOL_TERMS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          Terms of service
+        </a>
+        <span className="px-2 text-border">·</span>
+        <a
+          href={NEXCHOOL_PRIVACY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          Privacy policy
+        </a>
+        <span className="px-2 text-border">·</span>
+        <a
+          href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Nexchool admin support")}`}
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          Contact support
+        </a>
+      </p>
     </div>
   );
 }

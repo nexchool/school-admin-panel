@@ -14,11 +14,13 @@ import {
   getUserData,
   getPermissions,
   getEnabledFeatures,
+  getRoles,
   setAccessToken,
   setRefreshToken,
   setUserData,
   setPermissions,
   setEnabledFeatures,
+  setRoles,
   setTenantId,
   clearAuth,
   setSessionCookie,
@@ -28,6 +30,7 @@ import {
   logout as logoutService,
   getProfile,
   type LoginResponse,
+  type ProfileRole,
   type TenantChoice,
 } from "@/services/authService";
 
@@ -37,12 +40,15 @@ export interface User {
   name?: string;
   email_verified?: boolean;
   profile_picture_url?: string;
+  last_login_at?: string | null;
+  created_at?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   permissions: string[];
   enabledFeatures: string[];
+  roles: ProfileRole[];
   isAuthenticated: boolean;
   isLoading: boolean;
   pendingTenantChoice: {
@@ -76,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissionsState] = useState<string[]>([]);
   const [enabledFeatures, setEnabledFeaturesState] = useState<string[]>([]);
+  const [roles, setRolesState] = useState<ProfileRole[]>([]);
   const [pendingTenantChoice, setPendingTenantChoice] = useState<{
     tenants: TenantChoice[];
     email: string;
@@ -92,30 +99,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserData(data.user),
       setPermissions(data.permissions || []),
       setEnabledFeatures(features),
+      setRoles([]),
       ...(data.tenant_id ? [setTenantId(data.tenant_id)] : []),
     ]);
     setSessionCookie();
     setUser(data.user);
     setPermissionsState(data.permissions || []);
     setEnabledFeaturesState(features);
+    setRolesState([]);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const profile = await getProfile();
+      setUser(profile.user);
+      await setUserData(profile.user);
+      setPermissionsState(profile.permissions ?? []);
+      setEnabledFeaturesState(profile.enabled_features ?? []);
+      const roleList = profile.roles ?? [];
+      setRolesState(roleList);
+      await Promise.all([
+        setPermissions(profile.permissions ?? []),
+        setEnabledFeatures(profile.enabled_features ?? []),
+        setRoles(roleList),
+      ]);
+    } catch (err) {
+      console.error("Failed to refresh profile:", err);
+    }
   }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const [accessToken, refreshToken, userData, userPermissions, storedFeatures] =
+        const [accessToken, refreshToken, userData, userPermissions, storedFeatures, storedRoles] =
           await Promise.all([
             getAccessToken(),
             getRefreshToken(),
             getUserData(),
             getPermissions(),
             getEnabledFeatures(),
+            getRoles(),
           ]);
 
         if (accessToken && refreshToken && userData) {
           setUser(userData);
           setPermissionsState(userPermissions || []);
           setEnabledFeaturesState(storedFeatures || []);
+          setRolesState(storedRoles);
         }
       } catch (err) {
         console.error("Auth check error:", err);
@@ -136,9 +166,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { requiresTenantChoice: true };
       }
       await setAuthData(response);
+      await refreshUser();
       return { requiresTenantChoice: false };
     },
-    [setAuthData]
+    [setAuthData, refreshUser]
   );
 
   const loginWithTenant = useCallback(
@@ -152,8 +183,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenant_id: tenantId,
       });
       await setAuthData(response);
+      await refreshUser();
     },
-    [pendingTenantChoice, setAuthData]
+    [pendingTenantChoice, setAuthData, refreshUser]
   );
 
   const clearPendingTenantChoice = useCallback(() => setPendingTenantChoice(null), []);
@@ -168,16 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setPermissionsState([]);
     setEnabledFeaturesState([]);
-  }, []);
-
-  const refreshUser = useCallback(async () => {
-    try {
-      const profile = await getProfile();
-      setUser(profile);
-      await setUserData(profile);
-    } catch (err) {
-      console.error("Failed to refresh profile:", err);
-    }
+    setRolesState([]);
   }, []);
 
   const hasPermission = useCallback(
@@ -216,6 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         permissions,
         enabledFeatures,
+        roles,
         isAuthenticated: !!user,
         isLoading,
         pendingTenantChoice,
