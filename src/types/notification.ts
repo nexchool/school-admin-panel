@@ -12,8 +12,16 @@ export interface AppNotification {
   recipient_status?: string;
 }
 
+export interface NotificationPagination {
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 export interface NotificationsListResponse {
   notifications: AppNotification[];
+  pagination: NotificationPagination;
 }
 
 export const NOTIFICATION_TYPE = {

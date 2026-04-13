@@ -15,6 +15,7 @@ import {
   isPushDenied,
 } from "@/hooks/usePushRegistration";
 import { isFirebaseConfigured } from "@/lib/firebase";
+import { fetchMyDevices } from "@/services/devicesService";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -39,8 +40,31 @@ export function Header({ onMenuClick }: HeaderProps) {
       : "?";
 
   const handleBellClick = async () => {
-    // If push is not available / not configured, just open the in-app panel
-    if (!isFirebaseConfigured() || isPushGranted()) {
+    if (!isFirebaseConfigured()) {
+      setPanelOpen(true);
+      return;
+    }
+
+    if (isPushGranted()) {
+      try {
+        const { devices } = await fetchMyDevices();
+        const hasActive = devices.some((d) => d.is_active);
+        if (!hasActive) {
+          setEnablingPush(true);
+          try {
+            const result = await enableNotifications();
+            if (result.status === "granted" && !result.serverHasToken) {
+              toast.warning("Notifications allowed, but this device is not registered for push yet.");
+            } else if (result.status === "unavailable" && result.message) {
+              toast.error(result.message);
+            }
+          } finally {
+            setEnablingPush(false);
+          }
+        }
+      } catch {
+        /* still open panel */
+      }
       setPanelOpen(true);
       return;
     }
@@ -60,9 +84,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         if (result.status === "granted") {
           toast.success("Notifications enabled successfully");
           if (!result.serverHasToken) {
-            toast.warning(
-              "Browser allowed notifications, but the server did not store a push device. Check the Network tab for POST /api/devices/register (expect 200)."
-            );
+            toast.warning("Notifications allowed, but this device is not registered for push yet.");
           }
           setPanelOpen(true);
         } else if (result.status === "denied") {
@@ -70,6 +92,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             "Notification permission denied. You can re-enable it in browser settings."
           );
         } else if (result.status === "unavailable") {
+          if (result.message) toast.error(result.message);
           setPanelOpen(true);
         }
       } finally {

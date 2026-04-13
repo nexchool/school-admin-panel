@@ -4,12 +4,16 @@ import { useState, useCallback, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
+import { useForegroundFCMListener } from "@/hooks/useForegroundFCMListener";
+import { useNotificationInboxStream } from "@/hooks/useNotificationInboxStream";
 
 const MOBILE_BREAKPOINT = 768;
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  useForegroundFCMListener();
+  useNotificationInboxStream();
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
   const toggleSidebar = useCallback(() => setSidebarOpen((prev) => !prev), []);

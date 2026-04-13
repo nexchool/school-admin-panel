@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useNotifications, useMarkNotificationRead } from "@/hooks/useNotifications";
+import { useNotificationDetail, useMarkNotificationRead } from "@/hooks/useNotifications";
 import { NOTIFICATION_TYPE } from "@/types/notification";
 
 const TYPE_ICONS: Record<string, string> = {
@@ -66,25 +66,20 @@ export default function NotificationDetailPage() {
   const router = useRouter();
   const id = params?.id as string | undefined;
 
-  const { data: notifications = [], isLoading, isFetched } = useNotifications(false);
+  const { data: item, isLoading, isFetched, isError } = useNotificationDetail(id);
   const markRead = useMarkNotificationRead();
   const markReadAttempted = useRef<string | null>(null);
-
-  const item = useMemo(
-    () => notifications.find((n) => n.id === id),
-    [notifications, id]
-  );
 
   useEffect(() => {
     markReadAttempted.current = null;
   }, [id]);
 
   useEffect(() => {
-    if (!item || item.read_at) return;
+    if (isError || !item || item.read_at) return;
     if (markReadAttempted.current === item.id) return;
     markReadAttempted.current = item.id;
     markRead.mutate(item.id);
-  }, [item, markRead]);
+  }, [item, markRead, isError]);
 
   const actionLink = item ? getActionLink(item.type, item.extra_data) : null;
   const icon = item ? (TYPE_ICONS[item.type] ?? "🔔") : "🔔";
@@ -97,7 +92,7 @@ export default function NotificationDetailPage() {
     );
   }
 
-  if (isFetched && !item) {
+  if ((isFetched && !item && !isLoading) || isError) {
     return (
       <div className="space-y-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2">

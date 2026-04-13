@@ -1,37 +1,79 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { notificationService } from "@/services/notificationService";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  NOTIFICATION_PAGE_SIZE,
+  notificationService,
+} from "@/services/notificationService";
 import type { AppNotification } from "@/types/notification";
 
 export const notificationKeys = {
   all: ["notifications"] as const,
-  list: (unreadOnly?: boolean) => [...notificationKeys.all, "list", { unreadOnly }] as const,
+  feed: (unreadOnly: boolean) => [...notificationKeys.all, "feed", unreadOnly] as const,
+  detail: (id: string) => [...notificationKeys.all, "detail", id] as const,
+  unreadTotal: () => [...notificationKeys.all, "unread-total"] as const,
 };
 
-/** Fetch all notifications, polling every 30 s for the unread count badge. */
-export function useNotifications(unreadOnly = false) {
-  return useQuery({
-    queryKey: notificationKeys.list(unreadOnly),
-    queryFn: () => notificationService.list({ unreadOnly, limit: 50 }),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+/**
+ * Paginated inbox (SSE + invalidations refresh pages). No polling.
+ */
+export function useNotificationFeed(unreadOnly = false) {
+  return useInfiniteQuery({
+    queryKey: notificationKeys.feed(unreadOnly),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      notificationService.list({
+        unreadOnly,
+        limit: NOTIFICATION_PAGE_SIZE,
+        offset: pageParam as number,
+      }),
+    getNextPageParam: (last) =>
+      last.pagination.has_more
+        ? last.pagination.offset + last.pagination.limit
+        : undefined,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 
-/** Derived: unread count from the full list (no extra request). */
+export function useNotificationDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: notificationKeys.detail(id ?? ""),
+    queryFn: () => notificationService.getById(id!),
+    enabled: Boolean(id),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useUnreadNotificationsCount() {
-  const { data } = useNotifications(false);
-  const count = (data ?? []).filter((n: AppNotification) => !n.read_at).length;
-  return count;
+  const { data: total = 0 } = useQuery({
+    queryKey: notificationKeys.unreadTotal(),
+    queryFn: async () => {
+      const res = await notificationService.list({
+        unreadOnly: true,
+        limit: 1,
+        offset: 0,
+      });
+      return res.pagination.total;
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+  return total;
 }
 
 export function useMarkNotificationRead() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => notificationService.markRead(id),
+    mutationFn: (nid: string) => notificationService.markRead(nid),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.all });
+      void qc.invalidateQueries({ queryKey: notificationKeys.all });
     },
   });
 }
@@ -41,7 +83,14 @@ export function useMarkAllNotificationsRead() {
   return useMutation({
     mutationFn: () => notificationService.markAllRead(),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: notificationKeys.all });
+      void qc.invalidateQueries({ queryKey: notificationKeys.all });
     },
   });
+}
+
+export function flattenNotificationPages(
+  data: { pages: { notifications: AppNotification[] }[] } | undefined
+): AppNotification[] {
+  if (!data?.pages?.length) return [];
+  return data.pages.flatMap((p) => p.notifications);
 }

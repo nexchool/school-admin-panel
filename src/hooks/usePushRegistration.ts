@@ -9,7 +9,7 @@
  */
 
 import { getFirebaseApp, VAPID_KEY, isFirebaseConfigured } from "@/lib/firebase";
-import { apiPost } from "@/services/api";
+import { ApiException, apiPost } from "@/services/api";
 import { fetchMyDevices } from "@/services/devicesService";
 
 const LS_PERMISSION_STATUS = "notification_permission_status";
@@ -18,7 +18,7 @@ const LS_PERMISSION_STATUS = "notification_permission_status";
 export type EnablePushOutcome =
   | { status: "granted"; serverHasToken: boolean }
   | { status: "denied" }
-  | { status: "unavailable" };
+  | { status: "unavailable"; message?: string };
 
 /**
  * Request browser notification permission, obtain an FCM token, POST
@@ -28,7 +28,12 @@ export async function enableNotifications(): Promise<EnablePushOutcome> {
   if (typeof window === "undefined") return { status: "unavailable" };
   if (!("Notification" in window)) return { status: "unavailable" };
   if (!("serviceWorker" in navigator)) return { status: "unavailable" };
-  if (!isFirebaseConfigured()) return { status: "unavailable" };
+  if (!isFirebaseConfigured()) {
+    return {
+      status: "unavailable",
+      message: "Push is not configured for this build (missing NEXT_PUBLIC_FIREBASE_* in env).",
+    };
+  }
 
   try {
     const permission = await Notification.requestPermission();
@@ -50,11 +55,11 @@ export async function enableNotifications(): Promise<EnablePushOutcome> {
     });
 
     if (!token) {
-      console.warn("[Push] getToken returned empty — check VAPID key and service worker.");
-      return { status: "unavailable" };
+      return {
+        status: "unavailable",
+        message: "Could not obtain a push token (check VAPID key and service worker).",
+      };
     }
-
-    console.log("[Push] FCM token (prefix):", token.slice(0, 24) + "…");
 
     await apiPost("/api/devices/register", {
       device_token: token,
@@ -66,19 +71,15 @@ export async function enableNotifications(): Promise<EnablePushOutcome> {
     try {
       const { devices } = await fetchMyDevices();
       serverHasToken = devices.some((d) => d.is_active);
-      if (!serverHasToken) {
-        console.warn(
-          "[Push] POST /api/devices/register succeeded but GET /api/devices shows no active token — check API logs."
-        );
-      }
-    } catch (e) {
-      console.warn("[Push] Could not verify registration via GET /api/devices:", e);
+    } catch {
+      /* verification optional */
     }
 
     return { status: "granted", serverHasToken };
   } catch (err) {
-    console.warn("[Push] enableNotifications failed:", err);
-    return { status: "unavailable" };
+    const message =
+      err instanceof ApiException ? err.message : err instanceof Error ? err.message : undefined;
+    return { status: "unavailable", message };
   }
 }
 

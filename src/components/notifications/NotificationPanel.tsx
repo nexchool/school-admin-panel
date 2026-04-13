@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Bell, X, CheckCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  useNotifications,
+  notificationKeys,
+  useNotificationFeed,
+  useUnreadNotificationsCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  flattenNotificationPages,
 } from "@/hooks/useNotifications";
 import type { AppNotification } from "@/types/notification";
 
@@ -40,14 +44,26 @@ function getNotificationIcon(type: string): string {
 
 export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const panelRef = useRef<HTMLDivElement>(null);
-  const { data: notifications = [], isLoading } = useNotifications(false);
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useNotificationFeed(false);
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
 
-  const unreadCount = notifications.filter((n) => !n.read_at).length;
+  const notifications = flattenNotificationPages(data);
+  const globalUnread = useUnreadNotificationsCount();
 
-  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+  }, [open, queryClient]);
+
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
@@ -59,7 +75,6 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open, onClose]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
@@ -79,7 +94,6 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className={`fixed inset-0 z-40 bg-black/20 transition-opacity duration-200 ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
@@ -87,7 +101,6 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
         aria-hidden="true"
       />
 
-      {/* Panel */}
       <div
         ref={panelRef}
         className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col bg-card shadow-2xl transition-transform duration-300 ease-in-out ${
@@ -97,19 +110,18 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
         aria-modal="true"
         aria-label="Notifications"
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <div className="flex items-center gap-2">
             <Bell className="size-5 text-foreground" />
             <h2 className="text-base font-semibold">Notifications</h2>
-            {unreadCount > 0 && (
+            {globalUnread > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
-                {unreadCount > 99 ? "99+" : unreadCount}
+                {globalUnread > 99 ? "99+" : globalUnread}
               </span>
             )}
           </div>
           <div className="flex items-center gap-1">
-            {unreadCount > 0 && (
+            {globalUnread > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -131,7 +143,6 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
           </div>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -143,49 +154,68 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
               <p className="text-sm text-muted-foreground">No notifications yet</p>
             </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {notifications.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleItemClick(item)}
-                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
-                      !item.read_at ? "bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 text-xl leading-none">
-                        {getNotificationIcon(item.type)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p
-                            className={`text-sm leading-snug ${
-                              !item.read_at
-                                ? "font-semibold text-foreground"
-                                : "font-medium text-foreground/80"
-                            }`}
-                          >
-                            {item.title}
-                          </p>
-                          {!item.read_at && (
-                            <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
+            <>
+              <ul className="divide-y divide-border">
+                {notifications.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleItemClick(item)}
+                      className={`w-full px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
+                        !item.read_at ? "bg-primary/5" : ""
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 text-xl leading-none">
+                          {getNotificationIcon(item.type)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p
+                              className={`text-sm leading-snug ${
+                                !item.read_at
+                                  ? "font-semibold text-foreground"
+                                  : "font-medium text-foreground/80"
+                              }`}
+                            >
+                              {item.title}
+                            </p>
+                            {!item.read_at && (
+                              <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" />
+                            )}
+                          </div>
+                          {item.body && (
+                            <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                              {item.body}
+                            </p>
                           )}
-                        </div>
-                        {item.body && (
-                          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                            {item.body}
+                          <p className="mt-1 text-xs text-muted-foreground/70">
+                            {formatRelativeTime(item.created_at)}
                           </p>
-                        )}
-                        <p className="mt-1 text-xs text-muted-foreground/70">
-                          {formatRelativeTime(item.created_at)}
-                        </p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {hasNextPage && (
+                <div className="border-t border-border p-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={isFetchingNextPage}
+                    onClick={() => void fetchNextPage()}
+                  >
+                    {isFetchingNextPage ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      "Load more"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

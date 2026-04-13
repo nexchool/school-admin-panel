@@ -3,8 +3,11 @@
  */
 export { useAuth } from "@/components/providers";
 export {
-  useNotifications,
+  useNotificationFeed,
+  useNotificationDetail,
   useUnreadNotificationsCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
+  flattenNotificationPages,
 } from "./useNotifications";
+export { useNotificationInboxStream } from "./useNotificationInboxStream";

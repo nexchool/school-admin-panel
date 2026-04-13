@@ -42,6 +42,8 @@ if (firebaseConfig.apiKey) {
       icon,
       data: data || {},
       badge: "/favicon.ico",
+      silent: false,
+      vibrate: [120, 80, 120],
     });
   });
 
