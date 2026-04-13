@@ -21,6 +21,7 @@ import {
 import { teacherAvailabilityService } from "@/services/teacherConstraintService";
 import type { TeacherAvailability } from "@/types/teacher";
 import { Plus, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const DAY_NAMES = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -45,6 +46,7 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
       setItems(Array.isArray(data) ? data : []);
     } catch {
       setItems([]);
+      toast.error("Could not load availability");
     } finally {
       setLoading(false);
     }
@@ -68,8 +70,9 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
       setDayOfWeek("1");
       setPeriodNumber("1");
       setAvailable(false);
+      toast.success("Availability added");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to add");
+      toast.error(err instanceof Error ? err.message : "Failed to add");
     } finally {
       setSubmitting(false);
     }
@@ -81,8 +84,9 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
     try {
       await teacherAvailabilityService.deleteAvailability(teacherId, id);
       await loadData();
+      toast.success("Availability removed");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete");
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
     } finally {
       setDeleting(null);
     }

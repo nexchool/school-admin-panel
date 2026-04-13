@@ -94,13 +94,16 @@ export default function SubjectsPage() {
     try {
       if (editSubject) {
         await updateMutation.mutateAsync({ id: editSubject.id, input: data });
+        toast.success("Subject updated");
       } else {
         await createMutation.mutateAsync(data);
+        toast.success("Subject created");
       }
       setFormOpen(false);
       setEditSubject(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save subject");
+      throw e;
     }
   };
 
@@ -108,6 +111,7 @@ export default function SubjectsPage() {
     if (!deleteSubject) return;
     try {
       await deleteMutation.mutateAsync(deleteSubject.id);
+      toast.success("Subject deleted");
       setDeleteSubject(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete subject");

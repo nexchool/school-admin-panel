@@ -17,6 +17,7 @@ import { ClassFormModal } from "@/components/classes/ClassFormModal";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import type { ClassItem } from "@/types/class";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 
 export default function ClassesPage() {
   const router = useRouter();
@@ -33,6 +34,7 @@ export default function ClassesPage() {
       setAvailableTeachers(t);
     } catch {
       setAvailableTeachers([]);
+      toast.error("Could not load teachers for this form");
     }
   };
 
@@ -50,8 +52,14 @@ export default function ClassesPage() {
   ];
 
   const handleCreate = async (data: { name: string; section: string; academic_year_id: string; teacher_id?: string }) => {
-    await createMutation.mutateAsync(data);
-    setCreateOpen(false);
+    try {
+      await createMutation.mutateAsync(data);
+      toast.success("Class created");
+      setCreateOpen(false);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to create class");
+      throw e;
+    }
   };
 
   return (

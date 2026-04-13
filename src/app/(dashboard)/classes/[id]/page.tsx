@@ -22,6 +22,7 @@ import { ClassTimetableReadOnly } from "@/components/timetable/ClassTimetableRea
 import { useAuth } from "@/components/providers/AuthProvider";
 import { classesKeys } from "@/hooks/useClasses";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { ArrowLeft, Pencil, Trash2, Loader2, Plus, UserMinus, CalendarDays } from "lucide-react";
 import { useState } from "react";
 
@@ -62,6 +63,7 @@ export default function ClassDetailPage() {
       setAvailableTeachers(t);
     } catch {
       setAvailableTeachers([]);
+      toast.error("Could not load teachers for this form");
     }
   };
 
@@ -72,14 +74,25 @@ export default function ClassDetailPage() {
 
   const handleUpdate = async (data: { name: string; section: string; academic_year_id: string; teacher_id?: string }) => {
     if (!id) return;
-    await updateMutation.mutateAsync({ id, data });
-    setEditOpen(false);
+    try {
+      await updateMutation.mutateAsync({ id, data });
+      toast.success("Class updated");
+      setEditOpen(false);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update class");
+      throw e;
+    }
   };
 
   const handleDelete = async () => {
     if (!id || !confirm("Are you sure you want to delete this class?")) return;
-    await deleteMutation.mutateAsync(id);
-    router.push("/classes");
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success("Class deleted");
+      router.push("/classes");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete class");
+    }
   };
 
   const handleRemoveStudent = async (studentId: string) => {
@@ -88,8 +101,9 @@ export default function ClassDetailPage() {
     try {
       await classesService.removeStudent(id, studentId);
       refreshClass();
+      toast.success("Student removed from class");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to remove");
+      toast.error(err instanceof Error ? err.message : "Failed to remove");
     } finally {
       setRemovingStudent(null);
     }
@@ -101,8 +115,9 @@ export default function ClassDetailPage() {
     try {
       await classesService.removeTeacher(id, teacherId);
       refreshClass();
+      toast.success("Teacher removed from class");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to remove");
+      toast.error(err instanceof Error ? err.message : "Failed to remove");
     } finally {
       setRemovingTeacher(null);
     }

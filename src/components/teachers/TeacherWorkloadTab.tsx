@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { teacherWorkloadService } from "@/services/teacherConstraintService";
 import type { TeacherWorkload } from "@/types/teacher";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface TeacherWorkloadTabProps {
   teacherId: string;
@@ -38,6 +39,7 @@ export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
       setWorkload(null);
       setMaxPerDay("6");
       setMaxPerWeek("30");
+      toast.error("Could not load workload");
     } finally {
       setLoading(false);
     }
@@ -52,7 +54,7 @@ export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
     const perDay = parseInt(maxPerDay, 10);
     const perWeek = parseInt(maxPerWeek, 10);
     if (isNaN(perDay) || perDay < 1 || isNaN(perWeek) || perWeek < 1) {
-      alert("Valid numbers required (min 1)");
+      toast.error("Valid numbers required (min 1)");
       return;
     }
     setSaving(true);
@@ -70,8 +72,9 @@ export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
       }
       await loadData();
       setEditing(false);
+      toast.success("Workload saved");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+      toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import type { ClassItem } from "@/types/class";
 import type { AcademicYear } from "@/services/academicYearsService";
+import { toast } from "sonner";
 
 interface TeacherOption {
   id: string;
@@ -69,7 +70,7 @@ export function ClassFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !section.trim() || !academicYearId) {
-      alert("Name, section, and academic year are required.");
+      toast.error("Name, section, and academic year are required.");
       return;
     }
     setSubmitting(true);
@@ -81,8 +82,8 @@ export function ClassFormModal({
         teacher_id: teacherId === NONE_VALUE ? undefined : teacherId,
       });
       handleClose(false);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+    } catch {
+      // Parent handler toasts API errors and rethrows when applicable.
     } finally {
       setSubmitting(false);
     }

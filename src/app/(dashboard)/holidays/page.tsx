@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export default function HolidaysPage() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -35,7 +36,10 @@ export default function HolidaysPage() {
     holidayService
       .getHolidays({ include_recurring: true })
       .then(setHolidays)
-      .catch(() => setHolidays([]))
+      .catch(() => {
+        setHolidays([]);
+        toast.error("Could not load holidays");
+      })
       .finally(() => setLoading(false));
   };
 
@@ -62,28 +66,35 @@ export default function HolidaysPage() {
     start_date?: string;
     end_date?: string;
   }) => {
-    if (payload.id) {
-      await holidayService.updateHoliday(payload.id, {
-        name: payload.name,
-        holiday_type: payload.holiday_type,
-        is_recurring: payload.is_recurring,
-        recurring_day_of_week: payload.recurring_day_of_week,
-        start_date: payload.start_date,
-        end_date: payload.end_date,
-      });
-    } else {
-      await holidayService.createHoliday({
-        name: payload.name,
-        holiday_type: payload.holiday_type,
-        is_recurring: payload.is_recurring,
-        recurring_day_of_week: payload.recurring_day_of_week,
-        start_date: payload.start_date,
-        end_date: payload.end_date,
-      });
+    try {
+      if (payload.id) {
+        await holidayService.updateHoliday(payload.id, {
+          name: payload.name,
+          holiday_type: payload.holiday_type,
+          is_recurring: payload.is_recurring,
+          recurring_day_of_week: payload.recurring_day_of_week,
+          start_date: payload.start_date,
+          end_date: payload.end_date,
+        });
+        toast.success("Holiday updated");
+      } else {
+        await holidayService.createHoliday({
+          name: payload.name,
+          holiday_type: payload.holiday_type,
+          is_recurring: payload.is_recurring,
+          recurring_day_of_week: payload.recurring_day_of_week,
+          start_date: payload.start_date,
+          end_date: payload.end_date,
+        });
+        toast.success("Holiday added");
+      }
+      setFormOpen(false);
+      setEditHoliday(null);
+      loadHolidays();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to save holiday");
+      throw e;
     }
-    setFormOpen(false);
-    setEditHoliday(null);
-    loadHolidays();
   };
 
   const handleDelete = async () => {
@@ -91,10 +102,11 @@ export default function HolidaysPage() {
     setDeleting(true);
     try {
       await holidayService.deleteHoliday(deleteHoliday.id);
+      toast.success("Holiday deleted");
       setDeleteHoliday(null);
       loadHolidays();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete");
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
     } finally {
       setDeleting(false);
     }

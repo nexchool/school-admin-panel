@@ -42,7 +42,9 @@ export function useRecordPayment() {
       amount: number;
       method?: string;
       reference_number?: string;
+      method_detail?: string;
       notes?: string;
+      allocations?: { item_id: string; amount: number }[];
     }) => financeService.recordPayment(data),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: studentFeeKeys.all });

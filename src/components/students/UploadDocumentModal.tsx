@@ -25,6 +25,7 @@ import {
 } from "@/services/studentDocumentsService";
 import { useUploadStudentDocument } from "@/hooks/useStudentDocuments";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface UploadDocumentModalProps {
   open: boolean;
@@ -57,15 +58,16 @@ export function UploadDocumentModal({
 
   const handleSubmit = async () => {
     if (!documentType || !file) {
-      alert("Please select document type and choose a file.");
+      toast.error("Please select document type and choose a file.");
       return;
     }
     try {
       await uploadMutation.mutateAsync({ documentType, file });
+      toast.success("Document uploaded");
       onSuccess?.();
       handleClose(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Upload failed");
+      toast.error(err instanceof Error ? err.message : "Upload failed");
     }
   };
 

@@ -22,6 +22,7 @@ import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useCreateFeeStructure, useUpdateFeeStructure } from "@/hooks/useFeeStructures";
 import type { FeeStructure, CreateStructureInput } from "@/services/financeService";
 import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface FeeStructureFormModalProps {
   open: boolean;
@@ -94,7 +95,10 @@ export function FeeStructureFormModal({
         mode === "edit" ? initialData?.id : undefined
       )
       .then(setAvailableClasses)
-      .catch(() => setAvailableClasses([]));
+      .catch(() => {
+        setAvailableClasses([]);
+        toast.error("Could not load available classes");
+      });
   }, [open, academicYearId, initialData?.academic_year_id, initialData?.id, mode]);
 
   const addComponent = () => {
@@ -127,15 +131,15 @@ export function FeeStructureFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert("Name is required");
+      toast.error("Name is required");
       return;
     }
     if (mode === "create" && !academicYearId) {
-      alert("Academic year is required");
+      toast.error("Academic year is required");
       return;
     }
     if (!dueDate.trim()) {
-      alert("Due date is required");
+      toast.error("Due date is required");
       return;
     }
     const comps = components
@@ -146,7 +150,7 @@ export function FeeStructureFormModal({
         is_optional: c.is_optional,
       }));
     if (comps.length === 0) {
-      alert("Add at least one component");
+      toast.error("Add at least one component");
       return;
     }
     const payload: CreateStructureInput = {
@@ -158,11 +162,14 @@ export function FeeStructureFormModal({
     };
 
     const onMutationSuccess = () => {
+      toast.success(
+        mode === "edit" ? "Fee structure updated" : "Fee structure created"
+      );
       onSuccess?.();
       onOpenChange(false);
     };
-    const onMutationError = (err: Error) => {
-      alert(err instanceof Error ? err.message : "Failed to save");
+    const onMutationError = (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
     };
 
     if (mode === "edit" && initialData) {

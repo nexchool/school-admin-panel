@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { classesService } from "@/services/classesService";
 import type { Student } from "@/types/student";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ClassAssignStudentModalProps {
   open: boolean;
@@ -35,7 +36,10 @@ export function ClassAssignStudentModal({
       classesService
         .getUnassignedStudents(classId)
         .then(setStudents)
-        .catch(() => setStudents([]))
+        .catch(() => {
+          setStudents([]);
+          toast.error("Could not load students");
+        })
         .finally(() => setLoading(false));
     }
   }, [open, classId]);
@@ -46,8 +50,9 @@ export function ClassAssignStudentModal({
       await classesService.assignStudent(classId, student.id);
       onAssigned();
       onOpenChange(false);
+      toast.success("Student added to class");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to assign");
+      toast.error(err instanceof Error ? err.message : "Failed to assign");
     } finally {
       setAssigning(null);
     }

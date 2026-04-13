@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTeacher, useUpdateTeacher, useDeleteTeacher } from "@/hooks/useTeachers";
 import { TeacherFormModal } from "@/components/teachers/TeacherFormModal";
@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Pencil, Trash2, Loader2, User, BookOpen, Calendar, ClipboardList, BarChart3 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { teachersKeys } from "@/hooks/useTeachers";
 import type { UpdateTeacherInput } from "@/types/teacher";
@@ -51,13 +52,19 @@ function InfoRow({
 export default function TeacherDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params?.id as string | undefined;
   const { data: teacher, isLoading } = useTeacher(id ?? null);
   const updateMutation = useUpdateTeacher();
   const deleteMutation = useDeleteTeacher();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabKey>("info");
+  const initialTab = (searchParams?.get("tab") as TabKey | null) ?? "info";
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    (["info", "subjects", "availability", "leaves", "workload"] as TabKey[]).includes(initialTab)
+      ? initialTab
+      : "info"
+  );
 
   const refreshTeacher = () => {
     if (id) queryClient.invalidateQueries({ queryKey: teachersKeys.detail(id) });
@@ -65,14 +72,25 @@ export default function TeacherDetailPage() {
 
   const handleUpdate = async (data: UpdateTeacherInput) => {
     if (!id) return;
-    await updateMutation.mutateAsync({ id, input: data });
-    setEditOpen(false);
+    try {
+      await updateMutation.mutateAsync({ id, input: data });
+      toast.success("Teacher updated");
+      setEditOpen(false);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to update teacher");
+      throw e;
+    }
   };
 
   const handleDelete = async () => {
     if (!id || !confirm("Are you sure you want to delete this teacher?")) return;
-    await deleteMutation.mutateAsync(id);
-    router.push("/teachers");
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success("Teacher deleted");
+      router.push("/teachers");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete teacher");
+    }
   };
 
   if (isLoading || !id) {

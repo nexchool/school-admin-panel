@@ -24,6 +24,7 @@ import { classesService } from "@/services/classesService";
 import type { ClassItem } from "@/types/class";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 function formatDisplayDate(iso: string) {
   try {
@@ -97,7 +98,10 @@ export default function AttendancePage() {
     classesService
       .getClasses()
       .then(setClasses)
-      .catch(() => setClasses([]))
+      .catch(() => {
+        setClasses([]);
+        toast.error("Could not load classes");
+      })
       .finally(() => setClassesLoading(false));
   }, []);
 

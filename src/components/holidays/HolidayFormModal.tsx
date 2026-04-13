@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Holiday, CreateHolidayPayload } from "@/services/holidayService";
+import { toast } from "sonner";
 
 interface HolidayFormModalProps {
   open: boolean;
@@ -63,15 +64,15 @@ export function HolidayFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert("Name is required");
+      toast.error("Name is required");
       return;
     }
     if (isRecurring && !recurringDay) {
-      alert("Select a day for recurring holiday");
+      toast.error("Select a day for recurring holiday");
       return;
     }
     if (!isRecurring && !startDate) {
-      alert("Start date is required for non-recurring holiday");
+      toast.error("Start date is required for non-recurring holiday");
       return;
     }
     setSubmitting(true);
@@ -85,9 +86,8 @@ export function HolidayFormModal({
           ? { recurring_day_of_week: parseInt(recurringDay, 10) }
           : { start_date: startDate, end_date: endDate || startDate }),
       });
-      onOpenChange(false);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save holiday");
+    } catch {
+      // Parent shows toast on API failure
     } finally {
       setSubmitting(false);
     }

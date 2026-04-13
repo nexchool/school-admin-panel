@@ -22,7 +22,10 @@ import {
 import { MetricCard } from "@/components/finance/MetricCard";
 import { StatusBadge } from "@/components/finance/StatusBadge";
 import { FeeStructureFormModal } from "@/components/finance/FeeStructureFormModal";
-import { PaymentModal } from "@/components/finance/PaymentModal";
+import {
+  PaymentModal,
+  type PaymentFeeItem,
+} from "@/components/finance/PaymentModal";
 import { useFinanceSummary } from "@/hooks/useFinanceSummary";
 import { useStudentFees } from "@/hooks/useStudentFees";
 
@@ -50,6 +53,7 @@ export default function FinanceDashboardPage() {
     id: string;
     studentName: string;
     outstanding: number;
+    items?: PaymentFeeItem[];
   } | null>(null);
 
   const { data: summary, isLoading: summaryLoading } = useFinanceSummary({
@@ -240,6 +244,7 @@ export default function FinanceDashboardPage() {
                             id: f.id,
                             studentName: f.student_name ?? "Student",
                             outstanding: f.outstanding_amount ?? 0,
+                            items: f.items,
                           })
                         }
                       >
@@ -277,6 +282,7 @@ export default function FinanceDashboardPage() {
           studentFeeId={paymentTarget.id}
           studentName={paymentTarget.studentName}
           outstanding={paymentTarget.outstanding}
+          items={paymentTarget.items}
           onSuccess={() => setPaymentTarget(null)}
         />
       )}

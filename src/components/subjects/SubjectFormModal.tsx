@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Subject, CreateSubjectInput } from "@/types/subject";
+import { toast } from "sonner";
 
 interface SubjectFormModalProps {
   open: boolean;
@@ -46,7 +47,7 @@ export function SubjectFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert("Name is required.");
+      toast.error("Name is required.");
       return;
     }
     setSubmitting(true);
@@ -57,8 +58,8 @@ export function SubjectFormModal({
         description: description.trim() || undefined,
       });
       handleClose(false);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+    } catch {
+      // Subjects page toasts API errors and rethrows.
     } finally {
       setSubmitting(false);
     }

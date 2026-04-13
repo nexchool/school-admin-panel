@@ -25,6 +25,7 @@ import { useFeeStructures, useDeleteFeeStructure } from "@/hooks/useFeeStructure
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import type { FeeStructure } from "@/services/financeService";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function fmtDate(s: string) {
   try {
@@ -76,7 +77,9 @@ export default function FeeStructuresPage() {
   const handleDelete = (row: FeeStructure) => {
     if (!confirm(`Delete "${row.name}"? This will remove all uncleared fee assignments.`)) return;
     deleteStructure(row.id, {
-      onError: (err) => alert(err instanceof Error ? err.message : "Delete failed"),
+      onSuccess: () => toast.success(`Deleted "${row.name}"`),
+      onError: (err: unknown) =>
+        toast.error(err instanceof Error ? err.message : "Delete failed"),
     });
   };
 

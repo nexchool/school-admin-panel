@@ -22,6 +22,7 @@ import {
 import { StatusBadge } from "@/components/finance/StatusBadge";
 import { PaymentModal } from "@/components/finance/PaymentModal";
 import { useStudentFeeDetail } from "@/hooks/useStudentFees";
+import { toast } from "sonner";
 import { financeService } from "@/services/financeService";
 
 function fmtAmount(n: number | undefined | null) {
@@ -56,8 +57,11 @@ function fmtDateTime(s: string | undefined | null) {
 const METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
   upi: "UPI",
-  bank: "Bank Transfer",
+  bank_transfer: "Bank transfer",
+  bank: "Bank transfer",
   cheque: "Cheque",
+  other: "Other",
+  online: "Online",
 };
 
 export default function StudentFeeDetailPage() {
@@ -83,8 +87,9 @@ export default function StudentFeeDetailPage() {
       a.download = `invoice_${(fee?.student_name ?? id).replace(/\s+/g, "_")}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      toast.success("Invoice downloaded");
     } catch {
-      alert("Failed to download invoice");
+      toast.error("Failed to download invoice");
     } finally {
       setActionLoading(null);
     }
@@ -96,7 +101,7 @@ export default function StudentFeeDetailPage() {
     try {
       await financeService.printInvoice(id);
     } catch {
-      alert("Failed to print invoice");
+      toast.error("Failed to print invoice");
     } finally {
       setActionLoading(null);
     }
@@ -112,8 +117,9 @@ export default function StudentFeeDetailPage() {
       a.download = `receipt_${paymentId.slice(0, 8)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      toast.success("Receipt downloaded");
     } catch {
-      alert("Failed to download receipt");
+      toast.error("Failed to download receipt");
     } finally {
       setActionLoading(null);
     }
@@ -124,7 +130,7 @@ export default function StudentFeeDetailPage() {
     try {
       await financeService.printReceipt(paymentId);
     } catch {
-      alert("Failed to print receipt");
+      toast.error("Failed to print receipt");
     } finally {
       setActionLoading(null);
     }
@@ -320,6 +326,9 @@ export default function StudentFeeDetailPage() {
                             </p>
                             <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                               {METHOD_LABELS[p.method] ?? p.method}
+                              {p.method === "other" && p.method_detail
+                                ? ` — ${p.method_detail}`
+                                : ""}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">{fmtDateTime(p.created_at)}</p>
@@ -407,6 +416,7 @@ export default function StudentFeeDetailPage() {
         studentFeeId={fee.id}
         studentName={fee.student_name ?? "Student"}
         outstanding={outstanding}
+        items={fee.items}
         onSuccess={() => setPaymentOpen(false)}
       />
     </div>

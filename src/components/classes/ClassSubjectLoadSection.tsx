@@ -30,6 +30,7 @@ import { subjectsService } from "@/services/subjectsService";
 import type { SubjectLoad } from "@/types/class";
 import type { Subject } from "@/types/subject";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ClassSubjectLoadSectionProps {
   classId: string;
@@ -62,6 +63,7 @@ export function ClassSubjectLoadSection({
     } catch {
       setLoads([]);
       setSubjects([]);
+      toast.error("Could not load subject loads");
     } finally {
       setLoading(false);
     }
@@ -89,7 +91,7 @@ export function ClassSubjectLoadSection({
     e.preventDefault();
     const periods = parseInt(weeklyPeriods, 10);
     if (isNaN(periods) || periods < 1) {
-      alert("Weekly periods must be at least 1");
+      toast.error("Weekly periods must be at least 1");
       return;
     }
     setSubmitting(true);
@@ -98,13 +100,13 @@ export function ClassSubjectLoadSection({
         await classesService.updateSubjectLoad(classId, editingLoad.id, periods);
       } else {
         if (!subjectId) {
-          alert("Select a subject");
+          toast.error("Select a subject");
           setSubmitting(false);
           return;
         }
         const assignedIds = new Set(loads.map((l) => l.subject_id));
         if (assignedIds.has(subjectId)) {
-          alert("This subject already has a load configured.");
+          toast.error("This subject already has a load configured.");
           setSubmitting(false);
           return;
         }
@@ -116,8 +118,9 @@ export function ClassSubjectLoadSection({
       await loadData();
       onRefresh();
       setModalOpen(false);
+      toast.success(editingLoad ? "Subject load updated" : "Subject load added");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+      toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSubmitting(false);
     }
@@ -130,8 +133,9 @@ export function ClassSubjectLoadSection({
       await classesService.deleteSubjectLoad(classId, loadId);
       await loadData();
       onRefresh();
+      toast.success("Subject load removed");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete");
+      toast.error(err instanceof Error ? err.message : "Failed to delete");
     } finally {
       setDeleting(null);
     }

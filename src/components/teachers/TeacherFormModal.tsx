@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Teacher, CreateTeacherInput } from "@/types/teacher";
+import { toast } from "sonner";
 
 interface TeacherFormModalProps {
   open: boolean;
@@ -66,7 +67,7 @@ export function TeacherFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert("Name is required.");
+      toast.error("Name is required.");
       return;
     }
     setSubmitting(true);
@@ -84,8 +85,8 @@ export function TeacherFormModal({
         date_of_joining: dateOfJoining || undefined,
       });
       handleClose(false);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to save");
+    } catch {
+      // List page: error surfaced here. Detail page: parent toasts and rethrows.
     } finally {
       setSubmitting(false);
     }

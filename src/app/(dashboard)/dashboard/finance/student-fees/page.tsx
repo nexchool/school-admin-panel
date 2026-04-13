@@ -14,7 +14,10 @@ import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { FilterBar, type FeeFilters } from "@/components/finance/FilterBar";
 import { StatusBadge } from "@/components/finance/StatusBadge";
-import { PaymentModal } from "@/components/finance/PaymentModal";
+import {
+  PaymentModal,
+  type PaymentFeeItem,
+} from "@/components/finance/PaymentModal";
 import {
   ArrowLeft,
   Download,
@@ -25,6 +28,7 @@ import {
 import { useStudentFees } from "@/hooks/useStudentFees";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useClasses } from "@/hooks/useClasses";
+import { toast } from "sonner";
 import { financeService, type StudentFee } from "@/services/financeService";
 
 function fmtAmount(n: number | undefined | null) {
@@ -32,7 +36,12 @@ function fmtAmount(n: number | undefined | null) {
   return `₹${Number(n).toLocaleString("en-IN")}`;
 }
 
-type PaymentTarget = { id: string; studentName: string; outstanding: number };
+type PaymentTarget = {
+  id: string;
+  studentName: string;
+  outstanding: number;
+  items?: PaymentFeeItem[];
+};
 
 export default function StudentFeesPage() {
   const router = useRouter();
@@ -76,8 +85,9 @@ export default function StudentFeesPage() {
       a.download = `invoice_${(row.student_name ?? row.id).replace(/\s+/g, "_")}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
+      toast.success("Invoice downloaded");
     } catch {
-      alert("Failed to download invoice");
+      toast.error("Failed to download invoice");
     } finally {
       setActionLoading(null);
     }
@@ -89,7 +99,7 @@ export default function StudentFeesPage() {
     try {
       await financeService.printInvoice(row.id);
     } catch {
-      alert("Failed to print invoice");
+      toast.error("Failed to print invoice");
     } finally {
       setActionLoading(null);
     }
@@ -181,6 +191,7 @@ export default function StudentFeesPage() {
                     id: r.id,
                     studentName: r.student_name ?? "Student",
                     outstanding: Math.max(0, outstanding),
+                    items: r.items,
                   });
                 }}
               >
@@ -320,6 +331,7 @@ export default function StudentFeesPage() {
           studentFeeId={paymentTarget.id}
           studentName={paymentTarget.studentName}
           outstanding={paymentTarget.outstanding}
+          items={paymentTarget.items}
           onSuccess={() => setPaymentTarget(null)}
         />
       )}

@@ -22,6 +22,7 @@ import { subjectsService } from "@/services/subjectsService";
 import type { TeacherSubject } from "@/types/teacher";
 import type { Subject } from "@/types/subject";
 import { Plus, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface TeacherSubjectsTabProps {
   teacherId: string;
@@ -49,6 +50,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
     } catch {
       setSubjects([]);
       setAllSubjects([]);
+      toast.error("Could not load subjects");
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
 
   const handleAdd = async () => {
     if (!selectedSubjectId) {
-      alert("Select a subject.");
+      toast.error("Select a subject.");
       return;
     }
     setAdding(true);
@@ -73,8 +75,9 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
       onRefresh();
       setModalOpen(false);
       setSelectedSubjectId("");
+      toast.success("Subject assigned to teacher");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to add");
+      toast.error(err instanceof Error ? err.message : "Failed to add");
     } finally {
       setAdding(false);
     }
@@ -87,8 +90,9 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
       await teacherSubjectService.removeSubject(teacherId, subjectId);
       await loadData();
       onRefresh();
+      toast.success("Subject removed");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to remove");
+      toast.error(err instanceof Error ? err.message : "Failed to remove");
     } finally {
       setRemoving(null);
     }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { teacherLeaveService } from "@/services/teacherConstraintService";
 import type { TeacherLeave } from "@/types/teacher";
 import { Loader2, Check, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface TeacherLeavesTabProps {
   teacherId: string;
@@ -31,6 +32,7 @@ export function TeacherLeavesTab({ teacherId }: TeacherLeavesTabProps) {
       setLeaves(Array.isArray(data) ? data : []);
     } catch {
       setLeaves([]);
+      toast.error("Could not load leave requests");
     } finally {
       setLoading(false);
     }
@@ -45,8 +47,9 @@ export function TeacherLeavesTab({ teacherId }: TeacherLeavesTabProps) {
     try {
       await teacherLeaveService.approveLeave(leaveId);
       await loadData();
+      toast.success("Leave approved");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to approve");
+      toast.error(err instanceof Error ? err.message : "Failed to approve");
     } finally {
       setApproving(null);
     }
@@ -57,8 +60,9 @@ export function TeacherLeavesTab({ teacherId }: TeacherLeavesTabProps) {
     try {
       await teacherLeaveService.rejectLeave(leaveId);
       await loadData();
+      toast.success("Leave rejected");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to reject");
+      toast.error(err instanceof Error ? err.message : "Failed to reject");
     } finally {
       setRejecting(null);
     }

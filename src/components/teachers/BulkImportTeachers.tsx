@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ApiException } from "@/services/api";
+import { toast } from "sonner";
 
 type Step = "upload" | "preview" | "importing" | "results";
 
@@ -121,7 +122,7 @@ export function BulkImportTeachers({
     if (!f) return;
     const ext = f.name.split(".").pop()?.toLowerCase();
     if (ext !== "xlsx") {
-      alert("Please upload a .xlsx file only.");
+      toast.error("Please upload a .xlsx file only.");
       return;
     }
     setFile(f);
@@ -149,7 +150,7 @@ export function BulkImportTeachers({
 
   const handlePreview = async () => {
     if (!file) {
-      alert("Select an Excel file.");
+      toast.error("Select an Excel file.");
       return;
     }
     setPreviewError(null);
@@ -172,6 +173,7 @@ export function BulkImportTeachers({
             ? err.message
             : "Preview failed";
       setPreviewError(msg);
+      toast.error(msg);
       setStep("upload");
     }
   };
@@ -189,6 +191,9 @@ export function BulkImportTeachers({
       setImportResult(res);
       setStep("results");
       queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+      toast.success(
+        `Import finished: ${res.success} created, ${res.failed} failed`
+      );
     } catch (err) {
       const msg =
         err instanceof ApiException
@@ -196,7 +201,7 @@ export function BulkImportTeachers({
           : err instanceof Error
             ? err.message
             : "Import failed";
-      alert(msg);
+      toast.error(msg);
       setStep("preview");
     }
   };

@@ -21,6 +21,7 @@ import { subjectsService } from "@/services/subjectsService";
 import type { Teacher } from "@/types/teacher";
 import type { Subject } from "@/types/subject";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ClassAssignTeacherModalProps {
   open: boolean;
@@ -56,6 +57,7 @@ export function ClassAssignTeacherModal({
         .catch(() => {
           setTeachers([]);
           setSubjects([]);
+          toast.error("Could not load teachers or subjects");
         })
         .finally(() => setLoading(false));
     }
@@ -63,7 +65,7 @@ export function ClassAssignTeacherModal({
 
   const handleAssign = async (teacher: Teacher) => {
     if (!selectedSubjectId) {
-      alert("Please select a subject first.");
+      toast.error("Please select a subject first.");
       return;
     }
     setAssigning(teacher.id);
@@ -71,8 +73,9 @@ export function ClassAssignTeacherModal({
       await classesService.assignTeacher(classId, teacher.id, selectedSubjectId);
       onAssigned();
       onOpenChange(false);
+      toast.success("Teacher assigned to class");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to assign");
+      toast.error(err instanceof Error ? err.message : "Failed to assign");
     } finally {
       setAssigning(null);
     }

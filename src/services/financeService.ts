@@ -33,6 +33,7 @@ export interface StudentFee {
     amount: number;
     method: string;
     reference_number?: string;
+    method_detail?: string | null;
     notes?: string;
     status?: string;
     created_at: string;
@@ -166,15 +167,26 @@ export const financeService = {
     amount: number;
     method?: string;
     reference_number?: string;
+    method_detail?: string;
     notes?: string;
+    /** Optional: amounts per student_fee_item; must sum to `amount` when provided */
+    allocations?: { item_id: string; amount: number }[];
   }) => {
-    return apiPost("/api/finance/payments", {
+    const body: Record<string, unknown> = {
       student_fee_id: data.student_fee_id,
       amount: data.amount,
       method: data.method ?? "cash",
       reference_number: data.reference_number ?? null,
+      method_detail: data.method_detail?.trim() || null,
       notes: data.notes ?? null,
-    });
+    };
+    if (data.allocations && data.allocations.length > 0) {
+      body.allocations = data.allocations.map((a) => ({
+        item_id: a.item_id,
+        amount: a.amount,
+      }));
+    }
+    return apiPost("/api/finance/payments", body);
   },
 
   refundPayment: async (paymentId: string, notes?: string) =>

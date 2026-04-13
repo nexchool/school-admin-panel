@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Bus, Loader2, Pencil, Trash2, Users } from "lucide-react";
 import { FeeStructureFormModal } from "@/components/finance/FeeStructureFormModal";
+import { toast } from "sonner";
 import { useFeeStructure, useDeleteFeeStructure } from "@/hooks/useFeeStructures";
 
 function fmtDate(s: string) {
@@ -42,8 +43,12 @@ export default function FeeStructureDetailPage() {
   const handleDelete = async () => {
     if (!id || !confirm(`Delete "${structure?.name}"? This cannot be undone.`)) return;
     deleteStructure(id, {
-      onSuccess: () => router.push("/dashboard/finance/structures"),
-      onError: (err) => alert(err instanceof Error ? err.message : "Delete failed"),
+      onSuccess: () => {
+        toast.success("Fee structure deleted");
+        router.push("/dashboard/finance/structures");
+      },
+      onError: (err: unknown) =>
+        toast.error(err instanceof Error ? err.message : "Delete failed"),
     });
   };
 
