@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "@/services/api";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
 
 export interface AcademicYear {
   id: string;
@@ -45,5 +45,27 @@ export const academicYearsService = {
     const ay = (res as { academic_year?: AcademicYear })?.academic_year;
     if (!ay) throw new Error("Failed to create academic year");
     return ay;
+  },
+
+  updateAcademicYear: async (
+    id: string,
+    payload: Partial<{
+      name: string;
+      start_date: string;
+      end_date: string;
+      is_active: boolean;
+    }>
+  ): Promise<AcademicYear> => {
+    const res = await apiPut<{ academic_year?: AcademicYear }>(
+      `/api/academics/academic-years/${id}`,
+      payload
+    );
+    const ay = (res as { academic_year?: AcademicYear })?.academic_year;
+    if (!ay) throw new Error("Failed to update academic year");
+    return ay;
+  },
+
+  deleteAcademicYear: async (id: string): Promise<void> => {
+    await apiDelete(`/api/academics/academic-years/${id}`);
   },
 };

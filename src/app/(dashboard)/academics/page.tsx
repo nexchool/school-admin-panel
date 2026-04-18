@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   School,
   CalendarDays,
+  CalendarRange,
   Settings2,
   ChevronRight,
   Loader2,
@@ -42,6 +43,13 @@ export default function AcademicsPage() {
   });
 
   const sections = [
+    {
+      href: "/academics/academic-years",
+      label: "Academic years",
+      icon: CalendarRange,
+      description: "Create school years and date ranges (required before classes and fee structures)",
+      show: canManageSettings,
+    },
     {
       href: "/classes",
       label: "Classes",

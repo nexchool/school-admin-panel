@@ -203,7 +203,7 @@ export function FeeStructureFormModal({
             <div className="space-y-2">
               <Label>Academic Year *</Label>
               <Select
-                value={academicYearId}
+                value={academicYearId || undefined}
                 onValueChange={setAcademicYearId}
                 required
               >
@@ -218,6 +218,12 @@ export function FeeStructureFormModal({
                   ))}
                 </SelectContent>
               </Select>
+              {academicYears.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No academic years yet. Create one under Academics → Academic years before adding a fee
+                  structure.
+                </p>
+              )}
             </div>
           )}
           <div className="space-y-2">

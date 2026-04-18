@@ -32,7 +32,6 @@ import {
   useUpdateClassSubject,
 } from "@/hooks/useClassSubjects";
 import { subjectsService } from "@/services/subjectsService";
-import { classesService } from "@/services/classesService";
 import { classSubjectsService } from "@/services/classSubjectsService";
 import { ApiException } from "@/services/api";
 import type { ClassSubjectTableRow } from "@/types/classSubject";
@@ -76,9 +75,9 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
   });
 
   const availableTeachersQuery = useQuery({
-    queryKey: ["classes", "available-teachers", classId],
-    queryFn: () => classesService.getAvailableClassTeachers(classId),
-    enabled: canManage && !!classId,
+    queryKey: ["classes", "subject-teacher-candidates", classId],
+    queryFn: () => classSubjectsService.listSubjectTeacherCandidates(classId),
+    enabled: canManage && !!classId && subjectTeachersEnabled,
   });
 
   const createMutation = useCreateClassSubject(classId);

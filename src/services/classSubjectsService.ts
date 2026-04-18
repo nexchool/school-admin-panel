@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api";
+import type { Teacher } from "@/types/teacher";
 import type {
   ClassSubjectOffering,
   ClassSubjectTeacherAssignment,
@@ -47,6 +48,14 @@ export const classSubjectsService = {
   ): Promise<ClassSubjectTeacherAssignment[]> => {
     const data = await apiGet<{ items: ClassSubjectTeacherAssignment[] }>(
       `/api/classes/${encodeURIComponent(classId)}/subject-teachers`
+    );
+    return Array.isArray(data?.items) ? data.items : [];
+  },
+
+  /** Active teachers in the tenant — for assigning to class subjects (not homeroom picker). */
+  listSubjectTeacherCandidates: async (classId: string): Promise<Teacher[]> => {
+    const data = await apiGet<{ items: Teacher[] }>(
+      `/api/classes/${encodeURIComponent(classId)}/subject-teacher-candidates`
     );
     return Array.isArray(data?.items) ? data.items : [];
   },

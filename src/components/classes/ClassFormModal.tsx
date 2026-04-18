@@ -117,7 +117,7 @@ export function ClassFormModal({
           <div className="space-y-2">
             <Label>Academic Year</Label>
             <Select
-              value={academicYearId}
+              value={academicYearId || undefined}
               onValueChange={setAcademicYearId}
               required
             >

@@ -20,7 +20,6 @@ import {
   Clock,
 } from "lucide-react";
 import { MetricCard } from "@/components/finance/MetricCard";
-import { StatusBadge } from "@/components/finance/StatusBadge";
 import { FeeStructureFormModal } from "@/components/finance/FeeStructureFormModal";
 import {
   PaymentModal,
@@ -28,6 +27,7 @@ import {
 } from "@/components/finance/PaymentModal";
 import { useFinanceSummary } from "@/hooks/useFinanceSummary";
 import { useStudentFees } from "@/hooks/useStudentFees";
+import { ApiException } from "@/services/api";
 
 function fmtAmount(n: number | undefined | null) {
   if (n == null) return "₹0";
@@ -56,13 +56,34 @@ export default function FinanceDashboardPage() {
     items?: PaymentFeeItem[];
   } | null>(null);
 
-  const { data: summary, isLoading: summaryLoading } = useFinanceSummary({
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryFailed,
+    error: summaryError,
+    refetch: refetchSummary,
+  } = useFinanceSummary({
     include_recent_payments: 10,
   });
 
-  const { data: overduefees = [], isLoading: overdueLoading } = useStudentFees({
+  const {
+    data: overduefees = [],
+    isLoading: overdueLoading,
+    isError: overdueFailed,
+    error: overdueError,
+    refetch: refetchOverdue,
+  } = useStudentFees({
     status: "overdue",
   });
+
+  const financeLoadFailed = summaryFailed || overdueFailed;
+  const financeError = summaryFailed ? summaryError : overdueError;
+  const financeErrorText =
+    financeError instanceof ApiException
+      ? financeError.message
+      : financeError instanceof Error
+        ? financeError.message
+        : "Something went wrong while loading finance data.";
 
   const recentPayments = summary?.recent_payments ?? [];
   const collectionRate =
@@ -72,6 +93,39 @@ export default function FinanceDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {financeLoadFailed && (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base text-destructive">
+              <AlertCircle className="size-5 shrink-0" />
+              Finance data could not be loaded
+            </CardTitle>
+            <CardDescription className="text-destructive/90">{financeErrorText}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              If this is a new school, create an{" "}
+              <Link href="/academics/academic-years" className="font-medium text-foreground underline underline-offset-4">
+                academic year
+              </Link>{" "}
+              first, then classes and fee structures. If your plan does not include fees, contact your
+              platform administrator.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => {
+                void refetchSummary();
+                void refetchOverdue();
+              }}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
