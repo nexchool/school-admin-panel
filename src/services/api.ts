@@ -64,8 +64,11 @@ const apiRequest = async (
       msg === "Failed to fetch" ||
       msg === "Load failed" ||
       msg.includes("NetworkError when attempting to fetch");
+    const isDev = process.env.NODE_ENV === "development";
     const friendly = isNetworkFail
-      ? "Cannot reach the server. Make sure Docker is up and open the app via nginx (e.g. http://localhost:80) if you use direct Next ports."
+      ? isDev
+        ? "Cannot reach the API. If you run locally, start Docker and open the app through your gateway (for example http://localhost:80) instead of only the Next.js port."
+        : "We could not reach the server. Check your internet connection, wait a moment, and try again. If it keeps happening, sign out and sign back in, or contact your school administrator."
       : msg;
     throw new ApiException(friendly, 0, { originalError: msg, url });
   }
