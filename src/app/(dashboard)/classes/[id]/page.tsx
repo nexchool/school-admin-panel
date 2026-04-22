@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -10,9 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useClass, useUpdateClass, useDeleteClass } from "@/hooks/useClasses";
+import {
+  useClass,
+  useUpdateClass,
+  useDeleteClass,
+  classesKeys,
+} from "@/hooks/useClasses";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
-import { useQueryClient } from "@tanstack/react-query";
 import { classesService } from "@/services/classesService";
 import { ClassFormModal } from "@/components/classes/ClassFormModal";
 import { ClassAssignStudentModal } from "@/components/classes/ClassAssignStudentModal";
@@ -20,11 +26,26 @@ import { ClassAssignTeacherModal } from "@/components/classes/ClassAssignTeacher
 import { ClassSubjectsSection } from "@/modules/classes/components/ClassSubjectsSection";
 import { ClassTimetableReadOnly } from "@/components/timetable/ClassTimetableReadOnly";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { classesKeys } from "@/hooks/useClasses";
-import { cn } from "@/lib/utils";
+import {
+  EntityHeader,
+  QuickStats,
+  TabNav,
+  type TabNavItem,
+  type ProfileHeaderBadge,
+  type QuickStatItem,
+} from "@/components/detail";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Loader2, Plus, UserMinus, CalendarDays } from "lucide-react";
-import { useState } from "react";
+import {
+  Loader2,
+  Plus,
+  UserMinus,
+  CalendarDays,
+  GraduationCap,
+  Users,
+  BookOpen,
+  User,
+  Hash,
+} from "lucide-react";
 
 type ClassDetailTab = "students" | "teachers" | "subjects" | "timetable";
 
@@ -42,7 +63,9 @@ export default function ClassDetailPage() {
   const [detailTab, setDetailTab] = useState<ClassDetailTab>("students");
   const { data: cls, isLoading } = useClass(id ?? null);
   const { data: academicYears = [] } = useAcademicYears(false);
-  const [availableTeachers, setAvailableTeachers] = useState<{ id: string; name: string; employee_id: string }[]>([]);
+  const [availableTeachers, setAvailableTeachers] = useState<
+    { id: string; name: string; employee_id: string }[]
+  >([]);
   const updateMutation = useUpdateClass();
   const deleteMutation = useDeleteClass();
   const [editOpen, setEditOpen] = useState(false);
@@ -72,7 +95,12 @@ export default function ClassDetailPage() {
     setEditOpen(true);
   };
 
-  const handleUpdate = async (data: { name: string; section: string; academic_year_id: string; teacher_id?: string }) => {
+  const handleUpdate = async (data: {
+    name: string;
+    section: string;
+    academic_year_id: string;
+    teacher_id?: string;
+  }) => {
     if (!id) return;
     try {
       await updateMutation.mutateAsync({ id, data });
@@ -142,120 +170,80 @@ export default function ClassDetailPage() {
     );
   }
 
+  const classTitle = cls.section ? `${cls.name} — ${cls.section}` : cls.name;
+  const studentCount = cls.students?.length ?? 0;
+  const teacherCount = cls.teachers?.length ?? 0;
+
+  const badges: ProfileHeaderBadge[] = [];
+  if (cls.academic_year) {
+    badges.push({
+      label: cls.academic_year,
+      variant: "secondary",
+      icon: CalendarDays,
+    });
+  }
+  if (cls.teacher_name) {
+    badges.push({
+      label: `Class Teacher: ${cls.teacher_name}`,
+      variant: "outline",
+      icon: User,
+    });
+  }
+
+  const statsItems: QuickStatItem[] = [
+    { icon: Hash, label: "Section", value: cls.section },
+    { icon: CalendarDays, label: "Academic Year", value: cls.academic_year },
+    { icon: User, label: "Class Teacher", value: cls.teacher_name ?? "Unassigned" },
+    { icon: Users, label: "Students", value: studentCount },
+    { icon: BookOpen, label: "Subject Teachers", value: teacherCount },
+  ];
+
+  const tabs: TabNavItem<ClassDetailTab>[] = [
+    { id: "students", label: "Students", icon: Users, badge: studentCount },
+    { id: "teachers", label: "Teachers", icon: User, badge: teacherCount },
+    ...(showSubjectsTab
+      ? [{ id: "subjects" as const, label: "Subjects", icon: BookOpen }]
+      : []),
+    { id: "timetable", label: "Timetable", icon: CalendarDays },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/classes">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="size-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {cls.name} - {cls.section}
-            </h1>
-            <p className="text-muted-foreground">
-              {cls.academic_year ?? "—"}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleEditOpen} className="gap-2">
-            <Pencil className="size-4" />
-            Edit
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            className="gap-2"
-          >
-            <Trash2 className="size-4" />
-            Delete
-          </Button>
-        </div>
-      </div>
+      <EntityHeader
+        icon={GraduationCap}
+        title={classTitle}
+        subtitle={cls.academic_year ?? undefined}
+        badges={badges}
+        backHref="/classes"
+        backLabel="Back to Classes"
+        onEdit={handleEditOpen}
+        onDelete={handleDelete}
+        isDeleting={deleteMutation.isPending}
+      />
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Class Information</CardTitle>
-            <CardDescription>Basic class details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <InfoRow label="Name" value={cls.name} />
-            <InfoRow label="Section" value={cls.section} />
-            <InfoRow label="Academic Year" value={cls.academic_year} />
-            <InfoRow label="Class Teacher" value={cls.teacher_name} />
-          </CardContent>
-        </Card>
+      <QuickStats items={statsItems} />
 
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-1 border-b border-border">
-            <button
-              type="button"
-              className={cn(
-                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                detailTab === "students"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-              onClick={() => setDetailTab("students")}
-            >
-              Students
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                detailTab === "teachers"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-              onClick={() => setDetailTab("teachers")}
-            >
-              Teachers
-            </button>
-            {showSubjectsTab && (
-              <button
-                type="button"
-                className={cn(
-                  "-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                  detailTab === "subjects"
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-                onClick={() => setDetailTab("subjects")}
-              >
-                Subjects
-              </button>
-            )}
-            <button
-              type="button"
-              className={cn(
-                "-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                detailTab === "timetable"
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-              onClick={() => setDetailTab("timetable")}
-            >
-              <CalendarDays className="size-3.5" />
-              Timetable
-            </button>
-          </div>
+      <div className="space-y-5 pt-2">
+        <TabNav tabs={tabs} active={detailTab} onChange={setDetailTab} />
 
+        <div className="min-h-[300px]">
           {detailTab === "students" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle>Students</CardTitle>
+              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Users className="size-4 text-muted-foreground" />
+                    Students
+                  </CardTitle>
                   <CardDescription>
-                    {cls.students?.length ?? 0} students enrolled
+                    {studentCount} student{studentCount === 1 ? "" : "s"} enrolled
                   </CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setStudentPickerOpen(true)} className="gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => setStudentPickerOpen(true)}
+                  className="gap-1"
+                >
                   <Plus className="size-4" />
                   Add
                 </Button>
@@ -268,10 +256,18 @@ export default function ClassDetailPage() {
                         key={s.id}
                         className="flex items-center justify-between rounded-lg border border-border p-3"
                       >
-                        <div>
-                          <p className="font-medium">{s.name}</p>
-                          <p className="text-xs text-muted-foreground">{s.admission_number}</p>
-                        </div>
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => router.push(`/students/${s.id}`)}
+                        >
+                          <p className="truncate font-medium text-sm hover:text-primary">
+                            {s.name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {s.admission_number}
+                          </p>
+                        </button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -289,7 +285,7 @@ export default function ClassDetailPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No students assigned yet.</p>
+                  <EmptyState message="No students assigned yet." />
                 )}
               </CardContent>
             </Card>
@@ -297,14 +293,21 @@ export default function ClassDetailPage() {
 
           {detailTab === "teachers" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle>Teachers</CardTitle>
+              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <User className="size-4 text-muted-foreground" />
+                    Teachers
+                  </CardTitle>
                   <CardDescription>
                     Subject teachers assigned to this class
                   </CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setTeacherPickerOpen(true)} className="gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => setTeacherPickerOpen(true)}
+                  className="gap-1"
+                >
                   <Plus className="size-4" />
                   Add
                 </Button>
@@ -317,13 +320,22 @@ export default function ClassDetailPage() {
                         key={t.id}
                         className="flex items-center justify-between rounded-lg border border-border p-3"
                       >
-                        <div>
-                          <p className="font-medium">{t.teacher_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {t.subject_name ?? "Subject"}
-                            {t.teacher_employee_id && ` • ${t.teacher_employee_id}`}
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() =>
+                            router.push(`/teachers/${t.teacher_id}`)
+                          }
+                        >
+                          <p className="truncate font-medium text-sm hover:text-primary">
+                            {t.teacher_name}
                           </p>
-                        </div>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {t.subject_name ?? "Subject"}
+                            {t.teacher_employee_id &&
+                              ` • ${t.teacher_employee_id}`}
+                          </p>
+                        </button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -341,7 +353,7 @@ export default function ClassDetailPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No teachers assigned yet.</p>
+                  <EmptyState message="No teachers assigned yet." />
                 )}
               </CardContent>
             </Card>
@@ -353,19 +365,21 @@ export default function ClassDetailPage() {
 
           {detailTab === "timetable" && id && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle>Timetable</CardTitle>
-                  <CardDescription>Active schedule for this class</CardDescription>
+              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <CalendarDays className="size-4 text-muted-foreground" />
+                    Timetable
+                  </CardTitle>
+                  <CardDescription>
+                    Active schedule for this class
+                  </CardDescription>
                 </div>
                 <Link href={`/timetable/${id}`}>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
-                  >
-                    <CalendarDays className="size-3.5" />
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <CalendarDays className="size-4" />
                     Manage timetable
-                  </button>
+                  </Button>
                 </Link>
               </CardHeader>
               <CardContent>
@@ -402,12 +416,8 @@ export default function ClassDetailPage() {
   );
 }
 
-function InfoRow({ label, value }: { label: string; value?: string | null }) {
-  if (value == null || value === "") return null;
+function EmptyState({ message }: { message: string }) {
   return (
-    <div>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="text-sm">{value}</p>
-    </div>
+    <p className="py-6 text-center text-sm text-muted-foreground">{message}</p>
   );
 }

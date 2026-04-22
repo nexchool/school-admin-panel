@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { teacherWorkloadService } from "@/services/teacherConstraintService";
+import { ApiException } from "@/services/api";
 import type { TeacherWorkload } from "@/types/teacher";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { InfoBanner, DetailTable } from "@/components/detail";
 
 interface TeacherWorkloadTabProps {
   teacherId: string;
@@ -17,6 +25,7 @@ interface TeacherWorkloadTabProps {
 export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
   const [workload, setWorkload] = useState<TeacherWorkload | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [maxPerDay, setMaxPerDay] = useState("6");
   const [maxPerWeek, setMaxPerWeek] = useState("30");
   const [saving, setSaving] = useState(false);
@@ -24,6 +33,7 @@ export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await teacherWorkloadService.getWorkload(teacherId);
       if (data) {
@@ -35,11 +45,18 @@ export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
         setMaxPerDay("6");
         setMaxPerWeek("30");
       }
-    } catch {
+    } catch (err) {
       setWorkload(null);
       setMaxPerDay("6");
       setMaxPerWeek("30");
-      toast.error("Could not load workload");
+      // A 404 just means no workload is configured yet. Don't treat as an error.
+      if (err instanceof ApiException && err.status === 404) {
+        // Silent — handled by the "not configured" banner below.
+      } else {
+        const msg =
+          err instanceof Error ? err.message : "Could not load workload";
+        setLoadError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -91,80 +108,118 @@ export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <div>
-          <CardTitle>Workload</CardTitle>
-          <CardDescription>
-            Max periods per day/week (for timetable generation)
-          </CardDescription>
-        </div>
-        {!editing && (
-          <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-            Edit
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        {editing ? (
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Max periods per day</Label>
-              <Input
-                type="number"
-                min={1}
-                max={12}
-                value={maxPerDay}
-                onChange={(e) => setMaxPerDay(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Max periods per week</Label>
-              <Input
-                type="number"
-                min={1}
-                max={50}
-                value={maxPerWeek}
-                onChange={(e) => setMaxPerWeek(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setEditing(false);
-                  if (workload) {
-                    setMaxPerDay(String(workload.max_periods_per_day));
-                    setMaxPerWeek(String(workload.max_periods_per_week));
-                  }
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm">
-              <span className="font-medium">Max per day:</span>{" "}
-              {workload?.max_periods_per_day ?? "—"}
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Max per week:</span>{" "}
-              {workload?.max_periods_per_week ?? "—"}
-            </p>
-            {!workload && (
-              <p className="text-sm text-muted-foreground">
-                No workload configured. Click Edit to set limits.
+    <div className="space-y-4">
+      {!workload && !loadError && !editing && (
+        <InfoBanner
+          tone="warning"
+          icon={AlertTriangle}
+          title="Workload not configured"
+          description={
+            <>
+              <p>
+                Please add a workload for this teacher to enable better
+                timetable generation.
               </p>
-            )}
+              <p className="mt-1">
+                It is strongly advisable to configure a workload — these limits
+                (max periods per day/week) are used by the timetable generator
+                to avoid over-assigning periods to a teacher.
+              </p>
+            </>
+          }
+          actions={
+            <Button size="sm" onClick={() => setEditing(true)} className="gap-1.5">
+              <Plus className="size-4" />
+              Add Workload
+            </Button>
+          }
+        />
+      )}
+
+      {loadError && (
+        <InfoBanner
+          tone="warning"
+          icon={AlertTriangle}
+          title="Could not load workload"
+          description={loadError}
+          actions={
+            <Button size="sm" variant="outline" onClick={loadData}>
+              Retry
+            </Button>
+          }
+        />
+      )}
+
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0">
+          <div className="space-y-1">
+            <CardTitle className="text-base">Workload</CardTitle>
+            <CardDescription>
+              Max periods per day / week (for timetable generation)
+            </CardDescription>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          {!editing && workload && (
+            <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {editing ? (
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Max periods per day</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={maxPerDay}
+                  onChange={(e) => setMaxPerDay(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Max periods per week</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={maxPerWeek}
+                  onChange={(e) => setMaxPerWeek(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : workload ? "Save" : "Create"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditing(false);
+                    if (workload) {
+                      setMaxPerDay(String(workload.max_periods_per_day));
+                      setMaxPerWeek(String(workload.max_periods_per_week));
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : workload ? (
+            <DetailTable
+              rows={[
+                ["Max periods per day", workload.max_periods_per_day],
+                ["Max periods per week", workload.max_periods_per_week],
+              ]}
+            />
+          ) : (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No workload configured yet.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

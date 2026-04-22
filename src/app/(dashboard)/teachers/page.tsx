@@ -20,6 +20,7 @@ import { teacherLeaveService } from "@/services/teacherConstraintService";
 import type { Teacher, TeacherLeave } from "@/types/teacher";
 import { Plus, Search, Upload, ClipboardList, Users, Check, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { TabNav, type TabNavItem } from "@/components/detail";
 
 type PageView = "teachers" | "leaves";
 
@@ -253,32 +254,22 @@ export default function TeachersPage() {
         )}
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-border">
-        <Button
-          variant={view === "teachers" ? "secondary" : "ghost"}
-          size="sm"
-          className="rounded-b-none gap-2"
-          onClick={() => setView("teachers")}
-        >
-          <Users className="size-4" />
-          All Teachers
-        </Button>
-        <Button
-          variant={view === "leaves" ? "secondary" : "ghost"}
-          size="sm"
-          className="rounded-b-none gap-2"
-          onClick={() => setView("leaves")}
-        >
-          <ClipboardList className="size-4" />
-          Leave Requests
-          {pendingCount > 0 && (
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground">
-              {pendingCount}
-            </span>
-          )}
-        </Button>
-      </div>
+      <TabNav
+        tabs={
+          [
+            { id: "teachers", label: "All Teachers", icon: Users },
+            {
+              id: "leaves",
+              label: "Leave Requests",
+              icon: ClipboardList,
+              badge: pendingCount,
+              badgeTone: "destructive",
+            },
+          ] satisfies TabNavItem<PageView>[]
+        }
+        active={view}
+        onChange={setView}
+      />
 
       {view === "teachers" && (
         <Card>

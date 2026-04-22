@@ -1,53 +1,63 @@
 "use client";
 
+import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTeacher, useUpdateTeacher, useDeleteTeacher } from "@/hooks/useTeachers";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useTeacher,
+  useUpdateTeacher,
+  useDeleteTeacher,
+  teachersKeys,
+} from "@/hooks/useTeachers";
 import { TeacherFormModal } from "@/components/teachers/TeacherFormModal";
 import { TeacherSubjectsTab } from "@/components/teachers/TeacherSubjectsTab";
 import { TeacherAvailabilityTab } from "@/components/teachers/TeacherAvailabilityTab";
 import { TeacherLeavesTab } from "@/components/teachers/TeacherLeavesTab";
 import { TeacherWorkloadTab } from "@/components/teachers/TeacherWorkloadTab";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Pencil, Trash2, Loader2, User, BookOpen, Calendar, ClipboardList, BarChart3 } from "lucide-react";
-import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  ProfileHeader,
+  QuickStats,
+  TabNav,
+  SectionCard,
+  DetailTable,
+  formatDate,
+  getStatusVariant,
+  type TabNavItem,
+  type ProfileHeaderBadge,
+  type QuickStatItem,
+} from "@/components/detail";
+import {
+  Loader2,
+  User,
+  BookOpen,
+  Calendar,
+  ClipboardList,
+  BarChart3,
+  Mail,
+  Phone,
+  Briefcase,
+  GraduationCap,
+  Hash,
+  Building2,
+} from "lucide-react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { teachersKeys } from "@/hooks/useTeachers";
-import type { UpdateTeacherInput } from "@/types/teacher";
+import type { Teacher, UpdateTeacherInput } from "@/types/teacher";
 
 type TabKey = "info" | "subjects" | "availability" | "leaves" | "workload";
 
-const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
-  { key: "info", label: "Info", icon: User },
-  { key: "subjects", label: "Subjects", icon: BookOpen },
-  { key: "availability", label: "Availability", icon: Calendar },
-  { key: "leaves", label: "Leaves", icon: ClipboardList },
-  { key: "workload", label: "Workload", icon: BarChart3 },
+const TABS: TabNavItem<TabKey>[] = [
+  { id: "info", label: "Info", icon: User },
+  { id: "subjects", label: "Subjects", icon: BookOpen },
+  { id: "availability", label: "Availability", icon: Calendar },
+  { id: "leaves", label: "Leaves", icon: ClipboardList },
+  { id: "workload", label: "Workload", icon: BarChart3 },
 ];
 
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | number | null;
-}) {
-  if (value == null || value === "") return null;
-  return (
-    <div>
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="text-sm">{value}</p>
-    </div>
-  );
-}
+const TAB_IDS: TabKey[] = TABS.map((t) => t.id);
 
 export default function TeacherDetailPage() {
   const params = useParams();
@@ -61,9 +71,7 @@ export default function TeacherDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const initialTab = (searchParams?.get("tab") as TabKey | null) ?? "info";
   const [activeTab, setActiveTab] = useState<TabKey>(
-    (["info", "subjects", "availability", "leaves", "workload"] as TabKey[]).includes(initialTab)
-      ? initialTab
-      : "info"
+    TAB_IDS.includes(initialTab) ? initialTab : "info"
   );
 
   const refreshTeacher = () => {
@@ -112,133 +120,83 @@ export default function TeacherDetailPage() {
     );
   }
 
+  const badges: ProfileHeaderBadge[] = [];
+  if (teacher.designation) {
+    badges.push({
+      label: teacher.designation,
+      variant: "secondary",
+      icon: Briefcase,
+    });
+  }
+  if (teacher.department) {
+    badges.push({
+      label: teacher.department,
+      variant: "outline",
+      icon: Building2,
+    });
+  }
+  if (teacher.status) {
+    badges.push({
+      label: teacher.status,
+      variant: getStatusVariant(teacher.status),
+    });
+  }
+
+  const statsItems: QuickStatItem[] = [
+    { icon: Hash, label: "Employee ID", value: teacher.employee_id },
+    { icon: Briefcase, label: "Designation", value: teacher.designation },
+    { icon: Building2, label: "Department", value: teacher.department },
+    {
+      icon: Calendar,
+      label: "Joined",
+      value: formatDate(teacher.date_of_joining),
+    },
+    {
+      icon: GraduationCap,
+      label: "Experience",
+      value:
+        teacher.experience_years != null
+          ? `${teacher.experience_years} yrs`
+          : undefined,
+    },
+    {
+      icon: BookOpen,
+      label: "Subjects",
+      value: teacher.subjects?.length ?? 0,
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/teachers">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="size-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {teacher.name}
-            </h1>
-            <p className="text-muted-foreground">
-              {teacher.employee_id}
-              {teacher.designation && ` • ${teacher.designation}`}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)} className="gap-2">
-            <Pencil className="size-4" />
-            Edit
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            className="gap-2"
-          >
-            <Trash2 className="size-4" />
-            Delete
-          </Button>
+      <ProfileHeader
+        name={teacher.name}
+        subtitle={`Employee ID: ${teacher.employee_id}`}
+        profilePicture={teacher.profile_picture}
+        badges={badges}
+        backHref="/teachers"
+        backLabel="Back to Teachers"
+        onEdit={() => setEditOpen(true)}
+        onDelete={handleDelete}
+        isDeleting={deleteMutation.isPending}
+      />
+
+      <QuickStats items={statsItems} />
+
+      <div className="space-y-5 pt-2">
+        <TabNav tabs={TABS} active={activeTab} onChange={setActiveTab} />
+
+        <div className="min-h-[300px]">
+          {activeTab === "info" && <InfoTab teacher={teacher} />}
+          {activeTab === "subjects" && (
+            <TeacherSubjectsTab teacherId={id} onRefresh={refreshTeacher} />
+          )}
+          {activeTab === "availability" && (
+            <TeacherAvailabilityTab teacherId={id} />
+          )}
+          {activeTab === "leaves" && <TeacherLeavesTab teacherId={id} />}
+          {activeTab === "workload" && <TeacherWorkloadTab teacherId={id} />}
         </div>
       </div>
-
-      <div className="flex gap-1 border-b border-border">
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <Button
-            key={key}
-            variant={activeTab === key ? "secondary" : "ghost"}
-            size="sm"
-            className="rounded-b-none"
-            onClick={() => setActiveTab(key)}
-          >
-            <Icon className="size-4" />
-            {label}
-          </Button>
-        ))}
-      </div>
-
-      {activeTab === "info" && (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-            <CardDescription>Employee and role details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <InfoRow label="Employee ID" value={teacher.employee_id} />
-            <InfoRow label="Designation" value={teacher.designation} />
-            <InfoRow label="Department" value={teacher.department} />
-            <InfoRow label="Status" value={teacher.status} />
-            <InfoRow label="Date of Joining" value={teacher.date_of_joining} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-            <CardDescription>Email, phone, address</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <InfoRow label="Email" value={teacher.email} />
-            <InfoRow label="Phone" value={teacher.phone} />
-            <InfoRow label="Address" value={teacher.address} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Qualifications</CardTitle>
-            <CardDescription>Education and expertise</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <InfoRow label="Qualification" value={teacher.qualification} />
-            <InfoRow label="Specialization" value={teacher.specialization} />
-            <InfoRow label="Experience (years)" value={teacher.experience_years} />
-          </CardContent>
-        </Card>
-
-        {teacher.subjects && teacher.subjects.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Subjects</CardTitle>
-              <CardDescription>Teaching subjects</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {teacher.subjects.map((s) => (
-                  <span
-                    key={s.id}
-                    className="rounded-full bg-primary/10 px-3 py-1 text-sm"
-                  >
-                    {s.name}
-                    {s.code && ` (${s.code})`}
-                  </span>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-      )}
-
-      {activeTab === "subjects" && (
-        <TeacherSubjectsTab teacherId={id} onRefresh={refreshTeacher} />
-      )}
-      {activeTab === "availability" && (
-        <TeacherAvailabilityTab teacherId={id} />
-      )}
-      {activeTab === "leaves" && (
-        <TeacherLeavesTab teacherId={id} />
-      )}
-      {activeTab === "workload" && (
-        <TeacherWorkloadTab teacherId={id} />
-      )}
 
       <TeacherFormModal
         open={editOpen}
@@ -247,5 +205,100 @@ export default function TeacherDetailPage() {
         onSubmit={handleUpdate}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Info tab
+// ---------------------------------------------------------------------------
+
+function InfoTab({ teacher }: { teacher: Teacher }) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <SectionCard
+        title="Basic Information"
+        description="Employee and role details"
+        icon={User}
+      >
+        <DetailTable
+          rows={[
+            ["Full Name", teacher.name],
+            ["Employee ID", teacher.employee_id],
+            ["Designation", teacher.designation],
+            ["Department", teacher.department],
+            ["Status", teacher.status],
+            ["Date of Joining", formatDate(teacher.date_of_joining)],
+          ]}
+        />
+      </SectionCard>
+
+      <SectionCard
+        title="Contact"
+        description="Email, phone, address"
+        icon={Mail}
+      >
+        <DetailTable
+          rows={[
+            ["Email", teacher.email],
+            ["Phone", teacher.phone],
+            ["Address", teacher.address],
+          ]}
+        />
+      </SectionCard>
+
+      <SectionCard
+        title="Qualifications"
+        description="Education and expertise"
+        icon={GraduationCap}
+      >
+        <DetailTable
+          rows={[
+            ["Qualification", teacher.qualification],
+            ["Specialization", teacher.specialization],
+            [
+              "Experience",
+              teacher.experience_years != null
+                ? `${teacher.experience_years} year${
+                    teacher.experience_years === 1 ? "" : "s"
+                  }`
+                : undefined,
+            ],
+          ]}
+        />
+      </SectionCard>
+
+      <SectionCard
+        title="Subjects"
+        description="Teaching subjects"
+        icon={BookOpen}
+      >
+        {teacher.subjects && teacher.subjects.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {teacher.subjects.map((s) => (
+              <Badge key={s.id} variant="secondary" className="text-sm font-normal">
+                {s.name}
+                {s.code && (
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    {s.code}
+                  </span>
+                )}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <EmptyInline message="No subjects assigned yet. Use the Subjects tab to add expertise." />
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+function EmptyInline({ message }: { message: string }) {
+  return (
+    <Card className="border-dashed shadow-none">
+      <CardContent className="py-4 text-center text-sm text-muted-foreground">
+        {message}
+      </CardContent>
+    </Card>
   );
 }
