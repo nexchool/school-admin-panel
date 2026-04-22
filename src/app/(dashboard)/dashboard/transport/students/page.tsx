@@ -127,7 +127,7 @@ export default function TransportStudentsPage() {
 
   const studentById = useMemo(() => {
     const m = new Map<string, Student>();
-    for (const s of studentsQ.data ?? []) m.set(s.id, s);
+    for (const s of studentsQ.data?.items ?? []) m.set(s.id, s);
     return m;
   }, [studentsQ.data]);
 
@@ -349,7 +349,7 @@ export default function TransportStudentsPage() {
       <EnrollmentWizardModal
         open={wizardOpen}
         onOpenChange={setWizardOpen}
-        students={studentsQ.data ?? []}
+        students={studentsQ.data?.items ?? []}
         routes={routesQ.data ?? []}
         onDone={invalidate}
       />

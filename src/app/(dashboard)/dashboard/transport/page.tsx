@@ -105,7 +105,7 @@ export default function TransportOverviewPage() {
     const buses = busesQ.data ?? [];
     const routes = routesQ.data ?? [];
     const enrollments = enrQ.data ?? [];
-    const students = studentsQ.data ?? [];
+    const students = studentsQ.data?.items ?? [];
 
     const activeEnrStudentIds = new Set(
       enrollments.filter((e) => e.status === "active").map((e) => e.student_id)

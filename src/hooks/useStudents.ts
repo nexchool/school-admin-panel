@@ -1,31 +1,34 @@
 "use client";
 
 import {
+  keepPreviousData,
   useQuery,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { studentsService } from "@/services/studentsService";
+import {
+  studentsService,
+  type StudentsListParams,
+  type StudentsListResult,
+} from "@/services/studentsService";
 import type {
-  Student,
   CreateStudentInput,
   UpdateStudentInput,
 } from "@/types/student";
 
 export const studentsKeys = {
   all: ["students"] as const,
-  list: (params?: { search?: string; class_id?: string }) =>
+  list: (params?: StudentsListParams) =>
     [...studentsKeys.all, "list", params] as const,
   detail: (id: string) => [...studentsKeys.all, "detail", id] as const,
 };
 
-export function useStudents(params?: {
-  search?: string;
-  class_id?: string;
-}) {
-  return useQuery({
+export function useStudents(params?: StudentsListParams) {
+  return useQuery<StudentsListResult>({
     queryKey: studentsKeys.list(params),
     queryFn: () => studentsService.getStudents(params),
+    // Keep showing the previous page while a new page/search is fetching.
+    placeholderData: keepPreviousData,
   });
 }
 
