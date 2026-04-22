@@ -412,12 +412,15 @@ export function SectionCard({
   );
 }
 
-export type DetailRow = [label: string, value: string | number | null | undefined];
+export type DetailRow = [label: string, value: ReactNode];
 
 export function DetailTable({ rows }: { rows: DetailRow[] }) {
-  const filled = rows.filter(
-    ([, v]) => v != null && v !== "" && !(typeof v === "number" && Number.isNaN(v))
-  );
+  const filled = rows.filter(([, v]) => {
+    if (v == null || v === false) return false;
+    if (typeof v === "string") return v !== "";
+    if (typeof v === "number") return !Number.isNaN(v);
+    return true;
+  });
   if (filled.length === 0) {
     return (
       <p className="py-4 text-center text-sm text-muted-foreground">
@@ -437,7 +440,7 @@ export function DetailTable({ rows }: { rows: DetailRow[] }) {
             )}
           >
             <dt className="font-medium text-muted-foreground">{label}</dt>
-            <dd className="break-words text-foreground">{String(value)}</dd>
+            <dd className="break-words text-foreground">{value}</dd>
           </div>
         ))}
       </dl>

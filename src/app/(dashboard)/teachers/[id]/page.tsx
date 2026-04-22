@@ -239,7 +239,17 @@ function InfoTab({ teacher }: { teacher: Teacher }) {
       >
         <DetailTable
           rows={[
-            ["Email", teacher.email],
+            [
+              "Email",
+              teacher.email ? (
+                <a
+                  href={`mailto:${teacher.email}`}
+                  className="text-primary hover:underline"
+                >
+                  {teacher.email}
+                </a>
+              ) : null,
+            ],
             ["Phone", teacher.phone],
             ["Address", teacher.address],
           ]}

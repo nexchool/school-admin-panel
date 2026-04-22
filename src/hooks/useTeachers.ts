@@ -1,11 +1,16 @@
 "use client";
 
 import {
+  keepPreviousData,
   useQuery,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { teachersService } from "@/services/teachersService";
+import {
+  teachersService,
+  type TeachersListParams,
+  type TeachersListResult,
+} from "@/services/teachersService";
 import type {
   Teacher,
   CreateTeacherInput,
@@ -15,18 +20,16 @@ import type {
 
 export const teachersKeys = {
   all: ["teachers"] as const,
-  list: (params?: { search?: string; status?: string }) =>
+  list: (params?: TeachersListParams) =>
     [...teachersKeys.all, "list", params] as const,
   detail: (id: string) => [...teachersKeys.all, "detail", id] as const,
 };
 
-export function useTeachers(params?: {
-  search?: string;
-  status?: string;
-}) {
-  return useQuery({
+export function useTeachers(params?: TeachersListParams) {
+  return useQuery<TeachersListResult>({
     queryKey: teachersKeys.list(params),
     queryFn: () => teachersService.getTeachers(params),
+    placeholderData: keepPreviousData,
   });
 }
 
