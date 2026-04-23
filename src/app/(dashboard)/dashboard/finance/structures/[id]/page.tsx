@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Bus, Loader2, Pencil, Trash2, Users } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FeeStructureFormModal } from "@/components/finance/FeeStructureFormModal";
 import { toast } from "sonner";
 import { useFeeStructure, useDeleteFeeStructure } from "@/hooks/useFeeStructures";
@@ -33,23 +34,24 @@ export default function FeeStructureDetailPage() {
   const router = useRouter();
   const id = params?.id as string | undefined;
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { data: structure, isLoading } = useFeeStructure(id);
-  const { mutate: deleteStructure, isPending: deleting } = useDeleteFeeStructure();
+  const { mutateAsync: deleteStructureAsync, isPending: deleting } = useDeleteFeeStructure();
 
   const totalAmount =
     structure?.components?.reduce((sum, c) => sum + (c.amount ?? 0), 0) ?? 0;
 
-  const handleDelete = async () => {
-    if (!id || !confirm(`Delete "${structure?.name}"? This cannot be undone.`)) return;
-    deleteStructure(id, {
-      onSuccess: () => {
-        toast.success("Fee structure deleted");
-        router.push("/dashboard/finance/structures");
-      },
-      onError: (err: unknown) =>
-        toast.error(err instanceof Error ? err.message : "Delete failed"),
-    });
+  const performDelete = async () => {
+    if (!id) return;
+    try {
+      await deleteStructureAsync(id);
+      toast.success("Fee structure deleted");
+      router.push("/dashboard/finance/structures");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+      throw err;
+    }
   };
 
   if (isLoading || !id) {
@@ -101,7 +103,7 @@ export default function FeeStructureDetailPage() {
           </Button>
           <Button
             variant="destructive"
-            onClick={handleDelete}
+            onClick={() => setDeleteOpen(true)}
             disabled={deleting}
             className="gap-2"
           >
@@ -228,6 +230,17 @@ export default function FeeStructureDetailPage() {
         mode="edit"
         initialData={structure}
         onSuccess={() => setEditOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={structure ? `Delete “${structure.name}”?` : "Delete fee structure?"}
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleting}
+        onConfirm={performDelete}
       />
     </div>
   );

@@ -20,6 +20,7 @@ import {
 } from "@/hooks/useClasses";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { classesService } from "@/services/classesService";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ClassFormModal } from "@/components/classes/ClassFormModal";
 import { ClassAssignStudentModal } from "@/components/classes/ClassAssignStudentModal";
 import { ClassAssignTeacherModal } from "@/components/classes/ClassAssignTeacherModal";
@@ -73,6 +74,9 @@ export default function ClassDetailPage() {
   const [teacherPickerOpen, setTeacherPickerOpen] = useState(false);
   const [removingStudent, setRemovingStudent] = useState<string | null>(null);
   const [removingTeacher, setRemovingTeacher] = useState<string | null>(null);
+  const [deleteClassOpen, setDeleteClassOpen] = useState(false);
+  const [removeStudentId, setRemoveStudentId] = useState<string | null>(null);
+  const [removeTeacherId, setRemoveTeacherId] = useState<string | null>(null);
 
   const refreshClass = () => {
     if (id) {
@@ -112,19 +116,21 @@ export default function ClassDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!id || !confirm("Are you sure you want to delete this class?")) return;
+  const performDeleteClass = async () => {
+    if (!id) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Class deleted");
       router.push("/classes");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to delete class");
+      throw e;
     }
   };
 
-  const handleRemoveStudent = async (studentId: string) => {
-    if (!id || !confirm("Remove this student from the class?")) return;
+  const performRemoveStudent = async () => {
+    const studentId = removeStudentId;
+    if (!id || !studentId) return;
     setRemovingStudent(studentId);
     try {
       await classesService.removeStudent(id, studentId);
@@ -132,13 +138,15 @@ export default function ClassDetailPage() {
       toast.success("Student removed from class");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove");
+      throw err;
     } finally {
       setRemovingStudent(null);
     }
   };
 
-  const handleRemoveTeacher = async (teacherId: string) => {
-    if (!id || !confirm("Remove this teacher from the class?")) return;
+  const performRemoveTeacher = async () => {
+    const teacherId = removeTeacherId;
+    if (!id || !teacherId) return;
     setRemovingTeacher(teacherId);
     try {
       await classesService.removeTeacher(id, teacherId);
@@ -146,6 +154,7 @@ export default function ClassDetailPage() {
       toast.success("Teacher removed from class");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove");
+      throw err;
     } finally {
       setRemovingTeacher(null);
     }
@@ -217,7 +226,7 @@ export default function ClassDetailPage() {
         backHref="/classes"
         backLabel="Back to Classes"
         onEdit={handleEditOpen}
-        onDelete={handleDelete}
+        onDelete={() => setDeleteClassOpen(true)}
         isDeleting={deleteMutation.isPending}
       />
 
@@ -272,7 +281,7 @@ export default function ClassDetailPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleRemoveStudent(s.id)}
+                          onClick={() => setRemoveStudentId(s.id)}
                           disabled={removingStudent === s.id}
                         >
                           {removingStudent === s.id ? (
@@ -340,7 +349,7 @@ export default function ClassDetailPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleRemoveTeacher(t.teacher_id)}
+                          onClick={() => setRemoveTeacherId(t.teacher_id)}
                           disabled={removingTeacher === t.teacher_id}
                         >
                           {removingTeacher === t.teacher_id ? (
@@ -411,6 +420,39 @@ export default function ClassDetailPage() {
         onOpenChange={setTeacherPickerOpen}
         classId={id}
         onAssigned={refreshClass}
+      />
+
+      <ConfirmDialog
+        open={deleteClassOpen}
+        onOpenChange={setDeleteClassOpen}
+        title="Delete this class?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={performDeleteClass}
+      />
+
+      <ConfirmDialog
+        open={!!removeStudentId}
+        onOpenChange={(o) => !o && setRemoveStudentId(null)}
+        title="Remove student from class?"
+        description="The student will be unenrolled from this class."
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={!!removeStudentId && removingStudent === removeStudentId}
+        onConfirm={performRemoveStudent}
+      />
+
+      <ConfirmDialog
+        open={!!removeTeacherId}
+        onOpenChange={(o) => !o && setRemoveTeacherId(null)}
+        title="Remove teacher from class?"
+        description="This removes the subject teacher assignment for this class."
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={!!removeTeacherId && removingTeacher === removeTeacherId}
+        onConfirm={performRemoveTeacher}
       />
     </div>
   );

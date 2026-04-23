@@ -15,6 +15,7 @@ import {
   PenLine,
 } from "lucide-react";
 import type { TimetableVersion } from "@/types/timetable";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Props {
   versions: TimetableVersion[];
@@ -54,6 +55,8 @@ export function VersionSidebar({
   const [busy, setBusy] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmActivateId, setConfirmActivateId] = useState<string | null>(null);
 
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
@@ -169,7 +172,10 @@ export function VersionSidebar({
                   <button
                     type="button"
                     className="inline-flex items-center gap-1 rounded border border-green-200 bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
-                    onClick={(e) => { e.stopPropagation(); run(`activate-${v.id}`, () => onActivate(v.id)); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConfirmActivateId(v.id);
+                    }}
                     disabled={busy === `activate-${v.id}`}
                   >
                     {busy === `activate-${v.id}` ? <Loader2 className="size-3 animate-spin" /> : <Zap className="size-3" />}
@@ -192,8 +198,7 @@ export function VersionSidebar({
                     className="inline-flex items-center gap-1 rounded border border-destructive/30 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!confirm("Delete this draft permanently?")) return;
-                      run(`delete-${v.id}`, () => onDelete(v.id));
+                      setConfirmDeleteId(v.id);
                     }}
                     disabled={busy === `delete-${v.id}`}
                   >
@@ -206,6 +211,35 @@ export function VersionSidebar({
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmActivateId}
+        onOpenChange={(o) => !o && setConfirmActivateId(null)}
+        title="Activate this timetable?"
+        description="The current active version will be archived."
+        confirmLabel="Activate"
+        loading={!!confirmActivateId && busy === `activate-${confirmActivateId}`}
+        onConfirm={async () => {
+          const id = confirmActivateId;
+          if (!id) return;
+          await run(`activate-${id}`, () => onActivate(id));
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        onOpenChange={(o) => !o && setConfirmDeleteId(null)}
+        title="Delete this draft permanently?"
+        description="This removes the draft version and its entries. This cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={!!confirmDeleteId && busy === `delete-${confirmDeleteId}`}
+        onConfirm={async () => {
+          const id = confirmDeleteId;
+          if (!id) return;
+          await run(`delete-${id}`, () => onDelete(id));
+        }}
+      />
     </div>
   );
 }

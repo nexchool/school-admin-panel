@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { teacherAvailabilityService } from "@/services/teacherConstraintService";
 import type { TeacherAvailability } from "@/types/teacher";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
   const [available, setAvailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteSlotId, setDeleteSlotId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -78,8 +80,9 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this availability slot?")) return;
+  const performDeleteSlot = async () => {
+    const id = deleteSlotId;
+    if (!id) return;
     setDeleting(id);
     try {
       await teacherAvailabilityService.deleteAvailability(teacherId, id);
@@ -87,6 +90,7 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
       toast.success("Availability removed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete");
+      throw err;
     } finally {
       setDeleting(null);
     }
@@ -139,7 +143,7 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(item.id)}
+                    onClick={() => setDeleteSlotId(item.id)}
                     disabled={deleting === item.id}
                   >
                     {deleting === item.id ? (
@@ -214,6 +218,16 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteSlotId}
+        onOpenChange={(o) => !o && setDeleteSlotId(null)}
+        title="Delete this availability slot?"
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={!!deleteSlotId && deleting === deleteSlotId}
+        onConfirm={performDeleteSlot}
+      />
     </>
   );
 }

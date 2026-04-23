@@ -37,6 +37,7 @@ import {
   type TransportStaff,
 } from "@/services/transportService";
 import { StatusBadge } from "@/components/transport/transport-badges";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { AssignRouteDriverModal } from "@/components/transport/modals/AssignRouteDriverModal";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
@@ -60,6 +61,8 @@ export default function TransportStaffPage() {
   const [assignBus, setAssignBus] = useState<TransportBus | null>(null);
   const [pickBusOpen, setPickBusOpen] = useState(false);
   const [pickedBusId, setPickedBusId] = useState("");
+  const [deactivateTarget, setDeactivateTarget] = useState<Row | null>(null);
+  const [deactivatingStaff, setDeactivatingStaff] = useState(false);
 
   const { data: academicYears = [] } = useAcademicYears(true);
   const [academicYearId, setAcademicYearId] = useState("");
@@ -197,23 +200,24 @@ export default function TransportStaffPage() {
     }
   };
 
-  const deactivateDriver = async (id: string) => {
+  const performDeactivate = async () => {
+    const r = deactivateTarget;
+    if (!r) return;
+    setDeactivatingStaff(true);
     try {
-      await transportService.deleteDriver(id);
-      toast.success("Driver deactivated");
+      if (r.kind === "legacy_driver") {
+        await transportService.deleteDriver(r.driver.id);
+        toast.success("Driver deactivated");
+      } else {
+        await transportService.deleteStaff(r.staff.id);
+        toast.success("Staff deactivated");
+      }
       invalidate();
     } catch (ex: unknown) {
       toast.error(ex instanceof Error ? ex.message : "Could not deactivate");
-    }
-  };
-
-  const deactivateStaff = async (id: string) => {
-    try {
-      await transportService.deleteStaff(id);
-      toast.success("Staff deactivated");
-      invalidate();
-    } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Could not deactivate");
+      throw ex;
+    } finally {
+      setDeactivatingStaff(false);
     }
   };
 
@@ -380,16 +384,7 @@ export default function TransportStaffPage() {
                               <DropdownMenuItem
                                 className="text-destructive"
                                 disabled={d.status !== "active"}
-                                onClick={() => {
-                                  if (
-                                    !confirm(
-                                      "Deactivate this person? They must not be on an active assignment."
-                                    )
-                                  )
-                                    return;
-                                  if (isLegacy) void deactivateDriver(r.driver.id);
-                                  else void deactivateStaff(r.staff.id);
-                                }}
+                                onClick={() => setDeactivateTarget(r)}
                               >
                                 Deactivate
                               </DropdownMenuItem>
@@ -526,6 +521,17 @@ export default function TransportStaffPage() {
         open={!!assignBus}
         onOpenChange={(o) => !o && setAssignBus(null)}
         onAssigned={invalidate}
+      />
+
+      <ConfirmDialog
+        open={!!deactivateTarget}
+        onOpenChange={(o) => !o && setDeactivateTarget(null)}
+        title="Deactivate this person?"
+        description="They must not be on an active assignment."
+        confirmLabel="Deactivate"
+        variant="destructive"
+        loading={deactivatingStaff}
+        onConfirm={performDeactivate}
       />
     </div>
   );

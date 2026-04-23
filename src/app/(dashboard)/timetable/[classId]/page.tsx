@@ -228,13 +228,13 @@ export default function ClassTimetablePage() {
   };
 
   const handleActivate = async (id: string) => {
-    if (!confirm("Activate this timetable? The current active version will be archived.")) return;
     try {
       await activateVersion.mutateAsync(id);
       setSelectedVersionId(id);
       toast.success("Timetable activated");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to activate");
+      throw e;
     }
   };
 

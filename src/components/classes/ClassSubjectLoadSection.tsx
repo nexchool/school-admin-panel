@@ -29,6 +29,7 @@ import { classesService } from "@/services/classesService";
 import { subjectsService } from "@/services/subjectsService";
 import type { SubjectLoad } from "@/types/class";
 import type { Subject } from "@/types/subject";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,6 +51,7 @@ export function ClassSubjectLoadSection({
   const [weeklyPeriods, setWeeklyPeriods] = useState("4");
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteLoadId, setDeleteLoadId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -126,8 +128,9 @@ export function ClassSubjectLoadSection({
     }
   };
 
-  const handleDelete = async (loadId: string) => {
-    if (!confirm("Remove this subject load?")) return;
+  const performDeleteLoad = async () => {
+    const loadId = deleteLoadId;
+    if (!loadId) return;
     setDeleting(loadId);
     try {
       await classesService.deleteSubjectLoad(classId, loadId);
@@ -136,6 +139,7 @@ export function ClassSubjectLoadSection({
       toast.success("Subject load removed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to delete");
+      throw err;
     } finally {
       setDeleting(null);
     }
@@ -197,7 +201,7 @@ export function ClassSubjectLoadSection({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(load.id)}
+                      onClick={() => setDeleteLoadId(load.id)}
                       disabled={deleting === load.id}
                     >
                       {deleting === load.id ? (
@@ -277,6 +281,17 @@ export function ClassSubjectLoadSection({
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteLoadId}
+        onOpenChange={(o) => !o && setDeleteLoadId(null)}
+        title="Remove this subject load?"
+        description="Timetable generation may need this configuration updated afterward."
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={!!deleteLoadId && deleting === deleteLoadId}
+        onConfirm={performDeleteLoad}
+      />
     </>
   );
 }

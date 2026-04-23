@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { transportService, type TransportScheduleExceptionType } from "@/services/transportService";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ExceptionModal } from "@/components/transport/ExceptionModal";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { Plus, Trash2 } from "lucide-react";
@@ -25,6 +26,8 @@ export default function TransportScheduleExceptionsPage() {
   const [academicYearId, setAcademicYearId] = useState("");
   const [typeFilter, setTypeFilter] = useState<"all" | TransportScheduleExceptionType>("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [deleteExceptionId, setDeleteExceptionId] = useState<string | null>(null);
+  const [deletingException, setDeletingException] = useState(false);
 
   useEffect(() => {
     if (!academicYearId && academicYears.length > 0) {
@@ -50,14 +53,19 @@ export default function TransportScheduleExceptionsPage() {
     qc.invalidateQueries({ queryKey: ["transport", "bus"] });
   };
 
-  const remove = async (id: string) => {
-    if (!confirm("Delete this exception?")) return;
+  const performRemoveException = async () => {
+    const id = deleteExceptionId;
+    if (!id) return;
+    setDeletingException(true);
     try {
       await transportService.deleteScheduleException(id);
       toast.success("Exception removed");
       invalidateTimelines();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to delete");
+      throw e;
+    } finally {
+      setDeletingException(false);
     }
   };
 
@@ -191,7 +199,7 @@ export default function TransportScheduleExceptionsPage() {
                           size="icon"
                           className="size-8 text-destructive"
                           aria-label="Delete exception"
-                          onClick={() => remove(r.id)}
+                          onClick={() => setDeleteExceptionId(r.id)}
                         >
                           <Trash2 className="size-4" />
                         </Button>
@@ -214,6 +222,16 @@ export default function TransportScheduleExceptionsPage() {
         onOpenChange={setAddOpen}
         academicYearId={academicYearId}
         onCreated={invalidateTimelines}
+      />
+
+      <ConfirmDialog
+        open={!!deleteExceptionId}
+        onOpenChange={(o) => !o && setDeleteExceptionId(null)}
+        title="Delete this exception?"
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deletingException}
+        onConfirm={performRemoveException}
       />
     </div>
   );

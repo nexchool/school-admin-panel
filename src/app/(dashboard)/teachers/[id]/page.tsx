@@ -10,6 +10,7 @@ import {
   useDeleteTeacher,
   teachersKeys,
 } from "@/hooks/useTeachers";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { TeacherFormModal } from "@/components/teachers/TeacherFormModal";
 import { TeacherSubjectsTab } from "@/components/teachers/TeacherSubjectsTab";
 import { TeacherAvailabilityTab } from "@/components/teachers/TeacherAvailabilityTab";
@@ -69,6 +70,7 @@ export default function TeacherDetailPage() {
   const deleteMutation = useDeleteTeacher();
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const initialTab = (searchParams?.get("tab") as TabKey | null) ?? "info";
   const [activeTab, setActiveTab] = useState<TabKey>(
     TAB_IDS.includes(initialTab) ? initialTab : "info"
@@ -90,14 +92,15 @@ export default function TeacherDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!id || !confirm("Are you sure you want to delete this teacher?")) return;
+  const performDelete = async () => {
+    if (!id) return;
     try {
       await deleteMutation.mutateAsync(id);
       toast.success("Teacher deleted");
       router.push("/teachers");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to delete teacher");
+      throw e;
     }
   };
 
@@ -176,7 +179,7 @@ export default function TeacherDetailPage() {
         backHref="/teachers"
         backLabel="Back to Teachers"
         onEdit={() => setEditOpen(true)}
-        onDelete={handleDelete}
+        onDelete={() => setDeleteConfirmOpen(true)}
         isDeleting={deleteMutation.isPending}
       />
 
@@ -203,6 +206,17 @@ export default function TeacherDetailPage() {
         onOpenChange={setEditOpen}
         initialData={teacher}
         onSubmit={handleUpdate}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete this teacher?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={performDelete}
       />
     </div>
   );

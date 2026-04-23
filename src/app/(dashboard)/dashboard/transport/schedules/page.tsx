@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { transportService } from "@/services/transportService";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CreateScheduleModal } from "@/components/transport/CreateScheduleModal";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { Plus } from "lucide-react";
@@ -18,6 +19,8 @@ export default function TransportSchedulesPage() {
   const { data: academicYears = [], isLoading: ayLoading } = useAcademicYears(true);
   const [academicYearId, setAcademicYearId] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [deactivateScheduleId, setDeactivateScheduleId] = useState<string | null>(null);
+  const [deactivatingSchedule, setDeactivatingSchedule] = useState(false);
 
   useEffect(() => {
     if (!academicYearId && academicYears.length > 0) {
@@ -37,8 +40,10 @@ export default function TransportSchedulesPage() {
 
   const rows = useMemo(() => schedulesQ.data ?? [], [schedulesQ.data]);
 
-  const deactivate = async (id: string) => {
-    if (!confirm("Deactivate this schedule? Paired reverse runs are deactivated too.")) return;
+  const performDeactivateSchedule = async () => {
+    const id = deactivateScheduleId;
+    if (!id) return;
+    setDeactivatingSchedule(true);
     try {
       await transportService.deleteSchedule(id);
       toast.success("Schedule deactivated");
@@ -48,6 +53,9 @@ export default function TransportSchedulesPage() {
       qc.invalidateQueries({ queryKey: ["transport", "bus"] });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed");
+      throw e;
+    } finally {
+      setDeactivatingSchedule(false);
     }
   };
 
@@ -154,7 +162,7 @@ export default function TransportSchedulesPage() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => void deactivate(s.id)}
+                          onClick={() => setDeactivateScheduleId(s.id)}
                         >
                           Deactivate
                         </Button>
@@ -187,6 +195,17 @@ export default function TransportSchedulesPage() {
           qc.invalidateQueries({ queryKey: ["transport", "workload"] });
           qc.invalidateQueries({ queryKey: ["transport", "bus"] });
         }}
+      />
+
+      <ConfirmDialog
+        open={!!deactivateScheduleId}
+        onOpenChange={(o) => !o && setDeactivateScheduleId(null)}
+        title="Deactivate this schedule?"
+        description="Paired reverse runs are deactivated too."
+        confirmLabel="Deactivate"
+        variant="destructive"
+        loading={deactivatingSchedule}
+        onConfirm={performDeactivateSchedule}
       />
     </div>
   );

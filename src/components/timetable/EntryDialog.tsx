@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Loader2, Trash2 } from "lucide-react";
 import type { TimetableEntry, ClassSubjectOffering, SubjectTeacherAssignment } from "@/types/timetable";
 
@@ -59,6 +60,7 @@ export function EntryDialog({
   const [room, setRoom] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -68,6 +70,7 @@ export function EntryDialog({
       setTeacherId(editing?.teacher_id ?? "");
       setRoom(editing?.room ?? "");
       setError(null);
+      setRemoveConfirmOpen(false);
     }
   }, [open, editing, initDay, initPeriod, subjects]);
 
@@ -106,21 +109,22 @@ export function EntryDialog({
     }
   };
 
-  const handleDelete = async () => {
+  const performDelete = async () => {
     if (!editing || !onDelete) return;
-    if (!confirm("Remove this timetable entry?")) return;
     setBusy(true);
     try {
       await onDelete(editing.id);
       onOpenChange(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete.");
+      throw e;
     } finally {
       setBusy(false);
     }
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -240,7 +244,7 @@ export function EntryDialog({
                 variant="ghost"
                 size="sm"
                 className="text-destructive hover:text-destructive"
-                onClick={handleDelete}
+                onClick={() => setRemoveConfirmOpen(true)}
                 disabled={busy}
               >
                 <Trash2 className="mr-1.5 size-3.5" />
@@ -260,5 +264,16 @@ export function EntryDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+      <ConfirmDialog
+        open={removeConfirmOpen}
+        onOpenChange={setRemoveConfirmOpen}
+        title="Remove this timetable entry?"
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={busy}
+        onConfirm={performDelete}
+      />
+    </>
   );
 }

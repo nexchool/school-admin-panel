@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { transportService, type TransportGlobalStop } from "@/services/transportService";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ export default function TransportStopsPage() {
   const [formLat, setFormLat] = useState("");
   const [formLng, setFormLng] = useState("");
   const [formActive, setFormActive] = useState(true);
+  const [deleteStopTarget, setDeleteStopTarget] = useState<TransportGlobalStop | null>(null);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["transport", "global-stops", search, areaFilter],
@@ -130,14 +132,19 @@ export default function TransportStopsPage() {
     onError: (e: unknown) => toast.error(parseApiError(e)),
   });
 
-  const onDelete = (r: TransportGlobalStop) => {
+  const requestDeleteStop = (r: TransportGlobalStop) => {
     const n = r.usage_count ?? 0;
     if (n > 0) {
       toast.error(`This stop is used by ${n} route(s). Remove it from routes first, or deactivate it.`);
       return;
     }
-    if (!confirm(`Permanently delete “${r.name}”?`)) return;
-    deleteMutation.mutate(r.id);
+    setDeleteStopTarget(r);
+  };
+
+  const performDeleteStop = async () => {
+    const r = deleteStopTarget;
+    if (!r) return;
+    await deleteMutation.mutateAsync(r.id);
   };
 
   return (
@@ -244,7 +251,7 @@ export default function TransportStopsPage() {
                           variant="ghost"
                           size="sm"
                           className="text-destructive"
-                          onClick={() => onDelete(r)}
+                          onClick={() => requestDeleteStop(r)}
                           disabled={deleteMutation.isPending}
                         >
                           <Trash2 className="size-4" />
@@ -341,6 +348,16 @@ export default function TransportStopsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteStopTarget}
+        onOpenChange={(o) => !o && setDeleteStopTarget(null)}
+        title={deleteStopTarget ? `Permanently delete “${deleteStopTarget.name}”?` : "Delete stop?"}
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={performDeleteStop}
+      />
     </div>
   );
 }

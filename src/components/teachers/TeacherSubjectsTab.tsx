@@ -21,6 +21,7 @@ import { teacherSubjectService } from "@/services/teacherConstraintService";
 import { subjectsService } from "@/services/subjectsService";
 import type { TeacherSubject } from "@/types/teacher";
 import type { Subject } from "@/types/subject";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -37,6 +38,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [removeSubjectId, setRemoveSubjectId] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -83,8 +85,9 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
     }
   };
 
-  const handleRemove = async (subjectId: string) => {
-    if (!confirm("Remove this subject from teacher?")) return;
+  const performRemoveSubject = async () => {
+    const subjectId = removeSubjectId;
+    if (!subjectId) return;
     setRemoving(subjectId);
     try {
       await teacherSubjectService.removeSubject(teacherId, subjectId);
@@ -93,6 +96,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
       toast.success("Subject removed");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove");
+      throw err;
     } finally {
       setRemoving(null);
     }
@@ -137,7 +141,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
                     variant="ghost"
                     size="icon"
                     className="h-5 w-5 rounded-full p-0 text-destructive hover:text-destructive"
-                    onClick={() => handleRemove(s.subject_id)}
+                    onClick={() => setRemoveSubjectId(s.subject_id)}
                     disabled={removing === s.subject_id}
                   >
                     {removing === s.subject_id ? (
@@ -186,6 +190,16 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!removeSubjectId}
+        onOpenChange={(o) => !o && setRemoveSubjectId(null)}
+        title="Remove this subject from the teacher?"
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={!!removeSubjectId && removing === removeSubjectId}
+        onConfirm={performRemoveSubject}
+      />
     </>
   );
 }

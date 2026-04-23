@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStudent, useUpdateStudent, useDeleteStudent } from "@/hooks/useStudents";
 import { useClasses } from "@/hooks/useClasses";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
 import { StudentDocumentsSection } from "@/components/students/StudentDocumentsSection";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import {
   Heart,
   Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import type { Student, UpdateStudentInput } from "@/types/student";
 
 type TabId =
@@ -70,6 +72,7 @@ export default function StudentDetailPage() {
   const updateMutation = useUpdateStudent();
   const deleteMutation = useDeleteStudent();
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   const handleUpdate = async (data: UpdateStudentInput) => {
@@ -78,10 +81,16 @@ export default function StudentDetailPage() {
     setEditOpen(false);
   };
 
-  const handleDelete = async () => {
-    if (!id || !confirm("Are you sure you want to delete this student?")) return;
-    await deleteMutation.mutateAsync(id);
-    router.push("/students");
+  const performDelete = async () => {
+    if (!id) return;
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success("Student deleted");
+      router.push("/students");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete student");
+      throw e;
+    }
   };
 
   if (isLoading || !id) {
@@ -151,7 +160,7 @@ export default function StudentDetailPage() {
         backHref="/students"
         backLabel="Back to Students"
         onEdit={() => setEditOpen(true)}
-        onDelete={handleDelete}
+        onDelete={() => setDeleteConfirmOpen(true)}
         isDeleting={deleteMutation.isPending}
       />
 
@@ -179,6 +188,17 @@ export default function StudentDetailPage() {
         initialData={student}
         classes={classes}
         onSubmit={handleUpdate}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete this student?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={performDelete}
       />
     </div>
   );

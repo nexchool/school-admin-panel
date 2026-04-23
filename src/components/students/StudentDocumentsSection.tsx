@@ -20,6 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { toast } from "sonner";
 import { UploadDocumentModal } from "./UploadDocumentModal";
 
 interface StudentDocumentsSectionProps {
@@ -37,6 +39,7 @@ export function StudentDocumentsSection({ studentId }: StudentDocumentsSectionPr
   const [previewMime, setPreviewMime] = useState<string | undefined>(undefined);
   const [viewerLoading, setViewerLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
+  const [deleteDoc, setDeleteDoc] = useState<StudentDocument | null>(null);
 
   const revokePreview = useCallback(() => {
     setPreviewUrl((prev) => {
@@ -47,9 +50,14 @@ export function StudentDocumentsSection({ studentId }: StudentDocumentsSectionPr
 
   useEffect(() => () => revokePreview(), [revokePreview]);
 
-  const handleDelete = (doc: StudentDocument) => {
-    if (confirm(`Delete "${doc.original_filename}"?`)) {
-      deleteMutation.mutate(doc.id);
+  const performDeleteDoc = async () => {
+    const doc = deleteDoc;
+    if (!doc) return;
+    try {
+      await deleteMutation.mutateAsync(doc.id);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not delete document");
+      throw e;
     }
   };
 
@@ -148,7 +156,7 @@ export function StudentDocumentsSection({ studentId }: StudentDocumentsSectionPr
                     variant="ghost"
                     size="icon"
                     className="size-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(doc)}
+                    onClick={() => setDeleteDoc(doc)}
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -166,6 +174,16 @@ export function StudentDocumentsSection({ studentId }: StudentDocumentsSectionPr
             setUploadOpen(false);
             refetch();
           }}
+        />
+
+        <ConfirmDialog
+          open={!!deleteDoc}
+          onOpenChange={(o) => !o && setDeleteDoc(null)}
+          title={deleteDoc ? `Delete “${deleteDoc.original_filename}”?` : "Delete document?"}
+          confirmLabel="Delete"
+          variant="destructive"
+          loading={deleteMutation.isPending}
+          onConfirm={performDeleteDoc}
         />
 
         <Dialog

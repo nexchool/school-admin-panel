@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FeeStructureFormModal } from "@/components/finance/FeeStructureFormModal";
 import { ArrowLeft, Bus, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { useFeeStructures, useDeleteFeeStructure } from "@/hooks/useFeeStructures";
@@ -57,7 +58,8 @@ export default function FeeStructuresPage() {
   const { data: structures = [], isLoading } = useFeeStructures({
     academic_year_id: yearFilter || undefined,
   });
-  const { mutate: deleteStructure, isPending: deleting } = useDeleteFeeStructure();
+  const { mutateAsync: deleteStructureAsync, isPending: deleting } = useDeleteFeeStructure();
+  const [deleteTarget, setDeleteTarget] = useState<FeeStructure | null>(null);
 
   const openCreate = () => setModalState({ open: true, mode: "create" });
   const openEdit = (row: FeeStructure) =>
@@ -74,14 +76,7 @@ export default function FeeStructuresPage() {
       },
     });
 
-  const handleDelete = (row: FeeStructure) => {
-    if (!confirm(`Delete "${row.name}"? This will remove all uncleared fee assignments.`)) return;
-    deleteStructure(row.id, {
-      onSuccess: () => toast.success(`Deleted "${row.name}"`),
-      onError: (err: unknown) =>
-        toast.error(err instanceof Error ? err.message : "Delete failed"),
-    });
-  };
+  const requestDelete = (row: FeeStructure) => setDeleteTarget(row);
 
   const columns: DataTableColumn<FeeStructure>[] = [
     {
@@ -155,7 +150,7 @@ export default function FeeStructuresPage() {
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 disabled={deleting}
-                onClick={() => handleDelete(r)}
+                onClick={() => requestDelete(r)}
               >
                 <Trash2 className="mr-2 size-4" />
                 Delete
@@ -251,6 +246,26 @@ export default function FeeStructuresPage() {
         mode={modalState.mode}
         initialData={modalState.initialData}
         onSuccess={() => setModalState((s) => ({ ...s, open: false }))}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title={deleteTarget ? `Delete “${deleteTarget.name}”?` : "Delete fee structure?"}
+        description="This will remove all uncleared fee assignments."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleting}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          try {
+            await deleteStructureAsync(deleteTarget.id);
+            toast.success(`Deleted "${deleteTarget.name}"`);
+          } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Delete failed");
+            throw err;
+          }
+        }}
       />
     </div>
   );
