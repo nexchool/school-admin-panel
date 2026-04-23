@@ -237,7 +237,8 @@ export function BulkImportStudents({
           <DialogTitle>Bulk import students</DialogTitle>
           <DialogDescription>
             Upload a single-sheet .xlsx file. Row 1 must be headers. Required
-            columns: name, email, admission_number, class_name, section. Other
+            columns: name, email, class_name, section. Admission numbers are assigned
+            automatically from your school&apos;s format (Academic settings). Other
             columns are mapped when they match known fields.
           </DialogDescription>
         </DialogHeader>

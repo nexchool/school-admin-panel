@@ -217,12 +217,13 @@ export function BulkImportTeachers({
           <DialogDescription>
             Upload a single-sheet .xlsx file. Row 1 must be headers. Required
             column: <code className="text-xs">name</code>. Optional: email,
-            employee_id, phone, designation, department, qualification,
+            phone, designation, department, qualification,
             specialization, experience_years, address, date_of_joining, status
-            (active or inactive). Unknown columns are ignored. If{" "}
-            <code className="text-xs">employee_id</code> is omitted, IDs are
-            generated automatically; if <code className="text-xs">email</code>{" "}
-            is omitted, a login address is created from the employee ID.
+            (active or inactive). Unknown columns are ignored. Employee IDs are
+            always generated from your school&apos;s format (Academic settings);
+            a legacy <code className="text-xs">employee_id</code> column, if
+            present, is ignored. If <code className="text-xs">email</code> is
+            omitted, a login address is created from the employee ID.
           </DialogDescription>
         </DialogHeader>
 

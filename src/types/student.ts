@@ -105,7 +105,6 @@ export interface CreateStudentInput {
   guardian_phone: string;
   class_id?: string;
   academic_year_id?: string;
-  admission_number?: string;
   email?: string;
   phone?: string;
   date_of_birth?: string;

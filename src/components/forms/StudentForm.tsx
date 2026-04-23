@@ -40,7 +40,6 @@ const studentSchema = z.object({
   guardian_phone: z.string().min(1, "Guardian phone is required"),
   guardian_email: optionalEmail,
   class_id: z.string().optional(),
-  admission_number: optionalString,
   phone: optionalString,
   date_of_birth: optionalString,
   gender: optionalString,
@@ -144,7 +143,6 @@ export function StudentForm({
           guardian_phone: initialData.guardian_phone ?? "",
           guardian_email: initialData.guardian_email ?? "",
           class_id: initialData.class_id ?? "",
-          admission_number: initialData.admission_number ?? "",
           phone: initialData.phone ?? "",
           date_of_birth: initialData.date_of_birth ?? "",
           gender: initialData.gender ?? "",
@@ -225,7 +223,6 @@ export function StudentForm({
           guardian_phone: "",
           guardian_email: "",
           class_id: "",
-          admission_number: "",
           phone: "",
           date_of_birth: "",
           gender: "",
@@ -306,7 +303,6 @@ export function StudentForm({
     if (values.email) payload.email = values.email;
     if (values.guardian_email) payload.guardian_email = values.guardian_email;
     if (values.class_id) payload.class_id = values.class_id;
-    if (values.admission_number) payload.admission_number = values.admission_number;
     if (values.phone) payload.phone = values.phone;
     if (values.date_of_birth) payload.date_of_birth = values.date_of_birth;
     if (values.gender) payload.gender = values.gender;
@@ -431,15 +427,6 @@ export function StudentForm({
               {form.formState.errors.email.message}
             </p>
           )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="admission_number">Admission Number</Label>
-          <Input
-            id="admission_number"
-            {...form.register("admission_number")}
-            placeholder="Auto-generated if blank"
-          />
         </div>
 
         <div className="space-y-2">

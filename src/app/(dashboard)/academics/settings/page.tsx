@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { IdFormatBuilder } from "@/components/academics/IdFormatBuilder";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { validateBuilderPatternClient } from "@/utils/idFormat/patternFromBuilder";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +19,8 @@ interface AcademicSettings {
   default_bell_schedule_id: string | null;
   allow_admin_attendance_override: boolean;
   default_working_days_json: number[] | null;
+  admission_number_format: string | null;
+  teacher_employee_id_format: string | null;
 }
 
 interface BellScheduleItem {
@@ -96,6 +100,9 @@ export default function AcademicSettingsPage() {
   const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [bellScheduleId, setBellScheduleId] = useState<string>("");
   const [allowAdminOverride, setAllowAdminOverride] = useState(true);
+  const [admissionFormat, setAdmissionFormat] = useState<string | null>(null);
+  const [teacherFormat, setTeacherFormat] = useState<string | null>(null);
+  const [idSaveError, setIdSaveError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
 
   // Sync from server once loaded
@@ -104,6 +111,9 @@ export default function AcademicSettingsPage() {
     setWorkingDays(settings.default_working_days_json ?? [1, 2, 3, 4, 5, 6]);
     setBellScheduleId(settings.default_bell_schedule_id ?? "");
     setAllowAdminOverride(settings.allow_admin_attendance_override ?? true);
+    setAdmissionFormat(settings.admission_number_format?.trim() ? settings.admission_number_format : null);
+    setTeacherFormat(settings.teacher_employee_id_format?.trim() ? settings.teacher_employee_id_format : null);
+    setIdSaveError(null);
     setDirty(false);
   }, [settings]);
 
@@ -113,7 +123,9 @@ export default function AcademicSettingsPage() {
     onSuccess: (data) => {
       qc.setQueryData(SETTINGS_KEY, data);
       qc.invalidateQueries({ queryKey: ["academics", "bell-schedules"] });
+      qc.invalidateQueries({ queryKey: ["academics", "id-preview"] });
       setDirty(false);
+      setIdSaveError(null);
       toast.success("Settings saved");
     },
     onError: (e) => {
@@ -122,10 +134,27 @@ export default function AcademicSettingsPage() {
   });
 
   const handleSave = () => {
+    setIdSaveError(null);
+    if (admissionFormat !== null) {
+      const e = validateBuilderPatternClient(admissionFormat);
+      if (e) {
+        setIdSaveError(`Admission format: ${e}`);
+        return;
+      }
+    }
+    if (teacherFormat !== null) {
+      const e = validateBuilderPatternClient(teacherFormat);
+      if (e) {
+        setIdSaveError(`Teacher ID format: ${e}`);
+        return;
+      }
+    }
     saveMutation.mutate({
       default_working_days_json: workingDays,
       default_bell_schedule_id: bellScheduleId || null,
       allow_admin_attendance_override: allowAdminOverride,
+      admission_number_format: admissionFormat,
+      teacher_employee_id_format: teacherFormat,
     });
   };
 
@@ -163,6 +192,12 @@ export default function AcademicSettingsPage() {
           Save changes
         </Button>
       </div>
+
+      {idSaveError && (
+        <p className="text-sm text-destructive" role="alert">
+          {idSaveError}
+        </p>
+      )}
 
       {/* Working days */}
       <Card>
@@ -231,6 +266,32 @@ export default function AcademicSettingsPage() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* ID formats */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">ID numbers for new students and staff</CardTitle>
+          <CardDescription>
+            The app creates these automatically when you add people. You can change how the numbers look, or
+            use the app’s built-in style.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
+          <IdFormatBuilder
+            kind="student"
+            pattern={admissionFormat}
+            onChange={(p) => { setAdmissionFormat(p); setIdSaveError(null); }}
+            onMarkDirty={mark}
+          />
+          <div className="border-t border-border/60 pt-6" />
+          <IdFormatBuilder
+            kind="teacher"
+            pattern={teacherFormat}
+            onChange={(p) => { setTeacherFormat(p); setIdSaveError(null); }}
+            onMarkDirty={mark}
+          />
         </CardContent>
       </Card>
 
