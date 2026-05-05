@@ -16,6 +16,14 @@ import type { Teacher } from "@/types/teacher";
 
 export type { ClassItem, ClassDetail, CreateClassInput, SubjectLoad, CreateSubjectLoadInput };
 
+/** Backend now stores Class.name nullable (display label only — identity
+ *  lives on the structural FKs). The UI types still treat it as a plain
+ *  string, so we coalesce here at the service boundary. */
+function normalizeClass<T extends { name?: string | null }>(c: T): T {
+  if (c == null) return c;
+  return { ...c, name: c.name ?? "" } as T;
+}
+
 export const classesService = {
   getClasses: async (params?: {
     academic_year_id?: string;
@@ -25,22 +33,25 @@ export const classesService = {
       url += `?academic_year_id=${params.academic_year_id}`;
     }
     const data = await apiGet<ClassItem[]>(url);
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) ? data.map(normalizeClass) : [];
   },
 
   getClass: async (id: string): Promise<ClassDetail> => {
-    return apiGet<ClassDetail>(`/api/classes/${id}`);
+    const data = await apiGet<ClassDetail>(`/api/classes/${id}`);
+    return normalizeClass(data);
   },
 
   createClass: async (data: CreateClassInput): Promise<ClassItem> => {
-    return apiPost<ClassItem>("/api/classes/", data);
+    const out = await apiPost<ClassItem>("/api/classes/", data);
+    return normalizeClass(out);
   },
 
   updateClass: async (
     id: string,
     data: Partial<CreateClassInput>
   ): Promise<ClassItem> => {
-    return apiPut<ClassItem>(`/api/classes/${id}`, data);
+    const out = await apiPut<ClassItem>(`/api/classes/${id}`, data);
+    return normalizeClass(out);
   },
 
   deleteClass: async (id: string): Promise<void> => {

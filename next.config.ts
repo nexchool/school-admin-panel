@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   ...(isDockerBuild && isProduction ? { output: "standalone" as const } : {}),
   async redirects() {
     return [
+      {
+        source: "/dashboard/school-setup",
+        destination: "/school-setup",
+        permanent: false,
+      },
       { source: "/dashboard/transport/buses", destination: "/dashboard/transport/fleet", permanent: false },
       { source: "/dashboard/transport/drivers", destination: "/dashboard/transport/staff", permanent: false },
       {

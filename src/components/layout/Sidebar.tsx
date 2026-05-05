@@ -19,21 +19,33 @@ import {
   Bus,
   CalendarDays,
   HelpCircle,
+  Settings2,
 } from "lucide-react";
+import { useSetupStatus } from "@/hooks/useSchoolSetup";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 
-/** Everything above Profile; Transport is inserted here when enabled (before Profile). */
-const SIDEBAR_NAV_CORE = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  /** Tenant feature key required to see this nav item. Omit for core links. */
+  feature?: string;
+};
+
+/** Everything above Profile. Items with `feature` are filtered by the
+ * tenant's enabled features — disabling a feature hides its sidebar link.
+ * Transport keeps its position (before Profile) for visual continuity. */
+const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/academics", label: "Academics", icon: School },
   { href: "/students", label: "Students", icon: GraduationCap },
   { href: "/teachers", label: "Teachers", icon: Users },
   { href: "/classes", label: "Classes", icon: BookOpen },
-  { href: "/timetable", label: "Timetable", icon: CalendarDays },
-  { href: "/attendance", label: "Attendance", icon: ClipboardCheck },
-  { href: "/dashboard/finance", label: "Finance", icon: Wallet },
-  { href: "/holidays", label: "Holidays", icon: Calendar },
-] as const;
+  { href: "/timetable", label: "Timetable", icon: CalendarDays, feature: "timetable" },
+  { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance" },
+  { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management" },
+  { href: "/holidays", label: "Holidays", icon: Calendar, feature: "holiday_management" },
+];
 
 const SIDEBAR_NAV_PROFILE = { href: "/profile", label: "Profile", icon: User } as const;
 
@@ -71,14 +83,35 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, isFeatureEnabled, hasAnyPermission } = useAuth();
+  const { logout, isFeatureEnabled, hasAnyPermission, hasPermission } = useAuth();
+  const { data: setupStatus } = useSetupStatus();
+  const isSetupComplete = setupStatus?.overall.is_setup_complete ?? false;
 
+  const visibleCore = SIDEBAR_NAV_CORE.filter(
+    (item) => !item.feature || isFeatureEnabled(item.feature)
+  );
   const showTransport =
     isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
 
+  // School Setup is visible to admins always, plus to anyone when setup is
+  // still pending — that way an admin's first login screams "finish setup".
+  const showSchoolSetup =
+    hasPermission("school_setup.manage") ||
+    (setupStatus ? !isSetupComplete : false);
+
+  const setupNavItem: NavItem = {
+    href: "/school-setup",
+    label: isSetupComplete ? "School Setup" : "School Setup ⚠",
+    icon: Settings2,
+  };
+
+  const coreWithSetup = showSchoolSetup
+    ? [visibleCore[0], setupNavItem, ...visibleCore.slice(1)]
+    : visibleCore;
+
   const allNavItems = showTransport
-    ? [...SIDEBAR_NAV_CORE, SIDEBAR_NAV_TRANSPORT, SIDEBAR_NAV_PROFILE]
-    : [...SIDEBAR_NAV_CORE, SIDEBAR_NAV_PROFILE];
+    ? [...coreWithSetup, SIDEBAR_NAV_TRANSPORT, SIDEBAR_NAV_PROFILE]
+    : [...coreWithSetup, SIDEBAR_NAV_PROFILE];
 
   const handleLogout = () => {
     logout();

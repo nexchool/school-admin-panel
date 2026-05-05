@@ -2,6 +2,8 @@ import type { Student } from "./student";
 
 export interface ClassItem {
   id: string;
+  /** Display label. Backend may store NULL post multi-school migration; the
+   *  service-layer coalesces to an empty string before reaching the UI. */
   name: string;
   section?: string;
   academic_year?: string;
@@ -9,6 +11,15 @@ export interface ClassItem {
   teacher_id?: string;
   teacher_name?: string;
   student_count?: number;
+  grade_level?: number | null;
+  // Multi-school structural fields. Optional during the soft-migration
+  // window — older rows may not yet have them populated.
+  school_unit_id?: string | null;
+  school_unit_name?: string | null;
+  programme_id?: string | null;
+  programme_name?: string | null;
+  grade_id?: string | null;
+  grade_name?: string | null;
   created_at?: string;
 }
 
