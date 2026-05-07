@@ -46,13 +46,13 @@ describe("useSetupStepStatus", () => {
     expect(result.current).toBe("pending");
   });
 
-  it("returns 'optional' for terms when optional is true", () => {
+  it("returns 'pending' for terms when not ready (terms is now required)", () => {
     vi.mocked(usePathname).mockReturnValue("/dashboard");
     vi.mocked(useSetupStatus).mockReturnValue({
       data: { terms: { ready: false, optional: true } },
     } as any);
     const { result } = renderHook(() => useSetupStepStatus("terms"), { wrapper });
-    expect(result.current).toBe("optional");
+    expect(result.current).toBe("pending");
   });
 
   it("returns 'pending' when data is loading", () => {

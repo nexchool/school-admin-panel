@@ -47,11 +47,6 @@ export function useSetupStepStatus(step: SetupStepKey): StepBadge {
     return moduleStatus?.is_setup_complete ? "done" : "pending";
   }
 
-  // Terms is optional when the module says so or when data is absent.
-  if (step === "terms") {
-    if (!moduleStatus || moduleStatus.optional) return "optional";
-  }
-
   if (moduleStatus?.ready) return "done";
   return "pending";
 }

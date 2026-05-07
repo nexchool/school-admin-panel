@@ -16,7 +16,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   { key: "academic-year", number: 4, title: "Academic Year", description: "Set the active academic session.", href: "/school-setup/academic-year", optional: false },
   { key: "classes", number: 5, title: "Classes", description: "Create class sections for each grade.", href: "/school-setup/classes", optional: false },
   { key: "subjects", number: 6, title: "Subjects", description: "Configure subjects offered at your school.", href: "/school-setup/subjects", optional: false },
-  { key: "terms", number: 7, title: "Terms", description: "Optional: split the year into terms.", href: "/school-setup/terms", optional: true },
+  { key: "terms", number: 7, title: "Terms", description: "Split your academic year into terms.", href: "/school-setup/terms", optional: false },
   { key: "complete", number: 8, title: "Review & Complete", description: "Confirm setup and move on.", href: "/school-setup/complete", optional: false },
 ];
 
