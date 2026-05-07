@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WizardShell } from "@/components/school-setup/wizard/WizardShell";
 import { BulkGenerateDialog } from "@/components/school-setup/BulkGenerateDialog";
 import { DuplicateStructureDialog } from "@/components/school-setup/DuplicateStructureDialog";
+import { ExcelImportDialog } from "@/components/school-setup/ExcelImportDialog";
 import {
   ClassFormDialog,
   type ClassFormValues,
@@ -34,6 +35,7 @@ export default function SetupClassesPage() {
   const [deleteTarget, setDeleteTarget] = useState<ClassItem | null>(null);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false);
+  const [excelOpen, setExcelOpen] = useState(false);
 
   const handleAddClick = () => {
     setEditTarget(null);
@@ -121,10 +123,9 @@ export default function SetupClassesPage() {
             <Button
               size="sm"
               variant="outline"
-              disabled
-              title="Coming soon"
-              className="gap-1.5 opacity-60"
-              aria-label="Import from Excel (coming soon)"
+              className="gap-1.5"
+              onClick={() => setExcelOpen(true)}
+              aria-label="Import from Excel"
             >
               <Upload className="size-4" />
               Import from Excel
@@ -276,6 +277,10 @@ export default function SetupClassesPage() {
         open={duplicateOpen}
         onOpenChange={setDuplicateOpen}
       />
+
+      {excelOpen && (
+        <ExcelImportDialog onClose={() => setExcelOpen(false)} />
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}
