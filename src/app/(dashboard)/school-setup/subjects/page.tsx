@@ -32,7 +32,7 @@ const SUBJECT_TYPE_LABELS: Record<string, string> = {
 
 export default function SubjectsPage() {
   const { data: subjects = [], isLoading } = useSubjects();
-  const { data: templatesResult } = useTemplates();
+  const { data: templatesResult, isLoading: templatesLoading } = useTemplates();
   const templates = templatesResult?.data ?? [];
 
   const createMutation = useCreateSubject();
@@ -131,6 +131,15 @@ export default function SubjectsPage() {
           </p>
 
           {/* ── Section 1: Template picker ── */}
+          {templates.length === 0 && !templatesLoading && (
+            <div className="rounded-md border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+              <p className="font-medium">No subject templates available</p>
+              <p className="mt-1">
+                Templates need to be seeded by an administrator. Skip this section and add subjects manually below.
+              </p>
+            </div>
+          )}
+
           {templates.length > 0 && (
             <section className="space-y-3">
               <div>
