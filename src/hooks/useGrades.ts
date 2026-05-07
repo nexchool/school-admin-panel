@@ -30,6 +30,15 @@ export function useCreateGrade() {
   });
 }
 
+export function useUpdateGrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<Grade>) =>
+      gradesService.update(id, data),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useDeleteGrade() {
   const qc = useQueryClient();
   return useMutation({
