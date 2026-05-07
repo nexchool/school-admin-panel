@@ -13,6 +13,7 @@ export function isPublicAuthApiUrl(url: string): boolean {
     pathname.includes("/api/auth/login") ||
     pathname.includes("/api/auth/register") ||
     pathname.includes("/api/auth/password/forgot") ||
-    pathname.includes("/api/auth/password/reset")
+    pathname.includes("/api/auth/password/reset") ||
+    pathname.includes("/api/auth/tenant-branding")
   );
 }

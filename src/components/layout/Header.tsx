@@ -159,15 +159,6 @@ export function Header({ onMenuClick }: HeaderProps) {
                   {user.name || user.email}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => logout()}
-                className="gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
             </>
           )}
         </div>

@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
   FORGOT_PASSWORD: "/api/auth/password/forgot",
   RESET_PASSWORD: "/api/auth/password/reset",
   ENABLED_FEATURES: "/api/auth/enabled-features",
+  TENANT_BRANDING: "/api/auth/tenant-branding",
   PROFILE: "/api/auth/profile",
   UPLOAD_PROFILE_PICTURE: "/api/auth/upload-profile-picture",
 } as const;

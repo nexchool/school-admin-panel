@@ -33,7 +33,7 @@ const SUBJECT_TYPE_LABELS: Record<string, string> = {
 export default function SubjectsPage() {
   const { data: subjects = [], isLoading } = useSubjects();
   const { data: templatesResult, isLoading: templatesLoading } = useTemplates();
-  const templates = templatesResult?.data ?? [];
+  const templates = templatesResult ?? [];
 
   const createMutation = useCreateSubject();
   const updateMutation = useUpdateSubject();
@@ -100,8 +100,7 @@ export default function SubjectsPage() {
       return;
     }
     try {
-      const result = await applyMutation.mutateAsync(academicYearId);
-      const counts = result?.data;
+      const counts = await applyMutation.mutateAsync(academicYearId);
       if (counts) {
         toast.success(
           `Applied: ${counts.created} created, ${counts.skipped} skipped`,

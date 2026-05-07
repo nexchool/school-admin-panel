@@ -191,15 +191,15 @@ const setup = {
   },
 
   listTemplates: () =>
-    apiGet<{ data: TemplateGroup[] }>("/api/school-setup/templates/"),
+    apiGet<TemplateGroup[]>("/api/school-setup/templates/"),
 
   templateItems: (groupId: string) =>
-    apiGet<{ data: TemplateItem[] }>(
+    apiGet<TemplateItem[]>(
       `/api/school-setup/templates/${groupId}/items/`,
     ),
 
   applySubjectOfferings: (academicYearId: string) =>
-    apiPost<{ data: { created: number; skipped: number } }>(
+    apiPost<{ created: number; skipped: number }>(
       "/api/school-setup/apply-subject-offerings",
       { academic_year_id: academicYearId },
     ),

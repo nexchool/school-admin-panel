@@ -64,11 +64,11 @@ export function TemplateDetailModal({
 
   // ── Derived data ──────────────────────────────────────────────────
   const templateGroup = useMemo(
-    () => templatesResult?.data?.find((g) => g.id === templateId),
+    () => templatesResult?.find((g) => g.id === templateId),
     [templatesResult, templateId],
   );
 
-  const allItems = itemsResult?.data ?? [];
+  const allItems = itemsResult ?? [];
 
   const filteredItems = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();

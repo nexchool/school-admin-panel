@@ -11,6 +11,8 @@ const KEYS = {
   ENABLED_FEATURES: "enabled_features",
   USER_ROLES: "user_roles",
   TENANT_ID: "tenant_id",
+  /** Cached school / tenant display name for UI (sidebar, etc.). */
+  TENANT_NAME: "tenant_display_name",
 } as const;
 
 export async function getAccessToken(): Promise<string | null> {
@@ -122,6 +124,23 @@ export async function getTenantId(): Promise<string | null> {
 export async function setTenantId(id: string): Promise<void> {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEYS.TENANT_ID, id);
+}
+
+export async function getTenantName(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(KEYS.TENANT_NAME);
+  if (!raw) return null;
+  const t = raw.trim();
+  return t ? t : null;
+}
+
+export async function setTenantName(name: string | null): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (name === null || name.trim() === "") {
+    localStorage.removeItem(KEYS.TENANT_NAME);
+  } else {
+    localStorage.setItem(KEYS.TENANT_NAME, name.trim());
+  }
 }
 
 export async function clearAuth(): Promise<void> {

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useSetupStatus } from "@/hooks/useSchoolSetup";
 import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
+import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 
 type NavItem = {
@@ -102,7 +103,7 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, isFeatureEnabled, hasAnyPermission, hasPermission } = useAuth();
+  const { logout, isFeatureEnabled, hasAnyPermission, hasPermission, tenantName } = useAuth();
   const { data: setupStatus } = useSetupStatus();
   const isSetupComplete = setupStatus?.overall.is_setup_complete ?? false;
 
@@ -143,13 +144,13 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
 
   const sidebar = (
     <>
-      <div className="flex h-16 items-center justify-between border-b border-border px-4 md:px-6">
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-4 md:px-6">
         <Link
           href="/dashboard"
-          className="font-semibold text-foreground"
+          className="flex min-w-0 flex-1 items-center font-semibold text-foreground md:max-w-[min(100%,20rem)]"
           onClick={handleNavClick}
         >
-          School ERP
+          <SchoolBrandName name={tenantName} lineClamp={1} />
         </Link>
         {isMobile && (
           <button
@@ -163,28 +164,29 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
         )}
       </div>
 
-      <nav className="flex flex-1 flex-col p-4">
-        <div className="space-y-1">
-          {/* Dashboard — always first */}
-          {coreItemsBeforeSetup.map(({ href, label, icon: Icon }) => {
-            const isActive = isSidebarNavActive(pathname, href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={handleNavClick}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
+      <nav className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
+          <div className="space-y-1 pr-1">
+            {/* Dashboard — always first */}
+            {coreItemsBeforeSetup.map(({ href, label, icon: Icon }) => {
+              const isActive = isSidebarNavActive(pathname, href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={handleNavClick}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-5 w-5 shrink-0" />
+                  {label}
+                </Link>
+              );
+            })}
 
           {/* School Setup collapsible group */}
           {showSchoolSetup && (
@@ -261,9 +263,10 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
               Audit Log
             </Link>
           )}
+          </div>
         </div>
 
-        <div className="mt-auto space-y-3 border-t border-border pt-4">
+        <div className="shrink-0 space-y-3 border-t border-border pt-4">
           <Link
             href="/help"
             onClick={handleNavClick}
@@ -327,7 +330,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
         {/* Sidebar drawer */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-transform duration-200 ease-out md:hidden",
+            "fixed inset-y-0 left-0 z-50 flex h-full min-h-0 w-64 flex-col border-r border-border bg-card transition-transform duration-200 ease-out md:hidden",
             isOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -338,7 +341,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   }
 
   return (
-    <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
+    <aside className="hidden h-full min-h-0 w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
       {sidebar}
     </aside>
   );

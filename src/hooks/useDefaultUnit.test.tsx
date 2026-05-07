@@ -19,7 +19,10 @@ vi.mock("sonner", () => ({
 const mockRefreshUser = vi.fn();
 
 vi.mock("@/components/providers/AuthProvider", () => ({
-  useAuth: () => ({ refreshUser: mockRefreshUser }),
+  useAuth: () => ({
+    refreshUser: mockRefreshUser,
+    tenantName: null as string | null,
+  }),
 }));
 
 function makeWrapper() {

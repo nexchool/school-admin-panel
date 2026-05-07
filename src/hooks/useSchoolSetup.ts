@@ -93,14 +93,14 @@ export function useParseImportHeaders() {
 }
 
 export function useTemplates() {
-  return useQuery<{ data: TemplateGroup[] }>({
+  return useQuery<TemplateGroup[]>({
     queryKey: schoolSetupKeys.templates,
     queryFn: () => schoolSetupService.setup.listTemplates(),
   });
 }
 
 export function useTemplateItems(groupId: string | null) {
-  return useQuery<{ data: TemplateItem[] }>({
+  return useQuery<TemplateItem[]>({
     queryKey: groupId
       ? schoolSetupKeys.templateItems(groupId)
       : ["school-setup", "templates", null, "items"],

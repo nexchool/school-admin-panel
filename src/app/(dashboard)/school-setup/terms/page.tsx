@@ -100,10 +100,6 @@ export default function TermsPage() {
         onContinue={() => {}}
       >
         <div className="space-y-6">
-          <p className="text-sm text-muted-foreground">
-            Optional: split your academic year into terms.
-          </p>
-
           <section className="space-y-3">
             <div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
               <p>
