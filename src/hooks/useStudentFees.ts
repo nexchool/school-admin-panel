@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeService } from "@/services/financeService";
+import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 
 export interface StudentFeeFilters {
   student_id?: string;
@@ -19,10 +20,20 @@ export const studentFeeKeys = {
   detail: (id: string) => [...studentFeeKeys.all, "detail", id] as const,
 };
 
+/**
+ * If `filters.academic_year_id` is undefined, the active academic year context
+ * value is used. Pass an explicit string to override (explicit wins).
+ */
 export function useStudentFees(filters?: StudentFeeFilters) {
+  const { academicYearId } = useActiveAcademicYear();
+  const merged: StudentFeeFilters = {
+    ...filters,
+    academic_year_id: filters?.academic_year_id ?? academicYearId ?? undefined,
+  };
+
   return useQuery({
-    queryKey: studentFeeKeys.list(filters),
-    queryFn: () => financeService.getStudentFees(filters),
+    queryKey: studentFeeKeys.list(merged),
+    queryFn: () => financeService.getStudentFees(merged),
   });
 }
 
