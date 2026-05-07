@@ -56,7 +56,10 @@ test.describe('Audit Log page', () => {
     // We can only run it if we have a non-admin account; skip if not configured.
     const lowPrivEmail = process.env.E2E_LOW_PRIV_EMAIL;
     const lowPrivPassword = process.env.E2E_LOW_PRIV_PASSWORD;
-    if (!lowPrivEmail || !lowPrivPassword) test.skip();
+    if (!lowPrivEmail || !lowPrivPassword) {
+      test.skip();
+      return;
+    }
 
     await page.goto('/login');
     await page.fill('#email', lowPrivEmail);
