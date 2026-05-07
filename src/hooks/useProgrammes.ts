@@ -34,6 +34,15 @@ export function useCreateProgramme() {
   });
 }
 
+export function useUpdateProgramme() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<AcademicProgramme> }) =>
+      programmesService.update(id, data),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useDeleteProgramme() {
   const qc = useQueryClient();
   return useMutation({
