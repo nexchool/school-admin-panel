@@ -42,3 +42,12 @@ export function useDeleteTerm() {
     onSuccess: () => invalidateAll(qc),
   });
 }
+
+export function useUpdateTerm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<AcademicTerm> }) =>
+      academicTermsService.update(id, data),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
