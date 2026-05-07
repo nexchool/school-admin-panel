@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   schoolSetupService,
+  type BulkGeneratePayload,
   type DuplicatePayload,
   type PromoteYearPayload,
   type SetupStatus,
@@ -116,6 +117,18 @@ export function useApplySubjectOfferings() {
     onSuccess: () => {
       invalidateStatus(qc);
       qc.invalidateQueries({ queryKey: ["class-subjects"] });
+    },
+  });
+}
+
+export function useBulkGenerate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BulkGeneratePayload) =>
+      schoolSetupService.setup.bulkGenerate(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["classes"] });
+      invalidateStatus(qc);
     },
   });
 }

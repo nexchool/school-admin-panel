@@ -115,6 +115,29 @@ export interface ImportCsvResult {
   message?: string;
 }
 
+// ── Bulk-generate types ──────────────────────────────────────────────
+
+export type BulkGenerateResponse = {
+  data: {
+    created: Array<unknown>;
+    skipped: Array<unknown>;
+    errors: Array<{ cell?: number; section?: string; error: string }>;
+    created_count: number;
+    skipped_count: number;
+  };
+  message: string;
+};
+
+export interface BulkGeneratePayload {
+  academic_year_id: string;
+  cells: Array<{
+    grade_id: string;
+    school_unit_id: string;
+    programme_id: string;
+    sections: string[];
+  }>;
+}
+
 // ── Template types ───────────────────────────────────────────────────
 
 export type TemplateGroup = {
@@ -180,6 +203,9 @@ const setup = {
       "/api/school-setup/apply-subject-offerings",
       { academic_year_id: academicYearId },
     ),
+
+  bulkGenerate: (payload: BulkGeneratePayload) =>
+    apiPost<BulkGenerateResponse>("/api/school-setup/bulk-generate", payload),
 };
 
 export const schoolSetupService = { setup };

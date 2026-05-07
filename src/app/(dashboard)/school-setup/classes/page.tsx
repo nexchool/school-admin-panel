@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WizardShell } from "@/components/school-setup/wizard/WizardShell";
+import { BulkGenerateDialog } from "@/components/school-setup/BulkGenerateDialog";
 import { DuplicateStructureDialog } from "@/components/school-setup/DuplicateStructureDialog";
 import {
   ClassFormDialog,
@@ -32,6 +33,7 @@ export default function SetupClassesPage() {
   const [editTarget, setEditTarget] = useState<ClassItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClassItem | null>(null);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false);
 
   const handleAddClick = () => {
     setEditTarget(null);
@@ -108,10 +110,9 @@ export default function SetupClassesPage() {
             <Button
               size="sm"
               variant="outline"
-              disabled
-              title="Coming soon"
-              className="gap-1.5 opacity-60"
-              aria-label="Bulk Generate (coming soon)"
+              className="gap-1.5"
+              onClick={() => setBulkGenerateOpen(true)}
+              aria-label="Bulk Generate"
             >
               <Wand2 className="size-4" />
               Bulk Generate
@@ -264,6 +265,11 @@ export default function SetupClassesPage() {
         defaultValues={editTarget}
         onSubmit={handleFormSubmit}
         saving={isSaving}
+      />
+
+      <BulkGenerateDialog
+        open={bulkGenerateOpen}
+        onOpenChange={setBulkGenerateOpen}
       />
 
       <DuplicateStructureDialog
