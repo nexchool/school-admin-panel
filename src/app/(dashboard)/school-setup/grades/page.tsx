@@ -44,17 +44,17 @@ function SortableRow({ grade, onDelete, onRename }: SortableRowProps) {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className="flex items-center gap-2 rounded-md border bg-card p-2"
+      className="flex items-center gap-2 rounded-md border bg-card px-2 py-1.5"
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab text-muted-foreground"
+        className="cursor-grab text-muted-foreground shrink-0"
         aria-label="Drag to reorder"
       >
         <GripVertical className="size-4" />
       </button>
-      <span className="w-8 text-sm text-muted-foreground tabular-nums">
+      <span className="w-6 text-xs text-muted-foreground tabular-nums shrink-0">
         {grade.sequence}
       </span>
       <Input
@@ -65,7 +65,7 @@ function SortableRow({ grade, onDelete, onRename }: SortableRowProps) {
             onRename(grade.id, value);
           }
         }}
-        className="flex-1"
+        className="h-7 flex-1 text-sm"
       />
       <Button
         size="icon"
@@ -149,7 +149,7 @@ export default function SetupGradesPage() {
           Loading…
         </p>
       ) : (
-        <>
+        <div className="max-w-2xl mx-auto">
           {grades.length === 0 && (
             <p className="mb-4 text-sm text-muted-foreground">
               No grades yet. Add your first grade below.
@@ -165,7 +165,7 @@ export default function SetupGradesPage() {
               items={grades.map((g) => g.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1.5">
                 {grades.map((g) => (
                   <SortableRow
                     key={g.id}
@@ -178,12 +178,13 @@ export default function SetupGradesPage() {
             </SortableContext>
           </DndContext>
 
-          <div className="mt-4 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-2">
             <Input
               value={newName}
               placeholder="Grade name (e.g. Grade 1, Std 5)"
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onAdd()}
+              className="max-w-xs"
             />
             <Button
               onClick={onAdd}
@@ -193,7 +194,7 @@ export default function SetupGradesPage() {
               <Plus className="size-4" />
             </Button>
           </div>
-        </>
+        </div>
       )}
     </WizardShell>
   );
