@@ -36,7 +36,7 @@ import type { ClassItem } from "@/types/class";
 const ALL_VALUE = "__all__";
 
 export default function SetupClassesPage() {
-  const { data: classes = [], isLoading } = useClasses();
+  const { data: classes = [], isLoading } = useClasses({ school_unit_id: null });
   const { data: units = [] } = useSchoolUnits();
   const { data: programmes = [] } = useProgrammes();
   const createMutation = useCreateClass();
@@ -95,9 +95,16 @@ export default function SetupClassesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    toast.success("Class deleted");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Class deleted");
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      const message =
+        (err instanceof Error ? err.message : null) ||
+        "Failed to delete class";
+      toast.error(message);
+    }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
