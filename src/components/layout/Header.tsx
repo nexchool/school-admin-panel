@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, Menu, Bell } from "lucide-react";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 import { UnitSwitcher } from "./UnitSwitcher";
+import { AcademicYearSwitcher } from "./AcademicYearSwitcher";
 import { useUnreadNotificationsCount } from "@/hooks/useNotifications";
 import {
   enableNotifications,
@@ -125,6 +126,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="flex-1" />
 
         <div className="flex items-center gap-3">
+          <AcademicYearSwitcher />
           {user && (
             <>
               {notificationsEnabled && (
