@@ -25,6 +25,7 @@ import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useImportExcel, useParseImportHeaders } from "@/hooks/useSchoolSetup";
 import { fuzzyMatchHeader } from "@/lib/fuzzyMatchHeader";
 import { ApiException } from "@/services/api";
+import { schoolSetupService } from "@/services/schoolSetupService";
 import type { ImportCsvResult } from "@/services/schoolSetupService";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -102,6 +103,20 @@ export function ExcelImportDialog({ onClose }: Props) {
 
   function handleClose() {
     onClose();
+  }
+
+  async function handleDownloadTemplate() {
+    try {
+      const blob = await schoolSetupService.setup.downloadImportTemplate();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "class-import-template.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download template");
+    }
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -204,15 +219,10 @@ export function ExcelImportDialog({ onClose }: Props) {
               type="button"
               variant="outline"
               size="sm"
-              disabled
-              title="Template download coming soon"
-              className="opacity-60"
+              onClick={handleDownloadTemplate}
             >
               Download Excel template
             </Button>
-            <span className="text-xs text-muted-foreground">
-              Template download coming soon
-            </span>
           </div>
         </div>
 

@@ -9,7 +9,7 @@
  *   - academicTermsService
  */
 
-import { apiGet, apiPost, apiPostForm } from "@/services/api";
+import { apiGet, apiGetBlob, apiPost, apiPostForm } from "@/services/api";
 
 // ── Status types ─────────────────────────────────────────────────────
 
@@ -206,6 +206,9 @@ const setup = {
 
   bulkGenerate: (payload: BulkGeneratePayload) =>
     apiPost<BulkGenerateResponse>("/api/school-setup/bulk-generate", payload),
+
+  downloadImportTemplate: () =>
+    apiGetBlob("/api/school-setup/import/template"),
 };
 
 export const schoolSetupService = { setup };
