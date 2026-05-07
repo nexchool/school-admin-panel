@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks";
@@ -20,8 +21,15 @@ import {
   CalendarDays,
   HelpCircle,
   Settings2,
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  CheckCircle2,
+  Circle,
+  CircleDot,
 } from "lucide-react";
 import { useSetupStatus } from "@/hooks/useSchoolSetup";
+import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 
 type NavItem = {
@@ -54,6 +62,17 @@ const SIDEBAR_NAV_TRANSPORT = {
   label: "Transport",
   icon: Bus,
 } as const;
+
+const SETUP_STEPS: Array<{ key: SetupStepKey; href: string; label: string }> = [
+  { key: "units", href: "/school-setup/units", label: "School Units" },
+  { key: "programmes", href: "/school-setup/programmes", label: "Programmes" },
+  { key: "grades", href: "/school-setup/grades", label: "Grades" },
+  { key: "academic-year", href: "/school-setup/academic-year", label: "Academic Year" },
+  { key: "classes", href: "/school-setup/classes", label: "Classes" },
+  { key: "subjects", href: "/school-setup/subjects", label: "Subjects" },
+  { key: "terms", href: "/school-setup/terms", label: "Terms" },
+  { key: "complete", href: "/school-setup/complete", label: "Review & Complete" },
+];
 
 const TRANSPORT_NAV_PERMS = [
   "transport.buses.read",
@@ -99,19 +118,18 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
     hasPermission("school_setup.manage") ||
     (setupStatus ? !isSetupComplete : false);
 
-  const setupNavItem: NavItem = {
-    href: "/school-setup",
-    label: isSetupComplete ? "School Setup" : "School Setup ⚠",
-    icon: Settings2,
-  };
+  const [setupExpanded, setSetupExpanded] = useState(
+    pathname.startsWith("/school-setup")
+  );
 
-  const coreWithSetup = showSchoolSetup
-    ? [visibleCore[0], setupNavItem, ...visibleCore.slice(1)]
-    : visibleCore;
+  // Dashboard is always first; the setup group is injected between it and the
+  // rest when school setup is visible.
+  const coreItemsBeforeSetup = visibleCore.slice(0, 1); // Dashboard
+  const coreItemsAfterSetup = visibleCore.slice(1);     // everything else
 
   const allNavItems = showTransport
-    ? [...coreWithSetup, SIDEBAR_NAV_TRANSPORT, SIDEBAR_NAV_PROFILE]
-    : [...coreWithSetup, SIDEBAR_NAV_PROFILE];
+    ? [...coreItemsAfterSetup, SIDEBAR_NAV_TRANSPORT, SIDEBAR_NAV_PROFILE]
+    : [...coreItemsAfterSetup, SIDEBAR_NAV_PROFILE];
 
   const handleLogout = () => {
     logout();
@@ -147,6 +165,66 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
 
       <nav className="flex flex-1 flex-col p-4">
         <div className="space-y-1">
+          {/* Dashboard — always first */}
+          {coreItemsBeforeSetup.map(({ href, label, icon: Icon }) => {
+            const isActive = isSidebarNavActive(pathname, href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={handleNavClick}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {label}
+              </Link>
+            );
+          })}
+
+          {/* School Setup collapsible group */}
+          {showSchoolSetup && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setSetupExpanded((v) => !v)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  pathname.startsWith("/school-setup")
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <Settings2 className="h-5 w-5 shrink-0" />
+                <span className="flex-1 text-left">
+                  School Setup{!isSetupComplete && " ⚠"}
+                </span>
+                {setupExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              {setupExpanded && (
+                <div className="ml-7 mt-1 space-y-0.5 border-l border-border pl-3">
+                  {SETUP_STEPS.map((step) => (
+                    <SetupSubItem
+                      key={step.key}
+                      step={step}
+                      pathname={pathname}
+                      onNavClick={handleNavClick}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Remaining core nav items */}
           {allNavItems.map(({ href, label, icon: Icon }) => {
             const isActive = isSidebarNavActive(pathname, href);
             return (
@@ -166,6 +244,23 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
               </Link>
             );
           })}
+
+          {/* Audit Log — visible only to users with audit_log.view permission */}
+          {hasPermission("audit_log.view") && (
+            <Link
+              href="/audit-log"
+              onClick={handleNavClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                pathname === "/audit-log" || pathname.startsWith("/audit-log/")
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <ClipboardList className="h-5 w-5 shrink-0" />
+              Audit Log
+            </Link>
+          )}
         </div>
 
         <div className="mt-auto space-y-3 border-t border-border pt-4">
@@ -246,5 +341,58 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
     <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
       {sidebar}
     </aside>
+  );
+}
+
+// ── SetupSubItem ──────────────────────────────────────────────────────────────
+
+function SetupSubItem({
+  step,
+  pathname,
+  onNavClick,
+}: {
+  step: { key: SetupStepKey; href: string; label: string };
+  pathname: string;
+  onNavClick: () => void;
+}) {
+  const status = useSetupStepStatus(step.key);
+  const isActive = pathname === step.href;
+  const Icon =
+    status === "done" ? CheckCircle2 : status === "now" ? CircleDot : Circle;
+  const colorClass =
+    status === "done"
+      ? "text-emerald-600"
+      : status === "now"
+        ? "text-blue-600"
+        : "text-muted-foreground/60";
+  return (
+    <Link
+      href={step.href}
+      onClick={onNavClick}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
+    >
+      <Icon className={cn("h-3.5 w-3.5 shrink-0", colorClass)} />
+      <span className="flex-1">{step.label}</span>
+      {status === "done" && (
+        <span className="text-[9px] uppercase tracking-wide text-emerald-600">
+          done
+        </span>
+      )}
+      {status === "now" && (
+        <span className="text-[9px] uppercase tracking-wide text-blue-600">
+          now
+        </span>
+      )}
+      {status === "optional" && (
+        <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
+          opt
+        </span>
+      )}
+    </Link>
   );
 }
