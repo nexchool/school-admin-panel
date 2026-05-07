@@ -115,6 +115,27 @@ export interface ImportCsvResult {
   message?: string;
 }
 
+// ── Template types ───────────────────────────────────────────────────
+
+export type TemplateGroup = {
+  id: string;
+  name: string;
+  board_code: string;
+  is_active: boolean;
+};
+
+export type TemplateItem = {
+  id: string;
+  template_group_id: string;
+  grade_number: number;
+  stream?: string | null;
+  subject_name: string;
+  subject_code?: string | null;
+  periods_per_week?: number | null;
+  is_elective: boolean;
+  sort_order?: number;
+};
+
 // ── Setup aggregator ─────────────────────────────────────────────────
 
 const setup = {
@@ -125,12 +146,40 @@ const setup = {
     apiPost<DuplicateResult>("/api/school-setup/duplicate-structure", payload),
   promoteYear: (payload: PromoteYearPayload) =>
     apiPost<PromoteYearResult>("/api/school-setup/promote-year", payload),
-  importCsv: (file: File, academicYearId: string) => {
+  parseImportHeaders: async (file: File): Promise<{ headers: string[] }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return apiPostForm<{ headers: string[] }>(
+      "/api/school-setup/import/parse-headers",
+      fd,
+    );
+  },
+
+  importExcel: async (
+    file: File,
+    academicYearId: string,
+    mapping?: Record<string, string>,
+  ): Promise<ImportCsvResult> => {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("academic_year_id", academicYearId);
+    if (mapping) fd.append("mapping", JSON.stringify(mapping));
     return apiPostForm<ImportCsvResult>("/api/school-setup/import", fd);
   },
+
+  listTemplates: () =>
+    apiGet<{ data: TemplateGroup[] }>("/api/school-setup/templates/"),
+
+  templateItems: (groupId: string) =>
+    apiGet<{ data: TemplateItem[] }>(
+      `/api/school-setup/templates/${groupId}/items/`,
+    ),
+
+  applySubjectOfferings: (academicYearId: string) =>
+    apiPost<{ data: { created: number; skipped: number } }>(
+      "/api/school-setup/apply-subject-offerings",
+      { academic_year_id: academicYearId },
+    ),
 };
 
 export const schoolSetupService = { setup };
