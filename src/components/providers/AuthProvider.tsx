@@ -33,17 +33,10 @@ import {
   type ProfileRole,
   type TenantChoice,
 } from "@/services/authService";
+import type { User } from "@/types/auth";
 
-export interface User {
-  id: number;
-  email: string;
-  name?: string;
-  email_verified?: boolean;
-  profile_picture_url?: string;
-  default_unit_id?: string | null;
-  last_login_at?: string | null;
-  created_at?: string;
-}
+// Re-export for consumers that import User from this provider
+export type { User } from "@/types/auth";
 
 interface AuthContextType {
   user: User | null;
