@@ -16,6 +16,7 @@ import { useClasses } from "@/hooks/useClasses";
 import { useSubjects } from "@/hooks/useSubjects";
 import { useTerms } from "@/hooks/useTerms";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { useHolidays } from "@/hooks/useHolidays";
 
 // ── Mode B — post-completion prompt card ────────────────────────────
 
@@ -87,11 +88,20 @@ export default function CompletePage() {
   const { data: subjects = [] } = useSubjects();
   const { data: terms = [] } = useTerms(academicYearId ?? undefined);
 
+  // Non-blocking checks for step 8 warnings
+  const { data: holidays, isSuccess: holidaysLoaded } = useHolidays({
+    academic_year_id: academicYearId ?? undefined,
+  });
+  // Only warn when the query has settled with zero results (non-blocking — query errors are ignored)
+  const noHolidays = holidaysLoaded && (holidays?.length ?? 0) === 0;
+
+  // Derive class count and teacher gaps from the already-loaded classesData
+  const classesArray = Array.isArray(classesData) ? classesData : [];
+  const classCount = classesArray.length;
+  const classesWithoutTeacher = classesArray.filter((c) => !c.teacher_id).length;
+
   const isSetupComplete =
     setupStatus?.overall?.is_setup_complete === true;
-
-  // Derive class count from query data (classesData may be array directly)
-  const classCount = Array.isArray(classesData) ? classesData.length : 0;
 
   // Active academic year name
   const activeYear = academicYears.find((y) => y.is_active);
@@ -292,28 +302,35 @@ export default function CompletePage() {
             </section>
 
             {/* Non-blocking warnings */}
-            {classCount > 0 && (
+            {(classesWithoutTeacher > 0 || noHolidays) && (
               <section className="space-y-2">
-                <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-                  Reminder: assign class teachers after completing setup. Go to{" "}
-                  <Link
-                    href="/teachers"
-                    className="font-medium underline underline-offset-4"
-                  >
-                    Teachers
-                  </Link>{" "}
-                  to assign them.
-                </div>
-                <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-                  Holiday calendar not configured. Go to{" "}
-                  <Link
-                    href="/holidays"
-                    className="font-medium underline underline-offset-4"
-                  >
-                    Holidays
-                  </Link>{" "}
-                  to add school breaks.
-                </div>
+                {classesWithoutTeacher > 0 && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                    {classesWithoutTeacher === 1
+                      ? "1 class has no class teacher assigned."
+                      : `${classesWithoutTeacher} classes have no class teacher assigned.`}{" "}
+                    Go to{" "}
+                    <Link
+                      href="/teachers"
+                      className="font-medium underline underline-offset-4"
+                    >
+                      Teachers
+                    </Link>{" "}
+                    to assign them.
+                  </div>
+                )}
+                {noHolidays && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+                    Holiday calendar not configured. Go to{" "}
+                    <Link
+                      href="/holidays"
+                      className="font-medium underline underline-offset-4"
+                    >
+                      Holidays
+                    </Link>{" "}
+                    to add school breaks.
+                  </div>
+                )}
               </section>
             )}
 
