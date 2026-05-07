@@ -82,9 +82,16 @@ export default function SubjectsPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    toast.success("Subject deleted");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Subject deleted");
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      const message =
+        (err instanceof Error ? err.message : null) ||
+        "Failed to delete subject";
+      toast.error(message);
+    }
   };
 
   const handleApplyOfferings = async () => {
