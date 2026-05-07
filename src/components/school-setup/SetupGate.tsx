@@ -16,12 +16,7 @@ import { useSetupStatus } from "@/hooks/useSchoolSetup";
 const SETUP_ALLOWLIST_PREFIXES = [
   "/school-setup",
   "/profile",
-  "/school-units",
-  "/programmes",
-  "/grades",
-  "/academics",
-  "/classes",
-  "/subjects",
+  "/logout",
 ];
 
 function isAllowedDuringSetup(pathname: string): boolean {
