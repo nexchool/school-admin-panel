@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 
-type ActiveUnitValue = {
+export type ActiveUnitValue = {
   unitId: string | null;
   setUnitId: (id: string | null) => void;
 };
