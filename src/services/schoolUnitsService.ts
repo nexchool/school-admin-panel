@@ -17,6 +17,7 @@ export interface SchoolUnit {
   dise_no: string | null;
   index_no: string | null;
   recognition_no: string | null;
+  gr_number_scheme: string | null;
   phone: string | null;
   address: string | null;
   logo_url: string | null;

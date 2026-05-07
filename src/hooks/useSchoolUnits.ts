@@ -33,6 +33,15 @@ export function useCreateSchoolUnit() {
   });
 }
 
+export function useUpdateSchoolUnit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SchoolUnit> }) =>
+      schoolUnitsService.update(id, data),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
+
 export function useDeleteSchoolUnit() {
   const qc = useQueryClient();
   return useMutation({
