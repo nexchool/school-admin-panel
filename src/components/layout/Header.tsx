@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, Menu, Bell } from "lucide-react";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
+import { UnitSwitcher } from "./UnitSwitcher";
+import { AcademicYearSwitcher } from "./AcademicYearSwitcher";
 import { useUnreadNotificationsCount } from "@/hooks/useNotifications";
 import {
   enableNotifications,
@@ -117,9 +119,14 @@ export function Header({ onMenuClick }: HeaderProps) {
           <Menu className="h-6 w-6" />
         </button>
 
-        <div className="flex-1 md:flex-none" />
+        <div className="flex items-center gap-2">
+          <UnitSwitcher />
+        </div>
+
+        <div className="flex-1" />
 
         <div className="flex items-center gap-3">
+          <AcademicYearSwitcher />
           {user && (
             <>
               {notificationsEnabled && (
@@ -152,15 +159,6 @@ export function Header({ onMenuClick }: HeaderProps) {
                   {user.name || user.email}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => logout()}
-                className="gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </Button>
             </>
           )}
         </div>

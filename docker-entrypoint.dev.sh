@@ -68,4 +68,6 @@ if [ -n "$ARCH_SUFFIX" ]; then
   fi
 fi
 
-exec npm run dev -- --hostname 0.0.0.0 --port 3000
+# Use webpack dev server: Turbopack has panicked in Docker (volume bind + HMR) with
+# inner_of_uppers_lost_follower / Project::hmr_content — see Next.js Turbopack issue reports.
+exec npm run dev -- --webpack --hostname 0.0.0.0 --port 3000

@@ -44,6 +44,20 @@ export default function AcademicsPage() {
 
   const sections = [
     {
+      href: "/dashboard/academics/year-transition",
+      label: "Year transition",
+      icon: CalendarDays,
+      description: "Copy classes to the next year, map promotions, and move students in bulk",
+      show: canManageSettings && hasPermission("student.update"),
+    },
+    {
+      href: "/dashboard/academics/year-transition/history",
+      label: "Transition history",
+      icon: CalendarDays,
+      description: "Review past year transitions and the audit summary for each batch",
+      show: canManageSettings && hasPermission("student.update"),
+    },
+    {
       href: "/academics/academic-years",
       label: "Academic years",
       icon: CalendarRange,

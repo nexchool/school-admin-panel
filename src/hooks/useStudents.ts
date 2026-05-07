@@ -15,6 +15,7 @@ import type {
   CreateStudentInput,
   UpdateStudentInput,
 } from "@/types/student";
+import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 
 export const studentsKeys = {
   all: ["students"] as const,
@@ -23,10 +24,21 @@ export const studentsKeys = {
   detail: (id: string) => [...studentsKeys.all, "detail", id] as const,
 };
 
+/**
+ * If `params.academic_year_id` is undefined, the active academic year context
+ * value is used. Pass an explicit string to override (explicit wins).
+ */
 export function useStudents(params?: StudentsListParams) {
+  const { academicYearId } = useActiveAcademicYear();
+  const merged: StudentsListParams = {
+    ...params,
+    academic_year_id:
+      params?.academic_year_id ?? academicYearId ?? undefined,
+  };
+
   return useQuery<StudentsListResult>({
-    queryKey: studentsKeys.list(params),
-    queryFn: () => studentsService.getStudents(params),
+    queryKey: studentsKeys.list(merged),
+    queryFn: () => studentsService.getStudents(merged),
     // Keep showing the previous page while a new page/search is fetching.
     placeholderData: keepPreviousData,
   });

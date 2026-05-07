@@ -54,7 +54,8 @@ export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasAnyPermission } = useAuth();
+  const { hasAnyPermission, isFeatureEnabled } = useAuth();
+  const timetableEnabled = isFeatureEnabled("timetable");
   const id = params?.id as string | undefined;
   const showSubjectsTab = hasAnyPermission([
     "class_subject.read",
@@ -213,7 +214,9 @@ export default function ClassDetailPage() {
     ...(showSubjectsTab
       ? [{ id: "subjects" as const, label: "Subjects", icon: BookOpen }]
       : []),
-    { id: "timetable", label: "Timetable", icon: CalendarDays },
+    ...(timetableEnabled
+      ? [{ id: "timetable" as const, label: "Timetable", icon: CalendarDays }]
+      : []),
   ];
 
   return (
@@ -372,7 +375,7 @@ export default function ClassDetailPage() {
             <ClassSubjectsSection classId={id} onRefresh={refreshClass} />
           )}
 
-          {detailTab === "timetable" && id && (
+          {timetableEnabled && detailTab === "timetable" && id && (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
                 <div className="space-y-1">

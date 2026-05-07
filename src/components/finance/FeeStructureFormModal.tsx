@@ -238,7 +238,6 @@ export function FeeStructureFormModal({
                   onClick={() => toggleClass(c.id)}
                 >
                   {c.name}
-                  {c.section ? `-${c.section}` : ""}
                 </Button>
               ))}
               {availableClasses.length === 0 && academicYearId && (
