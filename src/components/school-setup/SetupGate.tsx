@@ -1,32 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks";
 import { useSetupStatus } from "@/hooks/useSchoolSetup";
 
-/**
- * Routes reachable while setup is incomplete. The dashboard links into the
- * structural module screens directly, so admins must land there without
- * being bounced back to /school-setup.
- */
-const SETUP_ALLOWLIST_PREFIXES = [
-  "/school-setup",
-  "/profile",
-  "/logout",
-];
-
-function isAllowedDuringSetup(pathname: string): boolean {
-  return SETUP_ALLOWLIST_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
-}
-
 export function SetupGate({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname() ?? "";
   const { hasPermission, isAuthenticated } = useAuth();
   const canManageSetup = hasPermission("school_setup.manage");
@@ -34,23 +16,7 @@ export function SetupGate({ children }: { children: React.ReactNode }) {
   const { data, isLoading, isError, refetch, isFetching } = useSetupStatus();
 
   const setupComplete = data?.overall.is_setup_complete ?? false;
-  const onAllowedRoute = isAllowedDuringSetup(pathname);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    if (!data) return;
-    if (setupComplete) return;
-    if (onAllowedRoute) return;
-    if (!canManageSetup) return;
-    router.replace("/school-setup");
-  }, [
-    isAuthenticated,
-    data,
-    setupComplete,
-    onAllowedRoute,
-    canManageSetup,
-    router,
-  ]);
+  const onSetupRoute = pathname === "/school-setup" || pathname.startsWith("/school-setup/");
 
   if (isLoading) {
     return (
@@ -87,7 +53,8 @@ export function SetupGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!setupComplete && !onAllowedRoute && !canManageSetup) {
+  // Non-admins see an informational card; they cannot manage setup.
+  if (!setupComplete && !canManageSetup) {
     return (
       <div className="mx-auto max-w-lg rounded-lg border bg-muted/40 p-6 text-sm">
         <h2 className="text-base font-semibold">School setup is in progress</h2>
@@ -99,5 +66,32 @@ export function SetupGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  const showBanner =
+    isAuthenticated &&
+    !setupComplete &&
+    canManageSetup &&
+    !onSetupRoute;
+
+  return (
+    <>
+      {showBanner && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>
+              School setup is incomplete. Some features may be unavailable until
+              you finish setup.
+            </span>
+          </div>
+          <Link
+            href="/school-setup"
+            className="shrink-0 font-medium underline underline-offset-2 hover:no-underline"
+          >
+            Continue setup →
+          </Link>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
