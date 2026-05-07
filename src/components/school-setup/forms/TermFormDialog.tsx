@@ -53,6 +53,7 @@ type TermFormDialogProps = {
   onOpenChange: (open: boolean) => void;
   defaultValues?: AcademicTerm | null;
   defaultSequence?: number;
+  activeYearName?: string | null;
   onSubmit: (values: TermFormValues) => Promise<void>;
   saving?: boolean;
 };
@@ -62,6 +63,7 @@ export function TermFormDialog({
   onOpenChange,
   defaultValues,
   defaultSequence = 1,
+  activeYearName,
   onSubmit,
   saving,
 }: TermFormDialogProps) {
@@ -126,6 +128,13 @@ export function TermFormDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Term" : "Add Term"}</DialogTitle>
         </DialogHeader>
+
+        {activeYearName && (
+          <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+            This term will be associated with:{" "}
+            <span className="font-medium text-foreground">{activeYearName}</span>
+          </div>
+        )}
 
         <form
           id="term-form"

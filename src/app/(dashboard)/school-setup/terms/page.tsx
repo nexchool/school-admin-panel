@@ -149,6 +149,9 @@ export default function TermsPage() {
                         Sequence
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                        Academic Year
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                         Start
                       </th>
                       <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -166,7 +169,7 @@ export default function TermsPage() {
                     {terms.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={8}
                           className="px-4 py-8 text-center text-muted-foreground"
                         >
                           No terms yet. Add one above to split your academic
@@ -174,53 +177,71 @@ export default function TermsPage() {
                         </td>
                       </tr>
                     ) : (
-                      terms.map((term) => (
-                        <tr
-                          key={term.id}
-                          className="border-b last:border-0 hover:bg-muted/20"
-                        >
-                          <td className="px-4 py-3 font-medium">{term.name}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                            {term.code ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {term.sequence}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {term.start_date}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {term.end_date}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge
-                              variant={term.is_active ? "default" : "outline"}
-                            >
-                              {term.is_active ? "Active" : "Inactive"}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditClick(term)}
-                                aria-label={`Edit ${term.name}`}
+                      terms.map((term) => {
+                        const termYear = academicYears.find(
+                          (y) => y.id === term.academic_year_id,
+                        );
+                        const isOtherYear =
+                          academicYearId && term.academic_year_id !== academicYearId;
+                        return (
+                          <tr
+                            key={term.id}
+                            className="border-b last:border-0 hover:bg-muted/20"
+                          >
+                            <td className="px-4 py-3 font-medium">{term.name}</td>
+                            <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                              {term.code ?? "—"}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {term.sequence}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              <span>{termYear?.name ?? "—"}</span>
+                              {isOtherYear && (
+                                <Badge
+                                  variant="outline"
+                                  className="ml-1.5 text-xs"
+                                >
+                                  other year
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {term.start_date}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {term.end_date}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant={term.is_active ? "default" : "outline"}
                               >
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeleteTarget(term)}
-                                aria-label={`Delete ${term.name}`}
-                              >
-                                <Trash2 className="size-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                                {term.is_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditClick(term)}
+                                  aria-label={`Edit ${term.name}`}
+                                >
+                                  <Pencil className="size-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeleteTarget(term)}
+                                  aria-label={`Delete ${term.name}`}
+                                >
+                                  <Trash2 className="size-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -236,6 +257,7 @@ export default function TermsPage() {
         onOpenChange={setFormOpen}
         defaultValues={editTarget}
         defaultSequence={terms.length + 1}
+        activeYearName={activeYearName}
         onSubmit={handleFormSubmit}
         saving={isSaving}
       />
