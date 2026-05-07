@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { AcademicYear } from "@/services/academicYearsService";
 
 const academicYearFormSchema = z
   .object({
@@ -35,6 +36,8 @@ type AcademicYearFormDialogProps = {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: AcademicYearFormValues) => Promise<void>;
   saving?: boolean;
+  /** When provided the dialog runs in edit mode */
+  year?: AcademicYear | null;
 };
 
 export function AcademicYearFormDialog({
@@ -42,7 +45,10 @@ export function AcademicYearFormDialog({
   onOpenChange,
   onSubmit,
   saving,
+  year,
 }: AcademicYearFormDialogProps) {
+  const isEdit = !!year;
+
   const {
     register,
     handleSubmit,
@@ -60,14 +66,23 @@ export function AcademicYearFormDialog({
 
   useEffect(() => {
     if (open) {
-      reset({
-        name: "",
-        start_date: "",
-        end_date: "",
-        is_active: true,
-      });
+      reset(
+        year
+          ? {
+              name: year.name,
+              start_date: year.start_date,
+              end_date: year.end_date,
+              is_active: year.is_active ?? false,
+            }
+          : {
+              name: "",
+              start_date: "",
+              end_date: "",
+              is_active: true,
+            },
+      );
     }
-  }, [open, reset]);
+  }, [open, year, reset]);
 
   const handleFormSubmit = async (values: AcademicYearFormValues) => {
     await onSubmit(values);
@@ -78,7 +93,9 @@ export function AcademicYearFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" onClose={() => onOpenChange(false)}>
         <DialogHeader>
-          <DialogTitle>Create Academic Year</DialogTitle>
+          <DialogTitle>
+            {isEdit ? "Edit Academic Year" : "Create Academic Year"}
+          </DialogTitle>
         </DialogHeader>
 
         <form
@@ -159,7 +176,7 @@ export function AcademicYearFormDialog({
             Cancel
           </Button>
           <Button type="submit" form="academic-year-form" disabled={saving}>
-            {saving ? "Creating…" : "Create Academic Year"}
+            {saving ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Changes" : "Create Academic Year")}
           </Button>
         </DialogFooter>
       </DialogContent>

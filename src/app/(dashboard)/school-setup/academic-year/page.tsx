@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarRange, Plus } from "lucide-react";
+import { CalendarRange, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WizardShell } from "@/components/school-setup/wizard/WizardShell";
 import {
   AcademicYearFormDialog,
@@ -15,26 +16,75 @@ import {
 import {
   useAcademicYears,
   useCreateAcademicYear,
+  useUpdateAcademicYear,
+  useDeleteAcademicYear,
 } from "@/hooks/useAcademicYears";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import type { AcademicYear } from "@/services/academicYearsService";
 
 export default function AcademicYearPage() {
   const { data: years = [], isLoading } = useAcademicYears();
   const createMutation = useCreateAcademicYear();
+  const updateMutation = useUpdateAcademicYear();
+  const deleteMutation = useDeleteAcademicYear();
   const { setAcademicYearId } = useActiveAcademicYear();
 
   const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<AcademicYear | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AcademicYear | null>(null);
 
   const activeYear = years.find((y) => y.is_active) ?? null;
   const otherYears = years.filter((y) => !y.is_active);
 
+  const handleCreateClick = () => {
+    setEditTarget(null);
+    setFormOpen(true);
+  };
+
+  const handleEditClick = (year: AcademicYear) => {
+    setEditTarget(year);
+    setFormOpen(true);
+  };
+
   const handleFormSubmit = async (values: AcademicYearFormValues) => {
-    const created = await createMutation.mutateAsync(values);
-    toast.success("Academic year created");
-    if (values.is_active) {
-      setAcademicYearId(created.id);
+    try {
+      if (editTarget) {
+        await updateMutation.mutateAsync({ id: editTarget.id, data: values });
+        toast.success("Academic year updated");
+        if (values.is_active) {
+          setAcademicYearId(editTarget.id);
+        }
+      } else {
+        const created = await createMutation.mutateAsync(values);
+        toast.success("Academic year created");
+        if (values.is_active) {
+          setAcademicYearId(created.id);
+        }
+      }
+    } catch (err: unknown) {
+      const message =
+        (err instanceof Error ? err.message : null) ||
+        "Failed to save academic year";
+      toast.error(message);
+      throw err; // re-throw so the dialog stays open
     }
   };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Academic year deleted");
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      const message =
+        (err instanceof Error ? err.message : null) ||
+        "Failed to delete academic year";
+      toast.error(message);
+    }
+  };
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <>
@@ -50,7 +100,7 @@ export default function AcademicYearPage() {
             </p>
             <Button
               size="sm"
-              onClick={() => setFormOpen(true)}
+              onClick={handleCreateClick}
               className="gap-1.5"
             >
               <Plus className="size-4" />
@@ -81,7 +131,25 @@ export default function AcademicYearPage() {
                           </p>
                         </div>
                       </div>
-                      <Badge variant="default">Active</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="default">Active</Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditClick(activeYear)}
+                          aria-label={`Edit ${activeYear.name}`}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(activeYear)}
+                          aria-label={`Delete ${activeYear.name}`}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -116,6 +184,9 @@ export default function AcademicYearPage() {
                           <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                             Status
                           </th>
+                          <th className="px-4 py-3 text-right font-medium text-muted-foreground">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -136,6 +207,26 @@ export default function AcademicYearPage() {
                             <td className="px-4 py-3">
                               <Badge variant="outline">Inactive</Badge>
                             </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditClick(year)}
+                                  aria-label={`Edit ${year.name}`}
+                                >
+                                  <Pencil className="size-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setDeleteTarget(year)}
+                                  aria-label={`Delete ${year.name}`}
+                                >
+                                  <Trash2 className="size-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -152,7 +243,25 @@ export default function AcademicYearPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         onSubmit={handleFormSubmit}
-        saving={createMutation.isPending}
+        saving={isSaving}
+        year={editTarget}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        title="Delete academic year"
+        description={
+          deleteTarget
+            ? `Are you sure you want to delete "${deleteTarget.name}"? This cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteConfirm}
+        loading={deleteMutation.isPending}
       />
     </>
   );

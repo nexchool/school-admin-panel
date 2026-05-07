@@ -59,3 +59,11 @@ export function useUpdateAcademicYear() {
     onSuccess: () => invalidateAll(qc),
   });
 }
+
+export function useDeleteAcademicYear() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => academicYearsService.deleteAcademicYear(id),
+    onSuccess: () => invalidateAll(qc),
+  });
+}
