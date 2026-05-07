@@ -46,6 +46,12 @@ export interface CreateClassInput {
   teacher_id?: string;
   start_date?: string;
   end_date?: string;
+  /** Structural fields added in the multi-school migration */
+  grade_id?: string | null;
+  programme_id?: string | null;
+  school_unit_id?: string | null;
+  medium_id?: string | null;
+  stream?: string | null;
 }
 
 /** Alias for CreateClassInput (used by classesService) */
