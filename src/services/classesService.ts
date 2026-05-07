@@ -26,12 +26,14 @@ function normalizeClass<T extends { name?: string | null }>(c: T): T {
 
 export const classesService = {
   getClasses: async (params?: {
-    academic_year_id?: string;
+    academic_year_id?: string | null;
+    school_unit_id?: string | null;
   }): Promise<ClassItem[]> => {
-    let url = "/api/classes/";
-    if (params?.academic_year_id) {
-      url += `?academic_year_id=${params.academic_year_id}`;
-    }
+    const sp = new URLSearchParams();
+    if (params?.academic_year_id) sp.set("academic_year_id", params.academic_year_id);
+    if (params?.school_unit_id) sp.set("school_unit_id", params.school_unit_id);
+    const qs = sp.toString();
+    const url = `/api/classes/${qs ? `?${qs}` : ""}`;
     const data = await apiGet<ClassItem[]>(url);
     return Array.isArray(data) ? data.map(normalizeClass) : [];
   },
