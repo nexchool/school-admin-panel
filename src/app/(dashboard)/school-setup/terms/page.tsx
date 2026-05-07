@@ -18,12 +18,16 @@ import {
   useUpdateTerm,
   useDeleteTerm,
 } from "@/hooks/useTerms";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import type { AcademicTerm } from "@/services/academicTermsService";
 
 export default function TermsPage() {
   const { academicYearId } = useActiveAcademicYear();
   const { data: terms = [], isLoading } = useTerms(academicYearId ?? undefined);
+  const { data: academicYears = [] } = useAcademicYears();
+  const activeYearName =
+    academicYears.find((y) => y.id === academicYearId)?.name ?? null;
 
   const createMutation = useCreateTerm();
   const updateMutation = useUpdateTerm();
@@ -101,6 +105,18 @@ export default function TermsPage() {
           </p>
 
           <section className="space-y-3">
+            <div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
+              <p>
+                Showing terms for{" "}
+                <span className="font-medium text-foreground">
+                  {activeYearName ?? "no active year"}
+                </span>
+              </p>
+              {!academicYearId && (
+                <p className="text-amber-600">Set an active academic year in Step 4 first.</p>
+              )}
+            </div>
+
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Terms</h2>
               <Button
@@ -113,12 +129,6 @@ export default function TermsPage() {
                 Add Term
               </Button>
             </div>
-
-            {!academicYearId && (
-              <p className="text-xs text-amber-600">
-                Set an active academic year in Step 4 to add terms.
-              </p>
-            )}
 
             {isLoading ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
