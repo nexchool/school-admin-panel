@@ -50,6 +50,8 @@ export interface HostelRoom {
   id: string;
   hostel_id: string;
   room_number: string;
+  /** e.g. "Ground Floor", "1st Floor" — used to group rooms on the grid. */
+  floor: string;
   capacity: number;
   status: HostelStatus;
   created_at: string;
@@ -239,6 +241,7 @@ export const hostelService = {
   async createRoom(input: {
     hostel_id: string;
     room_number: string;
+    floor?: string;
     capacity: number;
     status?: HostelStatus;
   }): Promise<HostelRoom> {
@@ -253,6 +256,7 @@ export const hostelService = {
     id: string,
     patch: Partial<{
       room_number: string;
+      floor: string;
       capacity: number;
       status: HostelStatus;
     }>
