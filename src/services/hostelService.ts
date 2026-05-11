@@ -182,13 +182,13 @@ function unwrap<T>(env: ApiEnvelope<T>): T {
 export const hostelService = {
   // ---- Hostels ----
   async listHostels(): Promise<Hostel[]> {
-    const env = await apiGet<ApiEnvelope<{ hostels: Hostel[] }>>("/hostel/hostels");
+    const env = await apiGet<ApiEnvelope<{ hostels: Hostel[] }>>("/api/hostel/hostels");
     return unwrap(env).hostels;
   },
 
   async getHostel(id: string): Promise<Hostel> {
     const env = await apiGet<ApiEnvelope<{ hostel: Hostel }>>(
-      `/hostel/hostels/${id}`
+      `/api/hostel/hostels/${id}`
     );
     return unwrap(env).hostel;
   },
@@ -202,7 +202,7 @@ export const hostelService = {
     status?: HostelStatus;
   }): Promise<Hostel> {
     const env = await apiPost<ApiEnvelope<{ hostel: Hostel }>>(
-      "/hostel/hostels",
+      "/api/hostel/hostels",
       input
     );
     return unwrap(env).hostel;
@@ -220,20 +220,20 @@ export const hostelService = {
     }>
   ): Promise<Hostel> {
     const env = await apiPatch<ApiEnvelope<{ hostel: Hostel }>>(
-      `/hostel/hostels/${id}`,
+      `/api/hostel/hostels/${id}`,
       patch
     );
     return unwrap(env).hostel;
   },
 
   async deleteHostel(id: string): Promise<void> {
-    await apiDelete(`/hostel/hostels/${id}`);
+    await apiDelete(`/api/hostel/hostels/${id}`);
   },
 
   // ---- Rooms ----
   async listRooms(hostelId: string): Promise<HostelRoom[]> {
     const env = await apiGet<ApiEnvelope<{ rooms: HostelRoom[] }>>(
-      `/hostel/hostels/${hostelId}/rooms`
+      `/api/hostel/hostels/${hostelId}/rooms`
     );
     return unwrap(env).rooms;
   },
@@ -243,7 +243,7 @@ export const hostelService = {
   ): Promise<{ room: HostelRoom; beds: HostelBed[] }> {
     return unwrap(
       await apiGet<ApiEnvelope<{ room: HostelRoom; beds: HostelBed[] }>>(
-        `/hostel/rooms/${id}`
+        `/api/hostel/rooms/${id}`
       )
     );
   },
@@ -256,7 +256,7 @@ export const hostelService = {
     status?: HostelStatus;
   }): Promise<HostelRoom> {
     const env = await apiPost<ApiEnvelope<{ room: HostelRoom }>>(
-      "/hostel/rooms",
+      "/api/hostel/rooms",
       input
     );
     return unwrap(env).room;
@@ -272,14 +272,14 @@ export const hostelService = {
     }>
   ): Promise<HostelRoom> {
     const env = await apiPatch<ApiEnvelope<{ room: HostelRoom }>>(
-      `/hostel/rooms/${id}`,
+      `/api/hostel/rooms/${id}`,
       patch
     );
     return unwrap(env).room;
   },
 
   async deleteRoom(id: string): Promise<void> {
-    await apiDelete(`/hostel/rooms/${id}`);
+    await apiDelete(`/api/hostel/rooms/${id}`);
   },
 
   // ---- Beds ----
@@ -289,7 +289,7 @@ export const hostelService = {
     status?: BedStatus;
   }): Promise<HostelBed> {
     const env = await apiPost<ApiEnvelope<{ bed: HostelBed }>>(
-      "/hostel/beds",
+      "/api/hostel/beds",
       input
     );
     return unwrap(env).bed;
@@ -300,14 +300,14 @@ export const hostelService = {
     patch: Partial<{ bed_number: string; status: BedStatus }>
   ): Promise<HostelBed> {
     const env = await apiPatch<ApiEnvelope<{ bed: HostelBed }>>(
-      `/hostel/beds/${id}`,
+      `/api/hostel/beds/${id}`,
       patch
     );
     return unwrap(env).bed;
   },
 
   async deleteBed(id: string): Promise<void> {
-    await apiDelete(`/hostel/beds/${id}`);
+    await apiDelete(`/api/hostel/beds/${id}`);
   },
 
   // ---- Allocations ----
@@ -324,7 +324,7 @@ export const hostelService = {
     });
     const qs = params.toString();
     const env = await apiGet<ApiEnvelope<{ allocations: HostelAllocation[] }>>(
-      `/hostel/allocations${qs ? `?${qs}` : ""}`
+      `/api/hostel/allocations${qs ? `?${qs}` : ""}`
     );
     return unwrap(env).allocations;
   },
@@ -339,7 +339,7 @@ export const hostelService = {
     notes?: string | null;
   }): Promise<HostelAllocation> {
     const env = await apiPost<ApiEnvelope<{ allocation: HostelAllocation }>>(
-      "/hostel/allocations",
+      "/api/hostel/allocations",
       input
     );
     return unwrap(env).allocation;
@@ -347,7 +347,7 @@ export const hostelService = {
 
   async checkoutAllocation(id: string): Promise<HostelAllocation> {
     const env = await apiPatch<ApiEnvelope<{ allocation: HostelAllocation }>>(
-      `/hostel/allocations/${id}/checkout`
+      `/api/hostel/allocations/${id}/checkout`
     );
     return unwrap(env).allocation;
   },
@@ -357,7 +357,7 @@ export const hostelService = {
   ): Promise<HostelAllocation | null> {
     try {
       const env = await apiGet<ApiEnvelope<{ allocation: HostelAllocation }>>(
-        `/hostel/students/${studentId}/allocation`
+        `/api/hostel/students/${studentId}/allocation`
       );
       return unwrap(env).allocation;
     } catch {
@@ -379,7 +379,7 @@ export const hostelService = {
     });
     const qs = params.toString();
     const env = await apiGet<ApiEnvelope<{ gatepasses: HostelGatepass[] }>>(
-      `/hostel/gatepasses${qs ? `?${qs}` : ""}`
+      `/api/hostel/gatepasses${qs ? `?${qs}` : ""}`
     );
     return unwrap(env).gatepasses;
   },
@@ -393,7 +393,7 @@ export const hostelService = {
           gatepass: HostelGatepass;
           audit_trail: HostelGatepassAudit[];
         }>
-      >(`/hostel/gatepasses/${id}`)
+      >(`/api/hostel/gatepasses/${id}`)
     );
   },
 
@@ -402,7 +402,7 @@ export const hostelService = {
   }): Promise<HostelGatepass[]> {
     const qs = filters?.hostel_id ? `?hostel_id=${filters.hostel_id}` : "";
     const env = await apiGet<ApiEnvelope<{ gatepasses: HostelGatepass[] }>>(
-      `/hostel/gatepasses/overdue${qs}`
+      `/api/hostel/gatepasses/overdue${qs}`
     );
     return unwrap(env).gatepasses;
   },
@@ -417,7 +417,7 @@ export const hostelService = {
     reason?: string;
   }): Promise<HostelGatepass> {
     const env = await apiPost<ApiEnvelope<{ gatepass: HostelGatepass }>>(
-      "/hostel/gatepasses",
+      "/api/hostel/gatepasses",
       input
     );
     return unwrap(env).gatepass;
@@ -425,14 +425,14 @@ export const hostelService = {
 
   async approveGatepass(id: string): Promise<HostelGatepass> {
     const env = await apiPost<ApiEnvelope<{ gatepass: HostelGatepass }>>(
-      `/hostel/gatepasses/${id}/approve`
+      `/api/hostel/gatepasses/${id}/approve`
     );
     return unwrap(env).gatepass;
   },
 
   async rejectGatepass(id: string, reason?: string): Promise<HostelGatepass> {
     const env = await apiPost<ApiEnvelope<{ gatepass: HostelGatepass }>>(
-      `/hostel/gatepasses/${id}/reject`,
+      `/api/hostel/gatepasses/${id}/reject`,
       reason ? { reason } : {}
     );
     return unwrap(env).gatepass;
@@ -440,14 +440,14 @@ export const hostelService = {
 
   async gatepassCheckout(id: string): Promise<HostelGatepass> {
     const env = await apiPost<ApiEnvelope<{ gatepass: HostelGatepass }>>(
-      `/hostel/gatepasses/${id}/checkout`
+      `/api/hostel/gatepasses/${id}/checkout`
     );
     return unwrap(env).gatepass;
   },
 
   async gatepassCheckin(id: string): Promise<HostelGatepass> {
     const env = await apiPost<ApiEnvelope<{ gatepass: HostelGatepass }>>(
-      `/hostel/gatepasses/${id}/checkin`
+      `/api/hostel/gatepasses/${id}/checkin`
     );
     return unwrap(env).gatepass;
   },
@@ -455,7 +455,7 @@ export const hostelService = {
   // ---- Visitors ----
   async searchVisitors(phonePrefix: string): Promise<HostelVisitor[]> {
     const env = await apiGet<ApiEnvelope<{ visitors: HostelVisitor[] }>>(
-      `/hostel/visitors/search?phone_prefix=${encodeURIComponent(phonePrefix)}`
+      `/api/hostel/visitors/search?phone_prefix=${encodeURIComponent(phonePrefix)}`
     );
     return unwrap(env).visitors;
   },
@@ -470,7 +470,7 @@ export const hostelService = {
     purpose?: string;
   }): Promise<HostelVisitorLog> {
     const env = await apiPost<ApiEnvelope<{ visitor_log: HostelVisitorLog }>>(
-      "/hostel/visitors",
+      "/api/hostel/visitors",
       input
     );
     return unwrap(env).visitor_log;
@@ -478,7 +478,7 @@ export const hostelService = {
 
   async visitorCheckOut(logId: string): Promise<HostelVisitorLog> {
     const env = await apiPatch<ApiEnvelope<{ visitor_log: HostelVisitorLog }>>(
-      `/hostel/visitor-logs/${logId}/checkout`
+      `/api/hostel/visitor-logs/${logId}/checkout`
     );
     return unwrap(env).visitor_log;
   },
@@ -498,7 +498,7 @@ export const hostelService = {
     });
     const qs = params.toString();
     const env = await apiGet<ApiEnvelope<{ visitor_logs: HostelVisitorLog[] }>>(
-      `/hostel/visitor-logs${qs ? `?${qs}` : ""}`
+      `/api/hostel/visitor-logs${qs ? `?${qs}` : ""}`
     );
     return unwrap(env).visitor_logs;
   },
@@ -516,20 +516,20 @@ export const hostelService = {
           overdue_gatepasses: HostelGatepass[];
           visitors_inside: number;
         }>
-      >("/hostel/dashboard")
+      >("/api/hostel/dashboard")
     );
   },
 
   async getOccupancyReport(): Promise<OccupancyRow[]> {
     const env = await apiGet<ApiEnvelope<{ occupancy: OccupancyRow[] }>>(
-      "/hostel/reports/occupancy"
+      "/api/hostel/reports/occupancy"
     );
     return unwrap(env).occupancy;
   },
 
   async downloadResidentsCsv(hostelId?: string): Promise<string> {
     const qs = hostelId ? `?hostel_id=${hostelId}` : "";
-    return apiGetText(`/hostel/reports/residents.csv${qs}`);
+    return apiGetText(`/api/hostel/reports/residents.csv${qs}`);
   },
 };
 
