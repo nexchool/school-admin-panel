@@ -66,6 +66,16 @@ export interface HostelBed {
   is_allocated: boolean;
   allocated_to_student_id: string | null;
   status: BedStatus;
+  /**
+   * Enriched on /api/hostel/rooms/:id only. Bed lists from other endpoints
+   * (e.g. `createBed`) may omit this — frontends should treat absence as
+   * "unknown" rather than "vacant".
+   */
+  occupant?: {
+    student_id: string;
+    name: string;
+    admission_number: string;
+  } | null;
 }
 
 export interface HostelAllocation {
