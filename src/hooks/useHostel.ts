@@ -33,6 +33,7 @@ import {
   HostelVisitorLog,
   OccupancyRow,
 } from "@/services/hostelService";
+import { toastSuccess } from "@/lib/errorToast";
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -109,10 +110,12 @@ export function useCreateHostel() {
       address?: string;
       status?: HostelStatus;
     }) => hostelService.createHostel(input),
-    onSuccess: () => {
+    onSuccess: (hostel) => {
       qc.invalidateQueries({ queryKey: hostelKeys.hostels.all });
       qc.invalidateQueries({ queryKey: hostelKeys.dashboard });
+      toastSuccess(`Hostel "${hostel.name}" created.`);
     },
+    meta: { errorFallback: "Couldn't create the hostel. Please try again." },
   });
 }
 
@@ -125,7 +128,9 @@ export function useUpdateHostel(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: hostelKeys.hostels.all });
       qc.invalidateQueries({ queryKey: hostelKeys.hostels.detail(id) });
+      toastSuccess("Hostel updated.");
     },
+    meta: { errorFallback: "Couldn't update the hostel. Please try again." },
   });
 }
 
@@ -136,7 +141,9 @@ export function useDeleteHostel() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: hostelKeys.hostels.all });
       qc.invalidateQueries({ queryKey: hostelKeys.dashboard });
+      toastSuccess("Hostel deleted.");
     },
+    meta: { errorFallback: "Couldn't delete the hostel." },
   });
 }
 
@@ -168,7 +175,9 @@ export function useCreateRoom() {
       qc.invalidateQueries({
         queryKey: hostelKeys.rooms.forHostel(room.hostel_id),
       });
+      toastSuccess(`Room ${room.room_number} added.`);
     },
+    meta: { errorFallback: "Couldn't add the room. Please try again." },
   });
 }
 
@@ -182,7 +191,9 @@ export function useUpdateRoom(roomId: string) {
         queryKey: hostelKeys.rooms.forHostel(room.hostel_id),
       });
       qc.invalidateQueries({ queryKey: hostelKeys.rooms.detail(roomId) });
+      toastSuccess("Room updated.");
     },
+    meta: { errorFallback: "Couldn't update the room." },
   });
 }
 
@@ -192,7 +203,9 @@ export function useDeleteRoom(hostelId: string) {
     mutationFn: (roomId: string) => hostelService.deleteRoom(roomId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: hostelKeys.rooms.forHostel(hostelId) });
+      toastSuccess("Room deleted.");
     },
+    meta: { errorFallback: "Couldn't delete the room." },
   });
 }
 
@@ -204,9 +217,11 @@ export function useCreateBed(roomId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: hostelService.createBed,
-    onSuccess: () => {
+    onSuccess: (bed) => {
       qc.invalidateQueries({ queryKey: hostelKeys.rooms.detail(roomId) });
+      toastSuccess(`Bed ${bed.bed_number} added.`);
     },
+    meta: { errorFallback: "Couldn't add the bed." },
   });
 }
 
@@ -219,7 +234,9 @@ export function useUpdateBed(roomId: string) {
     }) => hostelService.updateBed(input.id, input.patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: hostelKeys.rooms.detail(roomId) });
+      toastSuccess("Bed updated.");
     },
+    meta: { errorFallback: "Couldn't update the bed." },
   });
 }
 
@@ -229,7 +246,9 @@ export function useDeleteBed(roomId: string) {
     mutationFn: (bedId: string) => hostelService.deleteBed(bedId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: hostelKeys.rooms.detail(roomId) });
+      toastSuccess("Bed removed.");
     },
+    meta: { errorFallback: "Couldn't remove the bed." },
   });
 }
 
@@ -272,7 +291,9 @@ export function useCreateAllocation() {
         queryKey: hostelKeys.allocations.forStudent(allocation.student_id),
       });
       qc.invalidateQueries({ queryKey: hostelKeys.dashboard });
+      toastSuccess("Student allocated to the bed.");
     },
+    meta: { errorFallback: "Couldn't allocate the student. Please try again." },
   });
 }
 
@@ -289,7 +310,9 @@ export function useCheckoutAllocation() {
         queryKey: hostelKeys.allocations.forStudent(allocation.student_id),
       });
       qc.invalidateQueries({ queryKey: hostelKeys.dashboard });
+      toastSuccess("Student checked out. Bed is now vacant.");
     },
+    meta: { errorFallback: "Couldn't check out the student." },
   });
 }
 
@@ -331,7 +354,9 @@ export function useCreateGatepass() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: hostelKeys.gatepasses.all });
       qc.invalidateQueries({ queryKey: hostelKeys.dashboard });
+      toastSuccess("Gatepass request submitted.");
     },
+    meta: { errorFallback: "Couldn't create the gatepass. Please try again." },
   });
 }
 
@@ -348,7 +373,9 @@ export function useApproveGatepass() {
     onSuccess: (gp: HostelGatepass) => {
       qc.invalidateQueries({ queryKey: hostelKeys.gatepasses.detail(gp.id) });
       _invalidateAllGatepass(qc);
+      toastSuccess("Gatepass approved.");
     },
+    meta: { errorFallback: "Couldn't approve the gatepass." },
   });
 }
 
@@ -360,7 +387,9 @@ export function useRejectGatepass() {
     onSuccess: (gp: HostelGatepass) => {
       qc.invalidateQueries({ queryKey: hostelKeys.gatepasses.detail(gp.id) });
       _invalidateAllGatepass(qc);
+      toastSuccess("Gatepass rejected.");
     },
+    meta: { errorFallback: "Couldn't reject the gatepass." },
   });
 }
 
@@ -371,7 +400,9 @@ export function useGatepassCheckout() {
     onSuccess: (gp: HostelGatepass) => {
       qc.invalidateQueries({ queryKey: hostelKeys.gatepasses.detail(gp.id) });
       _invalidateAllGatepass(qc);
+      toastSuccess("Departure recorded.");
     },
+    meta: { errorFallback: "Couldn't record the gate checkout." },
   });
 }
 
@@ -382,7 +413,9 @@ export function useGatepassCheckin() {
     onSuccess: (gp: HostelGatepass) => {
       qc.invalidateQueries({ queryKey: hostelKeys.gatepasses.detail(gp.id) });
       _invalidateAllGatepass(qc);
+      toastSuccess("Return recorded.");
     },
+    meta: { errorFallback: "Couldn't record the return." },
   });
 }
 
@@ -421,7 +454,9 @@ export function useVisitorCheckIn() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hostel", "visitor-logs"] });
       qc.invalidateQueries({ queryKey: hostelKeys.dashboard });
+      toastSuccess("Visitor checked in.");
     },
+    meta: { errorFallback: "Couldn't check the visitor in." },
   });
 }
 
@@ -432,7 +467,9 @@ export function useVisitorCheckOut() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["hostel", "visitor-logs"] });
       qc.invalidateQueries({ queryKey: hostelKeys.dashboard });
+      toastSuccess("Visitor checked out.");
     },
+    meta: { errorFallback: "Couldn't check the visitor out." },
   });
 }
 

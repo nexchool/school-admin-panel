@@ -216,16 +216,9 @@ export default function GatepassesKanbanPage() {
                         <GatepassQuickActions
                           gp={gp}
                           busy={busy}
-                          onApprove={() =>
-                            approve.mutate(gp.id, {
-                              onError: (err) =>
-                                window.alert(
-                                  err instanceof Error
-                                    ? err.message
-                                    : "Failed to approve."
-                                ),
-                            })
-                          }
+                          // Errors are surfaced via the hook's meta.errorFallback
+                          // + the global mutation cache toast.
+                          onApprove={() => approve.mutate(gp.id)}
                           onReject={() => {
                             const reason =
                               window.prompt(
@@ -233,26 +226,8 @@ export default function GatepassesKanbanPage() {
                               ) ?? undefined;
                             reject.mutate({ id: gp.id, reason });
                           }}
-                          onCheckout={() =>
-                            checkout.mutate(gp.id, {
-                              onError: (err) =>
-                                window.alert(
-                                  err instanceof Error
-                                    ? err.message
-                                    : "Failed to checkout."
-                                ),
-                            })
-                          }
-                          onCheckin={() =>
-                            checkin.mutate(gp.id, {
-                              onError: (err) =>
-                                window.alert(
-                                  err instanceof Error
-                                    ? err.message
-                                    : "Failed to check in."
-                                ),
-                            })
-                          }
+                          onCheckout={() => checkout.mutate(gp.id)}
+                          onCheckin={() => checkin.mutate(gp.id)}
                         />
                       }
                     />

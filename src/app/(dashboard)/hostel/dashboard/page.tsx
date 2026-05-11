@@ -25,6 +25,7 @@ import {
   useHostels,
 } from "@/hooks/useHostel";
 import { hostelService } from "@/services/hostelService";
+import { toastError, toastSuccess } from "@/lib/errorToast";
 
 import type {
   HostelGatepass,
@@ -75,8 +76,9 @@ export default function HostelDashboardPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      toastSuccess("Residents CSV downloaded.");
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : "Failed to download.");
+      toastError(err, "Couldn't download the residents CSV.");
     }
   }
 

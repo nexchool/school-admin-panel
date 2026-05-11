@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toastError } from "@/lib/errorToast";
 import { cn } from "@/lib/utils";
 
 import { useStudents } from "@/hooks/useStudents";
@@ -142,7 +143,8 @@ export function VisitorCheckInForm({ onSubmit, saving }: VisitorCheckInFormProps
           className="grid gap-4 sm:grid-cols-2"
           onSubmit={handleSubmit(async (values) => {
             if (!allocation) {
-              window.alert(
+              toastError(
+                null,
                 "Selected student has no active allocation — cannot record a visit."
               );
               return;
