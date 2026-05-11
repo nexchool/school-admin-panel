@@ -18,6 +18,7 @@ import {
   Calendar,
   School,
   Bus,
+  Building2,
   CalendarDays,
   HelpCircle,
   Settings2,
@@ -54,6 +55,7 @@ const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance" },
   { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management" },
   { href: "/holidays", label: "Holidays", icon: Calendar, feature: "holiday_management" },
+  { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel" },
 ];
 
 const SIDEBAR_NAV_PROFILE = { href: "/profile", label: "Profile", icon: User } as const;
