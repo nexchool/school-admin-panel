@@ -27,6 +27,7 @@ import {
   type TransportStaff,
 } from "@/services/transportService";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 type Props = {
   bus: TransportBus | null;
@@ -98,7 +99,7 @@ export function AssignRouteDriverModal({ bus, open, onOpenChange, onAssigned }: 
       onAssigned();
       onOpenChange(false);
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Assignment failed");
+      toastError(ex, "Assignment failed");
     } finally {
       setLoading(false);
     }

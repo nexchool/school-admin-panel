@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { transportService } from "@/services/transportService";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 type Props = {
   open: boolean;
@@ -52,7 +53,7 @@ export function AddBusModal({ open, onOpenChange, onCreated }: Props) {
       onCreated();
       onOpenChange(false);
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Could not add bus");
+      toastError(ex, "Could not add bus");
     } finally {
       setLoading(false);
     }

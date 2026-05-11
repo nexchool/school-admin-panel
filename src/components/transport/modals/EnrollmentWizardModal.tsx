@@ -30,6 +30,7 @@ import { StopSearchSelect } from "@/components/transport/StopSearchSelect";
 import type { Student } from "@/types/student";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { toastError } from "@/lib/errorToast";
 
 const STEPS = ["Student", "Route", "Bus", "Pickup stop", "Confirm"] as const;
 
@@ -168,7 +169,7 @@ export function EnrollmentWizardModal({ open, onOpenChange, students, routes, on
       onDone();
       onOpenChange(false);
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Enrollment failed");
+      toastError(ex, "Enrollment failed");
     } finally {
       setLoading(false);
     }

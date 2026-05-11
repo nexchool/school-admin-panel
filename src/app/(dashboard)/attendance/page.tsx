@@ -1,5 +1,6 @@
 "use client";
 
+import { friendlyErrorMessage } from "@/lib/errorToast";
 import { useState, useEffect, useMemo } from "react";
 import {
   Card,
@@ -118,7 +119,7 @@ export default function AttendancePage() {
       .then(setAttendance)
       .catch((e) => {
         setAttendance(null);
-        setError(e instanceof Error ? e.message : "Could not load attendance");
+        setError(friendlyErrorMessage(e, "Could not load attendance"));
       })
       .finally(() => setLoading(false));
   }, [selectedClassId, selectedDate]);

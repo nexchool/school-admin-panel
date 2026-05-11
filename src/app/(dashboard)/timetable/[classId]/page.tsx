@@ -289,9 +289,7 @@ export default function ClassTimetablePage() {
     try {
       await moveEntry.mutateAsync({ entryId, day, period });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not move entry", {
-        description: "The slot may already be occupied or the teacher has a conflict.",
-      });
+      toastError(e, "Could not move entry");
     }
   }, [moveEntry]);
 
@@ -299,9 +297,7 @@ export default function ClassTimetablePage() {
     try {
       await swapEntries.mutateAsync({ entry_a_id: entryAId, entry_b_id: entryBId });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not swap entries", {
-        description: "Check for teacher conflicts at the target slots.",
-      });
+      toastError(e, "Could not swap entries");
     }
   }, [swapEntries]);
 

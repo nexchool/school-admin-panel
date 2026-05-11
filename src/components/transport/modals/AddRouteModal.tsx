@@ -18,6 +18,7 @@ import {
   type TransportRoute,
 } from "@/services/transportService";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 const FEE_CYCLES: { value: TransportFeeCycle; label: string }[] = [
   { value: "monthly", label: "Monthly" },
@@ -81,7 +82,7 @@ export function AddRouteModal({ open, onOpenChange, onCreated }: Props) {
       onCreated();
       onOpenChange(false);
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Could not create route");
+      toastError(ex, "Could not create route");
     } finally {
       setLoading(false);
     }
