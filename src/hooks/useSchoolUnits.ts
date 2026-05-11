@@ -18,10 +18,11 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: schoolSetupKeys.status });
 }
 
-export function useSchoolUnits() {
+export function useSchoolUnits(options?: { enabled?: boolean }) {
   return useQuery<SchoolUnit[]>({
     queryKey: schoolUnitsKeys.list(),
     queryFn: () => schoolUnitsService.list(),
+    enabled: options?.enabled ?? true,
   });
 }
 

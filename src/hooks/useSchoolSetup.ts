@@ -19,12 +19,13 @@ export const schoolSetupKeys = {
     ["school-setup", "templates", groupId, "items"] as const,
 };
 
-export function useSetupStatus() {
+export function useSetupStatus(options?: { enabled?: boolean }) {
   return useQuery<SetupStatus>({
     queryKey: schoolSetupKeys.status,
     queryFn: () => schoolSetupService.setup.status(),
     retry: 2,
     staleTime: 30_000,
+    enabled: options?.enabled ?? true,
   });
 }
 

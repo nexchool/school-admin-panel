@@ -107,7 +107,14 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
     if (!isPublicAuthApiUrl(responseUrl)) {
       const { clearAuth } = await import("@/lib/storage");
       await clearAuth();
-      window.location.replace("/login");
+      // Only redirect if we're not already on /login — otherwise queries
+      // fired by the public login page (e.g. ActiveScopeProvider's units /
+      // years / setup-status pre-fetches) would trigger an infinite reload
+      // loop when they 401.
+      const alreadyOnLogin = window.location.pathname.startsWith("/login");
+      if (!alreadyOnLogin) {
+        window.location.replace("/login");
+      }
       throw new ApiException(
         "Your session has expired or you are not signed in. Please log in again.",
         401,

@@ -12,6 +12,7 @@ const PROTECTED_PATHS = [
   "/attendance",
   "/finance",
   "/holidays",
+  "/hostel",
   "/profile",
 ];
 

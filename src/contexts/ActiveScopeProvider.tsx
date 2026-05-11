@@ -13,9 +13,11 @@ import {
 
 function ActiveScopeSync() {
   const { user, isAuthenticated } = useAuth();
-  const { data: units } = useSchoolUnits();
-  const { data: years } = useAcademicYears();
-  const { data: status } = useSetupStatus();
+  // Only pre-fetch tenant scope data when the user is signed in — otherwise
+  // these calls 401 on the login page and trigger the auth redirect handler.
+  const { data: units } = useSchoolUnits({ enabled: isAuthenticated });
+  const { data: years } = useAcademicYears(false, { enabled: isAuthenticated });
+  const { data: status } = useSetupStatus({ enabled: isAuthenticated });
   const { unitId, setUnitId } = useActiveUnit();
   const { academicYearId, setAcademicYearId } = useActiveAcademicYear();
 
