@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FeeStructureFormModal } from "@/components/finance/FeeStructureFormModal";
 import { toast } from "sonner";
 import { useFeeStructure, useDeleteFeeStructure } from "@/hooks/useFeeStructures";
+import { toastError } from "@/lib/errorToast";
 
 function fmtDate(s: string) {
   try {
@@ -49,7 +50,7 @@ export default function FeeStructureDetailPage() {
       toast.success("Fee structure deleted");
       router.push("/dashboard/finance/structures");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Delete failed");
+      toastError(err, "Delete failed");
       throw err;
     }
   };

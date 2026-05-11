@@ -32,6 +32,7 @@ import type { Subject } from "@/types/subject";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 interface ClassSubjectLoadSectionProps {
   classId: string;
@@ -122,7 +123,7 @@ export function ClassSubjectLoadSection({
       setModalOpen(false);
       toast.success(editingLoad ? "Subject load updated" : "Subject load added");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      toastError(err, "Failed to save");
     } finally {
       setSubmitting(false);
     }
@@ -138,7 +139,7 @@ export function ClassSubjectLoadSection({
       onRefresh();
       toast.success("Subject load removed");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete");
+      toastError(err, "Failed to delete");
       throw err;
     } finally {
       setDeleting(null);

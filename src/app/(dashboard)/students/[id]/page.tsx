@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Student, UpdateStudentInput } from "@/types/student";
+import { toastError } from "@/lib/errorToast";
 
 type TabId =
   | "overview"
@@ -88,7 +89,7 @@ export default function StudentDetailPage() {
       toast.success("Student deleted");
       router.push("/students");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete student");
+      toastError(e, "Failed to delete student");
       throw e;
     }
   };

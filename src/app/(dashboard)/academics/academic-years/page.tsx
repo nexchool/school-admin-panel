@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { ArrowLeft, CalendarRange, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 const SETTINGS_KEY = ["academics", "settings"] as const;
 
@@ -105,7 +106,7 @@ export default function AcademicYearsPage() {
       qc.invalidateQueries({ queryKey: SETTINGS_KEY });
     },
     onError: (e: unknown) => {
-      toast.error(e instanceof Error ? e.message : "Save failed");
+      toastError(e, "Save failed");
     },
   });
 

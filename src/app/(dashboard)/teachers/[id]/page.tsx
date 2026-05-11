@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Teacher, UpdateTeacherInput } from "@/types/teacher";
+import { toastError } from "@/lib/errorToast";
 
 type TabKey = "info" | "subjects" | "availability" | "leaves" | "workload";
 
@@ -87,7 +88,7 @@ export default function TeacherDetailPage() {
       toast.success("Teacher updated");
       setEditOpen(false);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update teacher");
+      toastError(e, "Failed to update teacher");
       throw e;
     }
   };
@@ -99,7 +100,7 @@ export default function TeacherDetailPage() {
       toast.success("Teacher deleted");
       router.push("/teachers");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete teacher");
+      toastError(e, "Failed to delete teacher");
       throw e;
     }
   };

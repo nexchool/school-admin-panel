@@ -47,6 +47,7 @@ import {
   User,
   Hash,
 } from "lucide-react";
+import { toastError } from "@/lib/errorToast";
 
 type ClassDetailTab = "students" | "teachers" | "subjects" | "timetable";
 
@@ -112,7 +113,7 @@ export default function ClassDetailPage() {
       toast.success("Class updated");
       setEditOpen(false);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update class");
+      toastError(e, "Failed to update class");
       throw e;
     }
   };
@@ -124,7 +125,7 @@ export default function ClassDetailPage() {
       toast.success("Class deleted");
       router.push("/classes");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete class");
+      toastError(e, "Failed to delete class");
       throw e;
     }
   };
@@ -138,7 +139,7 @@ export default function ClassDetailPage() {
       refreshClass();
       toast.success("Student removed from class");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove");
+      toastError(err, "Failed to remove");
       throw err;
     } finally {
       setRemovingStudent(null);
@@ -154,7 +155,7 @@ export default function ClassDetailPage() {
       refreshClass();
       toast.success("Teacher removed from class");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove");
+      toastError(err, "Failed to remove");
       throw err;
     } finally {
       setRemovingTeacher(null);

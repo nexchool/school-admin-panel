@@ -22,6 +22,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function HolidaysPage() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -92,7 +93,7 @@ export default function HolidaysPage() {
       setEditHoliday(null);
       loadHolidays();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to save holiday");
+      toastError(e, "Failed to save holiday");
       throw e;
     }
   };
@@ -106,7 +107,7 @@ export default function HolidaysPage() {
       setDeleteHoliday(null);
       loadHolidays();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete");
+      toastError(err, "Failed to delete");
     } finally {
       setDeleting(false);
     }

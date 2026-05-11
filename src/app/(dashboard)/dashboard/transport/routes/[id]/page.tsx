@@ -14,6 +14,7 @@ import { EditRouteModal } from "@/components/transport/modals/EditRouteModal";
 import { RouteStopEditor } from "@/components/transport/RouteStopEditor";
 import { ArrowLeft, Download } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function RouteDetailPage() {
   const params = useParams();
@@ -97,7 +98,7 @@ export default function RouteDetailPage() {
       toast.success("Marked as reviewed");
       invalidate();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not update");
+      toastError(e, "Could not update");
     }
   };
 
@@ -107,7 +108,7 @@ export default function RouteDetailPage() {
       await transportService.exportRouteStudents(id);
       toast.success("Export started");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toastError(e, "Export failed");
     }
   };
 
@@ -130,10 +131,10 @@ export default function RouteDetailPage() {
             `${e.message} Schedules: ${u.schedules ?? 0}, enrollments: ${u.enrollments ?? 0}, fee plans: ${u.fee_plans ?? 0}, assignments: ${u.assignments ?? 0}, exceptions: ${u.schedule_exceptions ?? 0}.`
           );
         } else {
-          toast.error(e.message);
+          toastError(e);
         }
       } else {
-        toast.error(e instanceof Error ? e.message : "Could not delete route");
+        toastError(e, "Could not delete route");
       }
     } finally {
       setDeleting(false);

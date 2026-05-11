@@ -26,6 +26,7 @@ import {
 import { useUploadStudentDocument } from "@/hooks/useStudentDocuments";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 interface UploadDocumentModalProps {
   open: boolean;
@@ -67,7 +68,7 @@ export function UploadDocumentModal({
       onSuccess?.();
       handleClose(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      toastError(err, "Upload failed");
     }
   };
 

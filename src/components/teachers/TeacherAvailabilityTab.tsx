@@ -23,6 +23,7 @@ import type { TeacherAvailability } from "@/types/teacher";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 const DAY_NAMES = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -74,7 +75,7 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
       setAvailable(false);
       toast.success("Availability added");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add");
+      toastError(err, "Failed to add");
     } finally {
       setSubmitting(false);
     }
@@ -89,7 +90,7 @@ export function TeacherAvailabilityTab({ teacherId }: TeacherAvailabilityTabProp
       await loadData();
       toast.success("Availability removed");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete");
+      toastError(err, "Failed to delete");
       throw err;
     } finally {
       setDeleting(null);

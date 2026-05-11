@@ -31,6 +31,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, ArrowLeft, Download } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function BusDetailPage() {
   const params = useParams();
@@ -106,7 +107,7 @@ export default function BusDetailPage() {
       await transportService.exportBusStudents(id);
       toast.success("Export started");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toastError(e, "Export failed");
     }
   };
 

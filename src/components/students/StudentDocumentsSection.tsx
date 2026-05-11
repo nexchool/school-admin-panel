@@ -23,6 +23,7 @@ import {
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { UploadDocumentModal } from "./UploadDocumentModal";
+import { toastError } from "@/lib/errorToast";
 
 interface StudentDocumentsSectionProps {
   studentId: string;
@@ -56,7 +57,7 @@ export function StudentDocumentsSection({ studentId }: StudentDocumentsSectionPr
     try {
       await deleteMutation.mutateAsync(doc.id);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not delete document");
+      toastError(e, "Could not delete document");
       throw e;
     }
   };

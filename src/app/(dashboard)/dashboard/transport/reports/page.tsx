@@ -23,6 +23,7 @@ import {
 import { transportService } from "@/services/transportService";
 import { Bus, FileSpreadsheet, Route, Users } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function TransportReportsPage() {
   const [busOpen, setBusOpen] = useState(false);
@@ -47,7 +48,7 @@ export default function TransportReportsPage() {
       toast.success("Download started");
       setBusOpen(false);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toastError(e, "Export failed");
     }
   };
 
@@ -58,7 +59,7 @@ export default function TransportReportsPage() {
       toast.success("Download started");
       setRouteOpen(false);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toastError(e, "Export failed");
     }
   };
 
@@ -67,7 +68,7 @@ export default function TransportReportsPage() {
       await transportService.exportContactSheet();
       toast.success("Contact sheet download started");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toastError(e, "Export failed");
     }
   };
 

@@ -18,6 +18,7 @@ import { transportService, type TransportRoute } from "@/services/transportServi
 import { AddRouteModal } from "@/components/transport/modals/AddRouteModal";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 type Row = TransportRoute & {
   stopsCount: number;
@@ -89,7 +90,7 @@ export default function TransportRoutesPage() {
       await transportService.exportRouteStudents(id);
       toast.success("Export started");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toastError(e, "Export failed");
     }
   };
 

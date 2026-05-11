@@ -58,6 +58,7 @@ import {
 import { toast } from "sonner";
 import { TabNav, type TabNavItem } from "@/components/detail";
 import { cn } from "@/lib/utils";
+import { toastError } from "@/lib/errorToast";
 
 type PageView = "teachers" | "leaves";
 
@@ -99,7 +100,7 @@ function AllLeavesView() {
       qc.invalidateQueries({ queryKey: ["teacher-leaves-all"] });
       toast.success("Leave approved");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to approve");
+      toastError(err, "Failed to approve");
     } finally {
       setApproving(null);
     }
@@ -112,7 +113,7 @@ function AllLeavesView() {
       qc.invalidateQueries({ queryKey: ["teacher-leaves-all"] });
       toast.success("Leave rejected");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reject");
+      toastError(err, "Failed to reject");
     } finally {
       setRejecting(null);
     }
@@ -522,7 +523,7 @@ export default function TeachersPage() {
       toast.success("Teacher created");
       setCreateOpen(false);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to create teacher");
+      toastError(e, "Failed to create teacher");
       throw e;
     }
   };
