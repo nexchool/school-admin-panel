@@ -27,6 +27,7 @@ import {
   clearAuth,
   setSessionCookie,
 } from "@/lib/storage";
+import { getCurrentSubdomain } from "@/lib/subdomain";
 import {
   login as loginService,
   logout as logoutService,
@@ -184,7 +185,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string): Promise<{ requiresTenantChoice: boolean }> => {
       setPendingTenantChoice(null);
-      const response = await loginService({ email, password });
+      const subdomain = getCurrentSubdomain();
+      const response = await loginService({
+        email,
+        password,
+        ...(subdomain ? { subdomain } : {}),
+      });
       if (response.requires_tenant_choice && response.tenants?.length) {
         setPendingTenantChoice({ tenants: response.tenants, email, password });
         return { requiresTenantChoice: true };
