@@ -1,5 +1,6 @@
 import { getApiUrl } from "@/lib/constants";
 import { isPublicAuthApiUrl } from "@/lib/auth-api";
+import { getCurrentSubdomain } from "@/lib/subdomain";
 import {
   getAccessToken,
   getRefreshToken,
@@ -46,6 +47,13 @@ const apiRequest = async (
   }
   if (tenantId) {
     headers["X-Tenant-ID"] = tenantId;
+  } else {
+    // Pre-login: no tenant_id stored yet — send subdomain from URL so backend
+    // can resolve tenant without relying solely on nginx Host forwarding.
+    const subdomain = getCurrentSubdomain();
+    if (subdomain) {
+      headers["X-Tenant-Subdomain"] = subdomain;
+    }
   }
 
   try {
