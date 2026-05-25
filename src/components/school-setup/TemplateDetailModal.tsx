@@ -14,8 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useTemplates, useTemplateItems } from "@/hooks/useSchoolSetup";
+import { useTemplates, useTemplateItems, useApplySubjectOfferings } from "@/hooks/useSchoolSetup";
 import { useCreateSubject } from "@/hooks/useSubjects";
+import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { toastError } from "@/lib/errorToast";
 
 // ── Local types ───────────────────────────────────────────────────────
 
@@ -38,6 +40,7 @@ type AddedRow = {
 type TemplateDetailModalProps = {
   templateId: string;
   onClose: () => void;
+  initialMode?: "view" | "edit";
 };
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -45,15 +48,19 @@ type TemplateDetailModalProps = {
 export function TemplateDetailModal({
   templateId,
   onClose,
+  initialMode = "view",
 }: TemplateDetailModalProps) {
   const { data: templatesResult } = useTemplates();
   const { data: itemsResult, isLoading: itemsLoading } =
     useTemplateItems(templateId);
 
   const createSubject = useCreateSubject();
+  const applyMutation = useApplySubjectOfferings();
+  const { academicYearId } = useActiveAcademicYear();
 
   // ── Modal state ───────────────────────────────────────────────────
-  const [mode, setMode] = useState<"view" | "edit">("view");
+  const [mode, setMode] = useState<"view" | "edit">(initialMode);
+  const [autoApply, setAutoApply] = useState(true);
   const [editedItems, setEditedItems] = useState<Map<string, EditedItem>>(
     new Map(),
   );
@@ -239,11 +246,20 @@ export function TemplateDetailModal({
           await createSubject.mutateAsync(s);
           created++;
         } catch {
-          // skip duplicates / errors silently; parent invalidation handles refresh
+          // skip duplicates / errors silently
         }
       }
-      toast.success(`Template applied: ${created} subject${created !== 1 ? "s" : ""} created`);
-      // Modal stays open per spec Q8
+      if (autoApply && academicYearId) {
+        try {
+          await applyMutation.mutateAsync(academicYearId);
+        } catch (err) {
+          toastError(err, "Subjects imported but could not apply to classes. Use 'Apply to classes' on the subjects page.");
+        }
+      }
+      toast.success(
+        `${created} subject${created !== 1 ? "s" : ""} imported${autoApply && academicYearId ? " and applied to all classes" : ""}`,
+      );
+      onClose();
     } finally {
       setSaving(false);
     }
@@ -262,13 +278,17 @@ export function TemplateDetailModal({
           // skip
         }
       }
+      if (autoApply && academicYearId) {
+        try {
+          await applyMutation.mutateAsync(academicYearId);
+        } catch (err) {
+          toastError(err, "Subjects imported but could not apply to classes.");
+        }
+      }
       toast.success(
-        `Saved & applied: ${created} subject${created !== 1 ? "s" : ""} created`,
+        `${created} subject${created !== 1 ? "s" : ""} imported${autoApply && academicYearId ? " and applied to all classes" : ""}`,
       );
-      setMode("view");
-      setEditedItems(new Map());
-      setAddedRows([]);
-      setDeletedIds(new Set());
+      onClose();
     } finally {
       setSaving(false);
     }
@@ -581,43 +601,60 @@ export function TemplateDetailModal({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="mt-4 flex gap-2 sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={saving}
-          >
-            Close
-          </Button>
+        <DialogFooter className="mt-4 flex gap-2 sm:justify-between flex-wrap">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="auto-apply"
+              checked={autoApply}
+              onChange={(e) => setAutoApply(e.target.checked)}
+              className="accent-primary"
+              disabled={!academicYearId}
+            />
+            <label htmlFor="auto-apply" className="text-xs text-muted-foreground cursor-pointer select-none">
+              Auto-apply to all classes after import
+              {!academicYearId && " (requires active academic year)"}
+            </label>
+          </div>
 
-          {mode === "view" ? (
+          <div className="flex gap-2">
             <Button
               type="button"
-              onClick={handleUseTemplate}
-              disabled={saving || itemsLoading}
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
             >
-              {saving ? "Applying…" : "Use This Template →"}
+              Close
             </Button>
-          ) : (
-            <div className="flex gap-2">
+
+            {mode === "view" ? (
               <Button
                 type="button"
-                variant="outline"
-                onClick={handleDiscardEdit}
-                disabled={saving}
-              >
-                Discard
-              </Button>
-              <Button
-                type="button"
-                onClick={handleSaveAndUse}
+                onClick={handleUseTemplate}
                 disabled={saving || itemsLoading}
               >
-                {saving ? "Saving…" : "Save & Use Template →"}
+                {saving ? "Importing…" : "Import subjects →"}
               </Button>
-            </div>
-          )}
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDiscardEdit}
+                  disabled={saving}
+                >
+                  Discard
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveAndUse}
+                  disabled={saving || itemsLoading}
+                >
+                  {saving ? "Importing…" : "Import subjects →"}
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
