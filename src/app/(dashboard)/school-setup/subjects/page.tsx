@@ -46,6 +46,9 @@ export default function SubjectsPage() {
   const [editTarget, setEditTarget] = useState<Subject | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Subject | null>(null);
   const [templateModalId, setTemplateModalId] = useState<string | null>(null);
+  const [templateModalMode, setTemplateModalMode] = useState<"view" | "edit">(
+    "view",
+  );
 
   // ── Handlers ────────────────────────────────────────────────────────
 
@@ -146,7 +149,7 @@ export default function SubjectsPage() {
                   Start from a curriculum template
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Tap View to inspect, Use to load into your subjects.
+                  <strong>Preview</strong> to inspect. <strong>Customise &amp; Import</strong> to select subjects and load them.
                 </p>
               </div>
 
@@ -176,17 +179,23 @@ export default function SubjectsPage() {
                         size="sm"
                         variant="outline"
                         className="flex-1 text-xs"
-                        onClick={() => setTemplateModalId(template.id)}
+                        onClick={() => {
+                          setTemplateModalMode("view");
+                          setTemplateModalId(template.id);
+                        }}
                       >
-                        View
+                        Preview
                       </Button>
                       <Button
                         type="button"
                         size="sm"
                         className="flex-1 text-xs"
-                        onClick={() => setTemplateModalId(template.id)}
+                        onClick={() => {
+                          setTemplateModalMode("edit");
+                          setTemplateModalId(template.id);
+                        }}
                       >
-                        Use
+                        Customise &amp; Import
                       </Button>
                     </div>
                   </div>
@@ -338,6 +347,7 @@ export default function SubjectsPage() {
       {templateModalId && (
         <TemplateDetailModal
           templateId={templateModalId}
+          initialMode={templateModalMode}
           onClose={() => setTemplateModalId(null)}
         />
       )}
