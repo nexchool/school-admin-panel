@@ -38,7 +38,7 @@ describe("WizardShell", () => {
 
   it("renders the step title and description", () => {
     renderShell();
-    expect(screen.getByText("School Units")).toBeInTheDocument();
+    expect(screen.getByText("Branches")).toBeInTheDocument();
     expect(screen.getByText(/Step 1 of 8/)).toBeInTheDocument();
   });
 
@@ -68,10 +68,10 @@ describe("WizardShell", () => {
     expect(screen.queryByRole("button", { name: /^Skip$/ })).not.toBeInTheDocument();
   });
 
-  it("uses 'Save changes' label when step is already done", () => {
+  it("always uses 'Save & Continue' label regardless of step status", () => {
     vi.mocked(useSetupStepStatus).mockReturnValue("done");
     renderShell({ stepKey: "units" });
-    expect(screen.getByRole("button", { name: /Save changes/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save & Continue/i })).toBeInTheDocument();
   });
 
   it("calls onContinue and navigates to next step when not done", async () => {
@@ -85,12 +85,14 @@ describe("WizardShell", () => {
     );
   });
 
-  it("does NOT auto-navigate when step is already done", async () => {
+  it("navigates to next step even when step is already done", async () => {
     const onContinue = vi.fn();
     vi.mocked(useSetupStepStatus).mockReturnValue("done");
     renderShell({ stepKey: "units", onContinue });
-    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Save & Continue/i }));
     await vi.waitFor(() => expect(onContinue).toHaveBeenCalled());
-    expect(pushMock).not.toHaveBeenCalled();
+    await vi.waitFor(() =>
+      expect(pushMock).toHaveBeenCalledWith("/school-setup/programmes"),
+    );
   });
 });

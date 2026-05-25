@@ -53,12 +53,11 @@ export function WizardShell({
   const prev = getPrevStep(stepKey);
   const status = useSetupStepStatus(stepKey);
 
-  const continueLabel =
-    primaryLabel ?? (status === "done" ? "Save changes" : "Save & Continue");
+  const continueLabel = primaryLabel ?? "Save & Continue";
 
   const handleContinue = async () => {
     await onContinue();
-    if (next && status !== "done") {
+    if (next) {
       router.push(next.href);
     }
   };
