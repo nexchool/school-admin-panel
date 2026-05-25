@@ -5,6 +5,7 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { toastError } from "@/lib/errorToast";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WizardShell } from "@/components/school-setup/wizard/WizardShell";
@@ -72,8 +73,8 @@ export default function TermsPage() {
           end_date: t.end_date,
           is_active: t.sequence === 1,
         });
-      } catch {
-        toast.error(`Failed to create ${t.name}`);
+      } catch (err) {
+        toastError(err, `Failed to create ${t.name}`);
         return;
       }
     }
