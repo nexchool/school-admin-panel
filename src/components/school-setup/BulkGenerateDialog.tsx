@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,6 +60,13 @@ export function BulkGenerateDialog({ open, onOpenChange, initialCells, onSuccess
     BulkGenerateResponse["data"]["errors"]
   >([]);
 
+  useEffect(() => {
+    if (open) {
+      setCells(initialCells ?? {});
+      setBackendErrors([]);
+    }
+  }, [open]); // intentionally snapshot at open time — do NOT add initialCells to deps
+
   /** Cross-product of units × programmes as column descriptors */
   const columns = useMemo<
     Array<{ key: ColKey; unitId: string; programmeId: string; label: string }>
@@ -103,7 +110,7 @@ export function BulkGenerateDialog({ open, onOpenChange, initialCells, onSuccess
   }, [cells]);
 
   const reset = () => {
-    setCells({});
+    setCells(initialCells ?? {});
     setBackendErrors([]);
   };
 
@@ -160,9 +167,9 @@ export function BulkGenerateDialog({ open, onOpenChange, initialCells, onSuccess
       }
 
       toast.success(`Created ${created_count}; skipped ${skipped_count}.`);
-      onSuccess?.();
       reset();
       onOpenChange(false);
+      onSuccess?.();
     } catch (err) {
       toast.error(
         err instanceof ApiException
