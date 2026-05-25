@@ -22,6 +22,29 @@ import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import type { AcademicTerm } from "@/services/academicTermsService";
 
+type TermPreset = {
+  label: string;
+  terms: Array<{ name: string; sequence: number; start_date: string; end_date: string }>;
+};
+
+const TERM_PRESETS: TermPreset[] = [
+  {
+    label: "2 Terms",
+    terms: [
+      { name: "Term 1", sequence: 1, start_date: "2025-04-01", end_date: "2025-09-30" },
+      { name: "Term 2", sequence: 2, start_date: "2025-10-01", end_date: "2026-03-31" },
+    ],
+  },
+  {
+    label: "3 Terms",
+    terms: [
+      { name: "Term 1", sequence: 1, start_date: "2025-04-01", end_date: "2025-07-31" },
+      { name: "Term 2", sequence: 2, start_date: "2025-08-01", end_date: "2025-11-30" },
+      { name: "Term 3", sequence: 3, start_date: "2025-12-01", end_date: "2026-03-31" },
+    ],
+  },
+];
+
 export default function TermsPage() {
   const { academicYearId } = useActiveAcademicYear();
   const { data: terms = [], isLoading } = useTerms(academicYearId ?? undefined);
@@ -32,6 +55,30 @@ export default function TermsPage() {
   const createMutation = useCreateTerm();
   const updateMutation = useUpdateTerm();
   const deleteMutation = useDeleteTerm();
+
+  const handleApplyPreset = async (preset: TermPreset) => {
+    if (!academicYearId) {
+      toast.error("No active academic year. Set one in Step 4 first.");
+      return;
+    }
+    for (const t of preset.terms) {
+      try {
+        await createMutation.mutateAsync({
+          academic_year_id: academicYearId,
+          name: t.name,
+          code: null,
+          sequence: t.sequence,
+          start_date: t.start_date,
+          end_date: t.end_date,
+          is_active: t.sequence === 1,
+        });
+      } catch {
+        toast.error(`Failed to create ${t.name}`);
+        return;
+      }
+    }
+    toast.success(`${preset.label} applied`);
+  };
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AcademicTerm | null>(null);
@@ -100,6 +147,34 @@ export default function TermsPage() {
         onContinue={() => {}}
       >
         <div className="space-y-6">
+          {/* Optional notice */}
+          <div className="rounded-md border border-dashed bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">Optional step.</span>{" "}
+            You can skip terms and come back later. Many schools only configure terms when
+            they need term-based reports or fee splits.
+          </div>
+
+          {/* Quick presets — only show if no terms exist yet */}
+          {terms.length === 0 && academicYearId && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Quick presets</p>
+              <div className="flex gap-2 flex-wrap">
+                {TERM_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={createMutation.isPending}
+                    onClick={() => handleApplyPreset(preset)}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <section className="space-y-3">
             <div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
               <p>
