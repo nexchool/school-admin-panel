@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -41,6 +41,9 @@ const DEFAULT_SECTION_LABELS: Record<number, string> = {
 const BOARD_OPTIONS = ["CBSE", "ICSE", "GSEB", "State Board", "Other"] as const;
 const MEDIUM_OPTIONS = ["English", "Gujarati", "Hindi", "Semi-English"] as const;
 
+const SECTION_OPTIONS = [1, 2, 3, 4] as const;
+const BRANCH_OPTIONS = [1, 2, 3] as const;
+
 // ── Component ─────────────────────────────────────────────────────────────
 
 export default function SchoolProfilePage() {
@@ -65,6 +68,12 @@ export default function SchoolProfilePage() {
   const toIdx = GRADE_OPTIONS.findIndex((g) => g.value === gradeTo);
   const gradeCount = fromIdx >= 0 && toIdx >= fromIdx ? toIdx - fromIdx + 1 : 0;
 
+  useEffect(() => {
+    if (fromIdx > toIdx) {
+      setGradeTo(gradeFrom);
+    }
+  }, [gradeFrom, fromIdx, toIdx]);
+
   const selectedGrades = useMemo(
     () => (fromIdx >= 0 && toIdx >= fromIdx ? GRADE_OPTIONS.slice(fromIdx, toIdx + 1) : []),
     [fromIdx, toIdx],
@@ -78,12 +87,13 @@ export default function SchoolProfilePage() {
     setGenerating(true);
     try {
       // 1. Create branches
-      const unitIds: string[] = [];
-      for (let i = 0; i < branchCount; i++) {
-        const name = branchCount === 1 ? "Main Branch" : `Branch ${i + 1}`;
-        const unit = await createUnit.mutateAsync({ name, type: "campus" });
-        unitIds.push(unit.id);
-      }
+      const units = await Promise.all(
+        Array.from({ length: branchCount }, (_, i) => {
+          const name = branchCount === 1 ? "Main Branch" : `Branch ${i + 1}`;
+          return createUnit.mutateAsync({ name, type: "campus" });
+        }),
+      );
+      const unitIds = units.map((u) => u.id);
 
       // 2. Create programme
       const code = board.toUpperCase().replace(/\s+/g, "_").slice(0, 10);
@@ -95,14 +105,12 @@ export default function SchoolProfilePage() {
       });
 
       // 3. Create grades in order
-      const gradeIds: string[] = [];
-      for (let i = 0; i < selectedGrades.length; i++) {
-        const grade = await createGrade.mutateAsync({
-          name: selectedGrades[i].value,
-          sequence: i + 1,
-        });
-        gradeIds.push(grade.id);
-      }
+      const createdGrades = await Promise.all(
+        selectedGrades.map((g, i) =>
+          createGrade.mutateAsync({ name: g.value, sequence: i + 1 }),
+        ),
+      );
+      const gradeIds = createdGrades.map((g) => g.id);
 
       // 4. Build initialCells for BulkGenerateDialog
       const cells: Record<string, Record<string, string>> = {};
@@ -203,7 +211,7 @@ export default function SchoolProfilePage() {
                 onChange={(e) => setGradeTo(e.target.value)}
                 className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                {GRADE_OPTIONS.map((g) => (
+                {GRADE_OPTIONS.slice(fromIdx >= 0 ? fromIdx : 0).map((g) => (
                   <option key={g.value} value={g.value}>{g.label}</option>
                 ))}
               </select>
@@ -219,7 +227,7 @@ export default function SchoolProfilePage() {
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">Default sections per grade</label>
             <div className="flex gap-2">
-              {[1, 2, 3, 4].map((n) => (
+              {SECTION_OPTIONS.map((n) => (
                 <button
                   key={n}
                   type="button"
@@ -243,7 +251,7 @@ export default function SchoolProfilePage() {
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">Branches</label>
             <div className="flex gap-2">
-              {[1, 2, 3].map((n) => (
+              {BRANCH_OPTIONS.map((n) => (
                 <button
                   key={n}
                   type="button"
