@@ -7,9 +7,15 @@ describe("wizard-steps registry", () => {
     WIZARD_STEPS.forEach((s, i) => expect(s.number).toBe(i + 1));
   });
 
-  it("has no optional steps", () => {
+  it("has one optional step (terms)", () => {
     const optional = WIZARD_STEPS.filter((s) => s.optional);
-    expect(optional).toHaveLength(0);
+    expect(optional).toHaveLength(1);
+    expect(optional[0].key).toBe("terms");
+  });
+
+  it("marks the terms step as optional", () => {
+    const terms = getStep("terms");
+    expect(terms.optional).toBe(true);
   });
 
   it("getStep returns the right step", () => {

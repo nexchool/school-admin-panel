@@ -58,9 +58,9 @@ describe("WizardShell", () => {
     expect(screen.getByRole("button", { name: /Back/i })).toBeDisabled();
   });
 
-  it("does not render Skip on terms (now required)", () => {
+  it("renders Skip on optional terms step", () => {
     renderShell({ stepKey: "terms" });
-    expect(screen.queryByRole("button", { name: /^Skip$/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Skip$/ })).toBeInTheDocument();
   });
 
   it("does not render Skip on required steps", () => {
