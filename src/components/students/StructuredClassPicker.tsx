@@ -22,7 +22,7 @@ interface Props {
 const ANY = "__any__";
 
 /**
- * Dependent dropdowns: School Unit → Programme → Grade → Class.
+ * Dependent dropdowns: Branch → Programme → Grade → Class.
  *
  * Driven entirely off the `classes` array — no extra requests. We derive
  * each level's options from what's actually wired up in the data, so the
@@ -113,7 +113,7 @@ export function StructuredClassPicker({ classes, value, onChange }: Props) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="space-y-1">
-        <Label>School unit</Label>
+        <Label>Branch</Label>
         <Select
           value={unitId}
           onValueChange={(v) => {

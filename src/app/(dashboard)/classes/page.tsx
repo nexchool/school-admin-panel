@@ -36,7 +36,7 @@ interface UnitBucket {
 }
 
 /**
- * Group classes as: School Unit → Programme → Grade → Sections.
+ * Group classes as: Branch → Programme → Grade → Sections.
  * Buckets fall back to "Unassigned" when older rows don't carry the
  * structural FKs yet (legacy data from before the multi-school migration).
  */
@@ -113,7 +113,7 @@ export default function ClassesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Classes</h1>
           <p className="text-muted-foreground">
-            Read-only list grouped by School Unit → Programme → Grade. Use the
+            Read-only list grouped by Branch → Programme → Grade. Use the
             guided builder to add new sections.
           </p>
         </div>

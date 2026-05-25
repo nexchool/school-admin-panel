@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -15,29 +15,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { SchoolUnit } from "@/services/schoolUnitsService";
-
-const UNIT_TYPE_OPTIONS = [
-  { value: "nursery", label: "Nursery" },
-  { value: "primary", label: "Primary" },
-  { value: "secondary", label: "Secondary" },
-  { value: "higher_secondary", label: "Higher Secondary" },
-  { value: "other", label: "Other" },
-] as const;
 
 const unitFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().min(1, "Code is required"),
-  type: z.enum(["nursery", "primary", "secondary", "higher_secondary", "other"], {
-    error: "Type is required",
-  }),
   dise_no: z.string().optional(),
   gr_number_scheme: z.string().min(1, "GR Number Scheme is required"),
   phone: z.string().optional(),
@@ -66,7 +48,6 @@ export function UnitFormDialog({
   const {
     register,
     handleSubmit,
-    control,
     reset,
     formState: { errors },
   } = useForm<UnitFormValues>({
@@ -74,7 +55,6 @@ export function UnitFormDialog({
     defaultValues: {
       name: "",
       code: "",
-      type: "primary",
       dise_no: "",
       gr_number_scheme: "",
       phone: "",
@@ -88,7 +68,6 @@ export function UnitFormDialog({
         reset({
           name: defaultValues.name ?? "",
           code: defaultValues.code ?? "",
-          type: defaultValues.type ?? "primary",
           dise_no: defaultValues.dise_no ?? "",
           gr_number_scheme: defaultValues.gr_number_scheme ?? "",
           phone: defaultValues.phone ?? "",
@@ -98,7 +77,6 @@ export function UnitFormDialog({
         reset({
           name: "",
           code: "",
-          type: "primary",
           dise_no: "",
           gr_number_scheme: "",
           phone: "",
@@ -120,7 +98,7 @@ export function UnitFormDialog({
         onClose={() => onOpenChange(false)}
       >
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Unit" : "Add Unit"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Branch" : "Add Branch"}</DialogTitle>
         </DialogHeader>
 
         <form
@@ -144,7 +122,7 @@ export function UnitFormDialog({
           </div>
 
           {/* Code */}
-          <div className="flex flex-col gap-1.5">
+          <div className="col-span-2 flex flex-col gap-1.5">
             <Label htmlFor="unit-code">
               Code <span className="text-destructive">*</span>
             </Label>
@@ -155,34 +133,6 @@ export function UnitFormDialog({
             />
             {errors.code && (
               <p className="text-xs text-destructive">{errors.code.message}</p>
-            )}
-          </div>
-
-          {/* Type */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="unit-type">
-              Type <span className="text-destructive">*</span>
-            </Label>
-            <Controller
-              name="type"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="unit-type">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNIT_TYPE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.type && (
-              <p className="text-xs text-destructive">{errors.type.message}</p>
             )}
           </div>
 
@@ -244,7 +194,7 @@ export function UnitFormDialog({
             Cancel
           </Button>
           <Button type="submit" form="unit-form" disabled={saving}>
-            {saving ? "Saving…" : isEdit ? "Save changes" : "Add Unit"}
+            {saving ? "Saving…" : isEdit ? "Save changes" : "Add Branch"}
           </Button>
         </DialogFooter>
       </DialogContent>

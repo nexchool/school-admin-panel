@@ -1,19 +1,12 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
 
-export type SchoolUnitType =
-  | "nursery"
-  | "primary"
-  | "secondary"
-  | "higher_secondary"
-  | "other";
-
 export type ActiveStatus = "active" | "inactive";
 
 export interface SchoolUnit {
   id: string;
   name: string;
   code: string;
-  type: SchoolUnitType;
+  type: "campus";
   dise_no: string | null;
   index_no: string | null;
   recognition_no: string | null;

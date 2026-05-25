@@ -161,13 +161,13 @@ export function DuplicateStructureDialog({ open, onOpenChange }: Props) {
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "unit" | "programme")}>
           <TabsList className="grid grid-cols-2">
-            <TabsTrigger value="unit">Unit → Unit</TabsTrigger>
+            <TabsTrigger value="unit">Branch → Branch</TabsTrigger>
             <TabsTrigger value="programme">Programme → Programme</TabsTrigger>
           </TabsList>
 
           <TabsContent value="unit" className="space-y-3 pt-3">
             <div className="space-y-1">
-              <Label>Source unit</Label>
+              <Label>Source branch</Label>
               <Select value={sourceUnit} onValueChange={setSourceUnit}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select source" />
@@ -182,7 +182,7 @@ export function DuplicateStructureDialog({ open, onOpenChange }: Props) {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>Target unit</Label>
+              <Label>Target branch</Label>
               <Select value={targetUnit} onValueChange={setTargetUnit}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select target" />

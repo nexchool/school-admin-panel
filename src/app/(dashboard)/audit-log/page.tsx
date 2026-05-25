@@ -252,10 +252,10 @@ function AuditLogContent() {
             {/* Unit */}
             {units && units.length > 1 && (
               <div className="space-y-1.5">
-                <Label htmlFor="unit-select">Unit</Label>
+                <Label htmlFor="unit-select">Branch</Label>
                 <Select value={unitId} onValueChange={setUnitId}>
                   <SelectTrigger id="unit-select">
-                    <SelectValue placeholder="All units" />
+                    <SelectValue placeholder="All branches" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All units</SelectItem>

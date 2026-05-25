@@ -243,7 +243,7 @@ export default function CompletePage() {
             {/* Summary cards grid */}
             <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <SummaryCard
-                title="School Units"
+                title="Branches"
                 value={
                   units.length > 0
                     ? `${units.length} configured`

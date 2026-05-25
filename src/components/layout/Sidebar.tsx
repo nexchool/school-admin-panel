@@ -67,7 +67,7 @@ const SIDEBAR_NAV_TRANSPORT = {
 } as const;
 
 const SETUP_STEPS: Array<{ key: SetupStepKey; href: string; label: string }> = [
-  { key: "units", href: "/school-setup/units", label: "School Units" },
+  { key: "units", href: "/school-setup/units", label: "Branches" },
   { key: "programmes", href: "/school-setup/programmes", label: "Programmes" },
   { key: "grades", href: "/school-setup/grades", label: "Grades" },
   { key: "academic-year", href: "/school-setup/academic-year", label: "Academic Year" },

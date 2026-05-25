@@ -22,13 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useAuth } from "@/hooks";
 import {
   useCreateSchoolUnit,
@@ -36,18 +29,7 @@ import {
   useSchoolUnits,
 } from "@/hooks/useSchoolUnits";
 import { ApiException } from "@/services/api";
-import type {
-  SchoolUnit,
-  SchoolUnitType,
-} from "@/services/schoolUnitsService";
-
-const UNIT_TYPES: { value: SchoolUnitType; label: string }[] = [
-  { value: "nursery", label: "Nursery" },
-  { value: "primary", label: "Primary" },
-  { value: "secondary", label: "Secondary" },
-  { value: "higher_secondary", label: "Higher secondary" },
-  { value: "other", label: "Other" },
-];
+import type { SchoolUnit } from "@/services/schoolUnitsService";
 
 export function SchoolUnitsList() {
   const { hasPermission } = useAuth();
@@ -60,12 +42,10 @@ export function SchoolUnitsList() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [type, setType] = useState<SchoolUnitType>("primary");
 
   const reset = () => {
     setName("");
     setCode("");
-    setType("primary");
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -75,10 +55,10 @@ export function SchoolUnitsList() {
       return;
     }
     createMut.mutate(
-      { name: name.trim(), code: code.trim(), type },
+      { name: name.trim(), code: code.trim() },
       {
         onSuccess: () => {
-          toast.success("School unit added.");
+          toast.success("Branch added.");
           setOpen(false);
           reset();
         },
@@ -95,9 +75,9 @@ export function SchoolUnitsList() {
   };
 
   const onDelete = (unit: SchoolUnit) => {
-    if (!window.confirm(`Delete unit “${unit.name}”?`)) return;
+    if (!window.confirm(`Delete branch “${unit.name}”?`)) return;
     deleteMut.mutate(unit.id, {
-      onSuccess: () => toast.success("Unit deleted."),
+      onSuccess: () => toast.success("Branch deleted."),
       onError: (e) =>
         toast.error(
           e instanceof ApiException
@@ -120,17 +100,17 @@ export function SchoolUnitsList() {
         </Button>
         {canManage ? (
           <Button type="button" onClick={() => setOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Add unit
+            <Plus className="h-4 w-4" /> Add branch
           </Button>
         ) : null}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>School units</CardTitle>
+          <CardTitle>Branches</CardTitle>
           <CardDescription>
-            Add each campus or sub-school you operate. One tenant can have many
-            units.
+            Add each campus or branch your school operates. One organisation can
+            have many branches.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -152,9 +132,7 @@ export function SchoolUnitsList() {
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium">{u.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {u.code} · {u.type}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{u.code}</p>
                   </div>
                   {canManage ? (
                     <Button
@@ -180,7 +158,7 @@ export function SchoolUnitsList() {
         <DialogContent className="sm:max-w-md">
           <form onSubmit={onSubmit}>
             <DialogHeader>
-              <DialogTitle>Add school unit</DialogTitle>
+              <DialogTitle>Add branch</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
@@ -189,7 +167,7 @@ export function SchoolUnitsList() {
                   id="su-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Modi Higher Secondary"
+                  placeholder="e.g. North Campus"
                   autoFocus
                 />
               </div>
@@ -202,24 +180,6 @@ export function SchoolUnitsList() {
                   placeholder="e.g. MHS"
                   maxLength={32}
                 />
-              </div>
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={type}
-                  onValueChange={(v) => setType(v as SchoolUnitType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNIT_TYPES.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
             <DialogFooter>

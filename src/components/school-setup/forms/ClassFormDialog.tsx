@@ -41,7 +41,7 @@ const classFormSchema = z.object({
   grade_id: z.string().min(1, "Grade is required"),
   programme_id: z.string().min(1, "Programme is required"),
   medium_id: z.string().optional(),
-  school_unit_id: z.string().min(1, "School unit is required"),
+  school_unit_id: z.string().min(1, "Branch is required"),
   stream: z.string().optional(),
 });
 
@@ -189,10 +189,10 @@ export function ClassFormDialog({
             )}
           </div>
 
-          {/* School unit */}
+          {/* Branch */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="class-unit">
-              School unit <span className="text-destructive">*</span>
+              Branch <span className="text-destructive">*</span>
             </Label>
             <Controller
               name="school_unit_id"
@@ -200,7 +200,7 @@ export function ClassFormDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger id="class-unit">
-                    <SelectValue placeholder="Select unit" />
+                    <SelectValue placeholder="Select branch" />
                   </SelectTrigger>
                   <SelectContent>
                     {units.map((u) => (

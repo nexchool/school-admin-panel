@@ -184,7 +184,7 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
           <DialogDescription>
             Enter comma-separated section labels (e.g.{" "}
             <code>A, B, C</code> or <code>Sci-A, Com-A</code>) for each Grade
-            × Unit × Programme combination you want to create. Empty cells are
+            × Branch × Programme combination you want to create. Empty cells are
             skipped.
           </DialogDescription>
         </DialogHeader>

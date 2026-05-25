@@ -10,7 +10,7 @@ export type WizardStep = {
 };
 
 export const WIZARD_STEPS: WizardStep[] = [
-  { key: "units", number: 1, title: "School Units", description: "Configure your school's campuses or branches.", href: "/school-setup/units", optional: false },
+  { key: "units", number: 1, title: "Branches", description: "Configure your school's campuses or branches.", href: "/school-setup/units", optional: false },
   { key: "programmes", number: 2, title: "Academic Programmes", description: "Define the boards and mediums you offer.", href: "/school-setup/programmes", optional: false },
   { key: "grades", number: 3, title: "Grades", description: "List the grades or standards your school runs.", href: "/school-setup/grades", optional: false },
   { key: "academic-year", number: 4, title: "Academic Year", description: "Set the active academic session.", href: "/school-setup/academic-year", optional: false },
