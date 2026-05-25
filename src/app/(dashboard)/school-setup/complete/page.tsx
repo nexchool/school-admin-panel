@@ -48,15 +48,21 @@ type SummaryCardProps = {
   title: string;
   value: string;
   ready: boolean;
+  href?: string;
 };
 
-function SummaryCard({ title, value, ready }: SummaryCardProps) {
+function SummaryCard({ title, value, ready, href }: SummaryCardProps) {
   return (
     <Card>
-      <CardHeader className="pb-1 pt-4 px-4">
+      <CardHeader className="pb-1 pt-4 px-4 flex-row items-center justify-between">
         <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           {title}
         </CardTitle>
+        {href && (
+          <Link href={href} className="text-xs text-primary hover:underline shrink-0">
+            Edit ↩
+          </Link>
+        )}
       </CardHeader>
       <CardContent className="px-4 pb-4">
         <p
@@ -250,6 +256,7 @@ export default function CompletePage() {
                     : "Not configured"
                 }
                 ready={units.length > 0}
+                href="/school-setup/units"
               />
               <SummaryCard
                 title="Programmes"
@@ -259,6 +266,7 @@ export default function CompletePage() {
                     : "Not configured"
                 }
                 ready={programmes.length > 0}
+                href="/school-setup/programmes"
               />
               <SummaryCard
                 title="Grades"
@@ -268,11 +276,13 @@ export default function CompletePage() {
                     : "Not configured"
                 }
                 ready={grades.length > 0}
+                href="/school-setup/grades"
               />
               <SummaryCard
                 title="Academic Year"
                 value={activeYear ? activeYear.name : "Not set"}
                 ready={!!activeYear}
+                href="/school-setup/academic-year"
               />
               <SummaryCard
                 title="Classes"
@@ -282,6 +292,7 @@ export default function CompletePage() {
                     : "Not configured"
                 }
                 ready={classCount > 0}
+                href="/school-setup/classes"
               />
               <SummaryCard
                 title="Subjects"
@@ -291,6 +302,7 @@ export default function CompletePage() {
                     : "Not configured"
                 }
                 ready={subjects.length > 0}
+                href="/school-setup/subjects"
               />
               <SummaryCard
                 title="Terms"
@@ -298,6 +310,7 @@ export default function CompletePage() {
                   terms.length > 0 ? `${terms.length} terms` : "None"
                 }
                 ready={terms.length > 0}
+                href="/school-setup/terms"
               />
             </section>
 
