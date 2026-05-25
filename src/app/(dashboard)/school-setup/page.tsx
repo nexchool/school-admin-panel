@@ -54,15 +54,20 @@ export default function SchoolSetupPage() {
   useEffect(() => {
     if (!canManage) return;
     if (isLoading || !data) return;
-    const overall = (data as { overall?: { is_setup_complete?: boolean } })
-      .overall;
+
+    const overall = (data as { overall?: { is_setup_complete?: boolean } }).overall;
     if (overall?.is_setup_complete) {
       router.replace("/school-setup/complete");
       return;
     }
-    const target = pickFirstIncomplete(
-      data as unknown as Record<string, unknown>,
-    );
+
+    // Send to Step 0 profile picker when setup is completely empty
+    if (data.programmes.count === 0 && data.grades.count === 0) {
+      router.replace("/school-setup/profile");
+      return;
+    }
+
+    const target = pickFirstIncomplete(data as unknown as Record<string, unknown>);
     router.replace(target.href);
   }, [canManage, isLoading, data, router]);
 
