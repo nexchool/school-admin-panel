@@ -24,6 +24,10 @@ import type { BulkGenerateResponse } from "@/services/schoolSetupService";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-filled cells: Record<gradeId, Record<"unitId::programmeId", "A, B, C">> */
+  initialCells?: Record<string, Record<string, string>>;
+  /** Called after successful bulk generate */
+  onSuccess?: () => void;
 }
 
 /** Key for a (unit × programme) column: `{unitId}::{programmeId}` */
@@ -41,7 +45,7 @@ function parseSections(raw: string): string[] {
     .filter((s) => s.length > 0);
 }
 
-export function BulkGenerateDialog({ open, onOpenChange }: Props) {
+export function BulkGenerateDialog({ open, onOpenChange, initialCells, onSuccess }: Props) {
   const { academicYearId } = useActiveAcademicYear();
   const { data: grades = [] } = useGrades();
   const { data: units = [] } = useSchoolUnits();
@@ -50,7 +54,7 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
 
   // cells[gradeId][colKey] = raw comma-separated string
   const [cells, setCells] = useState<Record<string, Record<ColKey, string>>>(
-    {},
+    () => initialCells ?? {},
   );
   const [backendErrors, setBackendErrors] = useState<
     BulkGenerateResponse["data"]["errors"]
@@ -156,6 +160,7 @@ export function BulkGenerateDialog({ open, onOpenChange }: Props) {
       }
 
       toast.success(`Created ${created_count}; skipped ${skipped_count}.`);
+      onSuccess?.();
       reset();
       onOpenChange(false);
     } catch (err) {
