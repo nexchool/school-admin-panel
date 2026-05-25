@@ -348,7 +348,10 @@ export default function SubjectsPage() {
         <TemplateDetailModal
           templateId={templateModalId}
           initialMode={templateModalMode}
-          onClose={() => setTemplateModalId(null)}
+          onClose={() => {
+            setTemplateModalId(null);
+            setTemplateModalMode("view");
+          }}
         />
       )}
 
