@@ -236,7 +236,7 @@ export function TemplateDetailModal({
     return result;
   }
 
-  async function handleUseTemplate() {
+  async function applyTemplate() {
     setSaving(true);
     try {
       const subjects = await buildSubjectList();
@@ -246,7 +246,9 @@ export function TemplateDetailModal({
           await createSubject.mutateAsync(s);
           created++;
         } catch {
-          // skip duplicates / errors silently
+          // skip duplicates / errors silently — parent query invalidation
+          // will refresh the subject list; if creation fails the subject
+          // simply won't appear in the import
         }
       }
       if (autoApply && academicYearId) {
@@ -265,33 +267,12 @@ export function TemplateDetailModal({
     }
   }
 
+  async function handleUseTemplate() {
+    await applyTemplate();
+  }
+
   async function handleSaveAndUse() {
-    setSaving(true);
-    try {
-      const subjects = await buildSubjectList();
-      let created = 0;
-      for (const s of subjects) {
-        try {
-          await createSubject.mutateAsync(s);
-          created++;
-        } catch {
-          // skip
-        }
-      }
-      if (autoApply && academicYearId) {
-        try {
-          await applyMutation.mutateAsync(academicYearId);
-        } catch (err) {
-          toastError(err, "Subjects imported but could not apply to classes.");
-        }
-      }
-      toast.success(
-        `${created} subject${created !== 1 ? "s" : ""} imported${autoApply && academicYearId ? " and applied to all classes" : ""}`,
-      );
-      onClose();
-    } finally {
-      setSaving(false);
-    }
+    await applyTemplate();
   }
 
   // ── Render helpers ────────────────────────────────────────────────
