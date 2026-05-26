@@ -1,4 +1,5 @@
-const IGNORED_SUBDOMAINS = new Set(["www", "api"]);
+// Reserved platform subdomains — not tenant slugs.
+const IGNORED_SUBDOMAINS = new Set(["www", "api", "app", "admin", "dashboard", "mail", "smtp", "ftp"]);
 
 /**
  * Extracts the school subdomain from a hostname string.
