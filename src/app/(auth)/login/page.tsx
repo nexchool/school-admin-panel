@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -8,7 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
-import { getTenantBrandingSafe } from "@/services/authService";
+import { getTenantBranding } from "@/services/authService";
+import { ApiException } from "@/services/api";
+import { getCurrentSubdomain } from "@/lib/subdomain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,12 +40,24 @@ export default function LoginPage() {
     useAuth();
   const [error, setError] = useState<string | null>(null);
 
-  const { data: brandingSchoolName } = useQuery({
+  const { data: brandingData, error: brandingError } = useQuery({
     queryKey: ["tenant-branding"],
-    queryFn: getTenantBrandingSafe,
+    queryFn: getTenantBranding,
     staleTime: 5 * 60_000,
     retry: false,
   });
+
+  // Redirect to school-not-found when the subdomain is set but the backend
+  // returns 404 (no tenant registered for that slug).
+  useEffect(() => {
+    if (!brandingError) return;
+    const subdomain = getCurrentSubdomain();
+    if (subdomain && brandingError instanceof ApiException && brandingError.status === 404) {
+      router.replace("/school-not-found");
+    }
+  }, [brandingError, router]);
+
+  const brandingSchoolName = brandingData?.name ?? null;
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
