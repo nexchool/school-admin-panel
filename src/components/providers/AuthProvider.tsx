@@ -8,6 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   getAccessToken,
   getRefreshToken,
@@ -78,6 +79,7 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissionsState] = useState<string[]>([]);
   const [enabledFeatures, setEnabledFeaturesState] = useState<string[]>([]);
@@ -195,11 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPendingTenantChoice({ tenants: response.tenants, email, password });
         return { requiresTenantChoice: true };
       }
+      queryClient.clear();
       await setAuthData(response);
       await refreshUser();
       return { requiresTenantChoice: false };
     },
-    [setAuthData, refreshUser]
+    [setAuthData, refreshUser, queryClient]
   );
 
   const loginWithTenant = useCallback(
@@ -212,10 +215,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         tenant_id: tenantId,
       });
+      queryClient.clear();
       await setAuthData(response);
       await refreshUser();
     },
-    [pendingTenantChoice, setAuthData, refreshUser]
+    [pendingTenantChoice, setAuthData, refreshUser, queryClient]
   );
 
   const clearPendingTenantChoice = useCallback(() => setPendingTenantChoice(null), []);
@@ -227,12 +231,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     await clearAuth();
+    // Flush all cached query data so a subsequent login (possibly a different
+    // tenant) never sees stale data from the previous session.
+    queryClient.clear();
     setUser(null);
     setPermissionsState([]);
     setEnabledFeaturesState([]);
     setRolesState([]);
     setTenantNameState(null);
-  }, []);
+  }, [queryClient]);
 
   const hasPermission = useCallback(
     (permission: string): boolean => {
