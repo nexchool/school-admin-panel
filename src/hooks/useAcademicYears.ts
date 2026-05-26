@@ -4,6 +4,7 @@ import {
   type AcademicYear,
 } from "@/services/academicYearsService";
 import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const academicYearsKeys = {
   all: ["academicYears"] as const,
@@ -20,10 +21,11 @@ export function useAcademicYears(
   activeOnly = false,
   options?: { enabled?: boolean }
 ) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: academicYearsKeys.list(activeOnly),
+    queryKey: [...academicYearsKeys.list(activeOnly), tenantId],
     queryFn: () => academicYearsService.getAcademicYears(activeOnly),
-    enabled: options?.enabled ?? true,
+    enabled: !!tenantId && (options?.enabled ?? true),
   });
 }
 

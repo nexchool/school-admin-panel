@@ -31,7 +31,8 @@ import {
   useGenerateTimetable,
 } from "@/hooks/useTimetable";
 import type { TimetableEntry, BellSchedulePeriod } from "@/types/timetable";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { timetableKeys } from "@/hooks/useTimetable";
 import { toast } from "sonner";
 import { apiGet } from "@/services/api";
@@ -73,7 +74,7 @@ export default function ClassTimetablePage() {
   const classId = params?.classId as string;
   const qc = useQueryClient();
 
-  const { data: bellListData } = useQuery({
+  const { data: bellListData } = useTenantQuery({
     queryKey: ["academics", "bell-schedules"],
     queryFn: () =>
       apiGet<{

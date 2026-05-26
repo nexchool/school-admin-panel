@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,12 +31,12 @@ export default function TransportReportsPage() {
   const [busId, setBusId] = useState("");
   const [routeId, setRouteId] = useState("");
 
-  const busesQ = useQuery({
+  const busesQ = useTenantQuery({
     queryKey: ["transport", "buses"],
     queryFn: () => transportService.listBuses(),
   });
 
-  const routesQ = useQuery({
+  const routesQ = useTenantQuery({
     queryKey: ["transport", "routes"],
     queryFn: () => transportService.listRoutes(),
   });

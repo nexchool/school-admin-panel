@@ -11,6 +11,7 @@ import {
   type TemplateGroup,
   type TemplateItem,
 } from "@/services/schoolSetupService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const schoolSetupKeys = {
   status: ["school-setup", "status"] as const,
@@ -20,12 +21,13 @@ export const schoolSetupKeys = {
 };
 
 export function useSetupStatus(options?: { enabled?: boolean }) {
+  const { tenantId } = useAuth();
   return useQuery<SetupStatus>({
-    queryKey: schoolSetupKeys.status,
+    queryKey: [...schoolSetupKeys.status, tenantId],
     queryFn: () => schoolSetupService.setup.status(),
     retry: 2,
     staleTime: 30_000,
-    enabled: options?.enabled ?? true,
+    enabled: !!tenantId && (options?.enabled ?? true),
   });
 }
 
@@ -94,19 +96,25 @@ export function useParseImportHeaders() {
 }
 
 export function useTemplates() {
+  const { tenantId } = useAuth();
   return useQuery<TemplateGroup[]>({
-    queryKey: schoolSetupKeys.templates,
+    queryKey: [...schoolSetupKeys.templates, tenantId],
     queryFn: () => schoolSetupService.setup.listTemplates(),
+    enabled: !!tenantId,
   });
 }
 
 export function useTemplateItems(groupId: string | null) {
+  const { tenantId } = useAuth();
   return useQuery<TemplateItem[]>({
-    queryKey: groupId
-      ? schoolSetupKeys.templateItems(groupId)
-      : ["school-setup", "templates", null, "items"],
+    queryKey: [
+      ...(groupId
+        ? schoolSetupKeys.templateItems(groupId)
+        : ["school-setup", "templates", null, "items"]),
+      tenantId,
+    ],
     queryFn: () => schoolSetupService.setup.templateItems(groupId!),
-    enabled: !!groupId,
+    enabled: !!groupId && !!tenantId,
   });
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +51,7 @@ export default function TransportStopsPage() {
   const [formActive, setFormActive] = useState(true);
   const [deleteStopTarget, setDeleteStopTarget] = useState<TransportGlobalStop | null>(null);
 
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rows = [], isLoading } = useTenantQuery({
     queryKey: ["transport", "global-stops", search, areaFilter],
     queryFn: () =>
       transportService.listGlobalStops({

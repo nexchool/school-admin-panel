@@ -7,6 +7,7 @@ import {
   programmesService,
   type AcademicProgramme,
 } from "@/services/programmesService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const programmesKeys = {
   all: ["programmes"] as const,
@@ -19,9 +20,11 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 }
 
 export function useProgrammes() {
+  const { tenantId } = useAuth();
   return useQuery<AcademicProgramme[]>({
-    queryKey: programmesKeys.list(),
+    queryKey: [...programmesKeys.list(), tenantId],
     queryFn: () => programmesService.list(),
+    enabled: !!tenantId,
   });
 }
 

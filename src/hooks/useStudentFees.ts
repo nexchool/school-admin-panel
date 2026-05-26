@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeService } from "@/services/financeService";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export interface StudentFeeFilters {
   student_id?: string;
@@ -26,22 +27,25 @@ export const studentFeeKeys = {
  */
 export function useStudentFees(filters?: StudentFeeFilters) {
   const { academicYearId } = useActiveAcademicYear();
+  const { tenantId } = useAuth();
   const merged: StudentFeeFilters = {
     ...filters,
     academic_year_id: filters?.academic_year_id ?? academicYearId ?? undefined,
   };
 
   return useQuery({
-    queryKey: studentFeeKeys.list(merged),
+    queryKey: [...studentFeeKeys.list(merged), tenantId],
     queryFn: () => financeService.getStudentFees(merged),
+    enabled: !!tenantId && !!merged.academic_year_id,
   });
 }
 
 export function useStudentFeeDetail(id: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: studentFeeKeys.detail(id ?? ""),
+    queryKey: [...studentFeeKeys.detail(id ?? ""), tenantId],
     queryFn: () => financeService.getStudentFee(id!),
-    enabled: !!id,
+    enabled: !!id && !!tenantId,
   });
 }
 

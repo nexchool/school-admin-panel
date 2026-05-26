@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { financeService } from "@/services/financeService";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const financeSummaryKeys = {
   all: ["finance", "summary"] as const,
@@ -20,14 +21,16 @@ export function useFinanceSummary(params?: {
   include_recent_payments?: number;
 }) {
   const { academicYearId } = useActiveAcademicYear();
+  const { tenantId } = useAuth();
   const merged = {
     ...params,
     academic_year_id: params?.academic_year_id ?? academicYearId ?? undefined,
   };
 
   return useQuery({
-    queryKey: financeSummaryKeys.detail(merged),
+    queryKey: [...financeSummaryKeys.detail(merged), tenantId],
     queryFn: () => financeService.getSummary(merged),
+    enabled: !!tenantId && !!merged.academic_year_id,
     staleTime: 30_000,
   });
 }

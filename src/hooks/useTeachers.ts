@@ -17,27 +17,32 @@ import type {
   UpdateTeacherInput,
   CreateTeacherResponse,
 } from "@/types/teacher";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const teachersKeys = {
   all: ["teachers"] as const,
-  list: (params?: TeachersListParams) =>
-    [...teachersKeys.all, "list", params] as const,
-  detail: (id: string) => [...teachersKeys.all, "detail", id] as const,
+  list: (tenantId: string | null, params?: TeachersListParams) =>
+    [...teachersKeys.all, "list", tenantId, params] as const,
+  detail: (tenantId: string | null, id: string) =>
+    [...teachersKeys.all, "detail", tenantId, id] as const,
 };
 
 export function useTeachers(params?: TeachersListParams) {
+  const { tenantId } = useAuth();
   return useQuery<TeachersListResult>({
-    queryKey: teachersKeys.list(params),
+    queryKey: teachersKeys.list(tenantId, params),
     queryFn: () => teachersService.getTeachers(params),
+    enabled: !!tenantId,
     placeholderData: keepPreviousData,
   });
 }
 
 export function useTeacher(id: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: teachersKeys.detail(id ?? ""),
+    queryKey: teachersKeys.detail(tenantId, id ?? ""),
     queryFn: () => teachersService.getTeacher(id!),
-    enabled: !!id,
+    enabled: !!id && !!tenantId,
   });
 }
 
@@ -57,11 +62,9 @@ export function useUpdateTeacher() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateTeacherInput }) =>
       teachersService.updateTeacher(id, input),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
+      // Prefix invalidation — covers list + every tenant-scoped detail key.
       queryClient.invalidateQueries({ queryKey: teachersKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: teachersKeys.detail(variables.id),
-      });
     },
   });
 }

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,18 +32,18 @@ export default function RouteDetailPage() {
     if (searchParams.get("edit") === "1") setEditOpen(true);
   }, [searchParams]);
 
-  const routeQ = useQuery({
+  const routeQ = useTenantQuery({
     queryKey: ["transport", "route", id],
     queryFn: () => transportService.getRoute(id!, true),
     enabled: !!id,
   });
 
-  const feeQ = useQuery({
+  const feeQ = useTenantQuery({
     queryKey: ["transport", "fee-plans"],
     queryFn: () => transportService.listFeePlans(),
   });
 
-  const busesQ = useQuery({
+  const busesQ = useTenantQuery({
     queryKey: ["transport", "buses"],
     queryFn: () => transportService.listBuses(),
   });
@@ -69,7 +70,7 @@ export default function RouteDetailPage() {
     return s.slice().sort((a, b) => a.sequence_order - b.sequence_order);
   }, [route?.stops]);
 
-  const enrollQ = useQuery({
+  const enrollQ = useTenantQuery({
     queryKey: ["transport", "enrollments"],
     queryFn: () => transportService.listEnrollments(),
     enabled: !!id,

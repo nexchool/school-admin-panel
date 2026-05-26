@@ -11,6 +11,7 @@ import type {
   CreateSubjectInput,
   UpdateSubjectInput,
 } from "@/types/subject";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const subjectsKeys = {
   all: ["subjects"] as const,
@@ -19,17 +20,20 @@ export const subjectsKeys = {
 };
 
 export function useSubjects() {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: subjectsKeys.list(),
+    queryKey: [...subjectsKeys.list(), tenantId],
     queryFn: () => subjectsService.getSubjects(),
+    enabled: !!tenantId,
   });
 }
 
 export function useSubject(id: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: subjectsKeys.detail(id ?? ""),
+    queryKey: [...subjectsKeys.detail(id ?? ""), tenantId],
     queryFn: () => subjectsService.getSubject(id!),
-    enabled: !!id,
+    enabled: !!id && !!tenantId,
   });
 }
 

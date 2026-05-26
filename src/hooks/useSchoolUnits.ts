@@ -7,6 +7,7 @@ import {
   schoolUnitsService,
   type SchoolUnit,
 } from "@/services/schoolUnitsService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const schoolUnitsKeys = {
   all: ["school-units"] as const,
@@ -19,10 +20,11 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 }
 
 export function useSchoolUnits(options?: { enabled?: boolean }) {
+  const { tenantId } = useAuth();
   return useQuery<SchoolUnit[]>({
-    queryKey: schoolUnitsKeys.list(),
+    queryKey: [...schoolUnitsKeys.list(), tenantId],
     queryFn: () => schoolUnitsService.list(),
-    enabled: options?.enabled ?? true,
+    enabled: !!tenantId && (options?.enabled ?? true),
   });
 }
 

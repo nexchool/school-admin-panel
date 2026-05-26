@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import {
   academicYearsService,
   type AcademicYear,
@@ -49,7 +50,7 @@ export default function AcademicYearsPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission("class.manage");
 
-  const { data: years = [], isLoading } = useQuery({
+  const { data: years = [], isLoading } = useTenantQuery({
     queryKey: academicYearsKeys.list(false),
     queryFn: () => academicYearsService.getAcademicYears(false),
   });

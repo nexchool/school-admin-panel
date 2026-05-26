@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,12 +80,12 @@ export default function TransportStaffPage() {
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   }, []);
 
-  const driversQ = useQuery({
+  const driversQ = useTenantQuery({
     queryKey: ["transport", "drivers"],
     queryFn: () => transportService.listDrivers(),
   });
 
-  const allStaffQ = useQuery({
+  const allStaffQ = useTenantQuery({
     queryKey: ["transport", "staff", "all"],
     queryFn: () => transportService.listStaff(),
   });
@@ -115,7 +116,7 @@ export default function TransportStaffPage() {
     return m;
   }, [transportStaffIds, workloadQueries]);
 
-  const busesQ = useQuery({
+  const busesQ = useTenantQuery({
     queryKey: ["transport", "buses"],
     queryFn: () => transportService.listBuses(),
   });

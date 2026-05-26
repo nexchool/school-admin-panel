@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { ChevronsUpDown, HelpCircle, Loader2 } from "lucide-react";
 import { apiGet } from "@/services/api";
 import { Button } from "@/components/ui/button";
@@ -138,7 +138,7 @@ export function IdFormatBuilder({ kind, pattern, onChange, onMarkDirty }: IdForm
   const queryEnabled =
     !useCustom || (useCustom && advPatternForApi ? validateBuilderPatternClient(advPatternForApi) === null : false);
 
-  const previewQuery = useQuery({
+  const previewQuery = useTenantQuery({
     queryKey: ["academics", "id-preview", kind, useCustom, advPatternForApi ?? "default"],
     queryFn: () => {
       const t = kind === "student" ? "student" : "teacher";

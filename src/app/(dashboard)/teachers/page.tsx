@@ -6,7 +6,8 @@ import {
   usePathname,
   useSearchParams,
 } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import {
   Card,
   CardContent,
@@ -86,7 +87,7 @@ function AllLeavesView() {
   const [approving, setApproving] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
 
-  const { data: leaves = [], isLoading } = useQuery({
+  const { data: leaves = [], isLoading } = useTenantQuery({
     queryKey: ["teacher-leaves-all", statusFilter],
     queryFn: () =>
       teacherLeaveService.listLeaves(statusFilter ? { status: statusFilter } : undefined),
@@ -461,7 +462,7 @@ export default function TeachersPage() {
   }, [data, totalPages, url.page, setUrlParams]);
 
   // Count pending leaves for the badge
-  const { data: pendingLeaves = [] } = useQuery({
+  const { data: pendingLeaves = [] } = useTenantQuery({
     queryKey: ["teacher-leaves-all", "pending"],
     queryFn: () => teacherLeaveService.listLeaves({ status: "pending" }),
     refetchInterval: 30_000,

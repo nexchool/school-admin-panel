@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks";
 import { academicYearsService } from "@/services/academicYearsService";
 import { academicYearsKeys } from "@/hooks/useAcademicYears";
@@ -257,24 +258,24 @@ export default function YearTransitionPage() {
   );
   const [teacherGapsLoading, setTeacherGapsLoading] = useState(false);
 
-  const { data: years = [], isLoading: yearsLoading } = useQuery({
+  const { data: years = [], isLoading: yearsLoading } = useTenantQuery({
     queryKey: academicYearsKeys.list(false),
     queryFn: () => academicYearsService.getAcademicYears(false),
   });
 
-  const { data: fromClasses = [], isLoading: fromClassesLoading } = useQuery({
+  const { data: fromClasses = [], isLoading: fromClassesLoading } = useTenantQuery({
     queryKey: ["classes", fromYearId],
     queryFn: () => classesService.getClasses({ academic_year_id: fromYearId }),
     enabled: !!fromYearId,
   });
 
-  const { data: nextClasses = [], isLoading: nextClassesLoading } = useQuery({
+  const { data: nextClasses = [], isLoading: nextClassesLoading } = useTenantQuery({
     queryKey: ["classes", toYearId],
     queryFn: () => classesService.getClasses({ academic_year_id: toYearId }),
     enabled: !!toYearId,
   });
 
-  const { data: settings } = useQuery({
+  const { data: settings } = useTenantQuery({
     queryKey: ["academics", "settings"],
     queryFn: () => yearTransitionService.getAcademicSettings(),
   });

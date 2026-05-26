@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeService, type CreateStructureInput } from "@/services/financeService";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const feeStructureKeys = {
   all: ["finance", "structures"] as const,
@@ -17,22 +18,25 @@ export const feeStructureKeys = {
  */
 export function useFeeStructures(params?: { academic_year_id?: string; class_id?: string }) {
   const { academicYearId } = useActiveAcademicYear();
+  const { tenantId } = useAuth();
   const merged = {
     ...params,
     academic_year_id: params?.academic_year_id ?? academicYearId ?? undefined,
   };
 
   return useQuery({
-    queryKey: feeStructureKeys.list(merged),
+    queryKey: [...feeStructureKeys.list(merged), tenantId],
     queryFn: () => financeService.getStructures(merged),
+    enabled: !!tenantId && !!merged.academic_year_id,
   });
 }
 
 export function useFeeStructure(id: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: feeStructureKeys.detail(id ?? ""),
+    queryKey: [...feeStructureKeys.detail(id ?? ""), tenantId],
     queryFn: () => financeService.getStructure(id!),
-    enabled: !!id,
+    enabled: !!id && !!tenantId,
   });
 }
 

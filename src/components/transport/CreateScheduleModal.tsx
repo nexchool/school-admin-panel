@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import {
   Dialog,
   DialogContent,
@@ -44,22 +44,22 @@ export function CreateScheduleModal({ open, onOpenChange, academicYearId, onCrea
     reverse_end_time: "",
   });
 
-  const routesQ = useQuery({
+  const routesQ = useTenantQuery({
     queryKey: ["transport", "routes"],
     queryFn: () => transportService.listRoutes(),
     enabled: open,
   });
-  const busesQ = useQuery({
+  const busesQ = useTenantQuery({
     queryKey: ["transport", "buses"],
     queryFn: () => transportService.listBuses(),
     enabled: open,
   });
-  const driversQ = useQuery({
+  const driversQ = useTenantQuery({
     queryKey: ["transport", "drivers"],
     queryFn: () => transportService.listDrivers(),
     enabled: open,
   });
-  const helpersQ = useQuery({
+  const helpersQ = useTenantQuery({
     queryKey: ["transport", "staff", "helpers"],
     queryFn: () => transportService.listStaff(),
     enabled: open,

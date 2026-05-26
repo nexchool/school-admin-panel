@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import {
   Dialog,
   DialogContent,
@@ -47,28 +47,28 @@ export function ExceptionModal({ open, onOpenChange, academicYearId, onCreated }
     reason: "",
   });
 
-  const routesQ = useQuery({
+  const routesQ = useTenantQuery({
     queryKey: ["transport", "routes"],
     queryFn: () => transportService.listRoutes(),
     enabled: open,
   });
-  const busesQ = useQuery({
+  const busesQ = useTenantQuery({
     queryKey: ["transport", "route", form.route_id, "buses-exception", academicYearId],
     queryFn: () =>
       transportService.busesForRoute(form.route_id, { academicYearId }),
     enabled: open && kind === "override" && !!form.route_id && !!academicYearId,
   });
-  const driversQ = useQuery({
+  const driversQ = useTenantQuery({
     queryKey: ["transport", "drivers"],
     queryFn: () => transportService.listDrivers(),
     enabled: open && kind === "override",
   });
-  const helpersQ = useQuery({
+  const helpersQ = useTenantQuery({
     queryKey: ["transport", "staff", "helpers"],
     queryFn: () => transportService.listStaff(),
     enabled: open && kind === "override",
   });
-  const schedulesQ = useQuery({
+  const schedulesQ = useTenantQuery({
     queryKey: ["transport", "schedules", academicYearId, "exceptions-modal"],
     queryFn: () =>
       transportService.listSchedules({

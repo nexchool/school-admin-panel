@@ -12,6 +12,7 @@ import {
   type SubjectContextDto,
   type SubjectContextUpsertInput,
 } from "@/services/subjectContextsService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const subjectContextKeys = {
   all: ["subject-contexts"] as const,
@@ -24,9 +25,11 @@ export const mediumKeys = {
 };
 
 export function useMediums() {
+  const { tenantId } = useAuth();
   return useQuery<MediumDto[]>({
-    queryKey: mediumKeys.all,
+    queryKey: [...mediumKeys.all, tenantId],
     queryFn: () => mediumsService.list(),
+    enabled: !!tenantId,
   });
 }
 
@@ -45,14 +48,15 @@ export function useSubjectContexts(
   gradeId: string,
   enabled = true,
 ) {
+  const { tenantId } = useAuth();
   return useQuery<SubjectContextDto[]>({
-    queryKey: subjectContextKeys.forGrade(programmeId, gradeId),
+    queryKey: [...subjectContextKeys.forGrade(programmeId, gradeId), tenantId],
     queryFn: () =>
       subjectContextsService.list({
         programme_id: programmeId,
         grade_id: gradeId,
       }),
-    enabled: enabled && !!programmeId && !!gradeId,
+    enabled: enabled && !!programmeId && !!gradeId && !!tenantId,
   });
 }
 

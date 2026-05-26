@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ export default function TransportStaffWorkloadPage() {
     }
   }, [academicYears, academicYearId]);
 
-  const workloadQ = useQuery({
+  const workloadQ = useTenantQuery({
     queryKey: ["transport", "staff", id, "workload", day, academicYearId],
     queryFn: () =>
       transportService.getDriverWorkload(id!, { date: day, academicYearId }),

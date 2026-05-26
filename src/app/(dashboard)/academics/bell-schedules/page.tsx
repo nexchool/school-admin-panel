@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { apiGet, apiPost, apiDelete } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,13 +87,13 @@ export default function BellSchedulesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
 
-  const { data: listData, isLoading } = useQuery({
+  const { data: listData, isLoading } = useTenantQuery({
     queryKey: BELL_KEY,
     queryFn: () => apiGet<BellScheduleListResponse>("/api/academics/bell-schedules"),
   });
   const schedules = listData?.items ?? [];
 
-  const { data: settings } = useQuery({
+  const { data: settings } = useTenantQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => apiGet<AcademicSettings>("/api/academics/settings"),
   });

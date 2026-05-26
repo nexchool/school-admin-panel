@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,7 @@ export default function TransportSchedulesPage() {
     }
   }, [academicYears, academicYearId]);
 
-  const schedulesQ = useQuery({
+  const schedulesQ = useTenantQuery({
     queryKey: ["transport", "schedules", academicYearId],
     queryFn: () =>
       transportService.listSchedules({

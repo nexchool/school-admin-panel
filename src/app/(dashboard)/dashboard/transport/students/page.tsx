@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,22 +96,22 @@ export default function TransportStudentsPage() {
     fee_cycle: "monthly" as TransportFeeCycle,
   });
 
-  const enrollQ = useQuery({
+  const enrollQ = useTenantQuery({
     queryKey: ["transport", "enrollments"],
     queryFn: () => transportService.listEnrollments(),
   });
 
-  const studentsQ = useQuery({
+  const studentsQ = useTenantQuery({
     queryKey: ["students", "all"],
     queryFn: () => studentsService.getStudents(),
   });
 
-  const routesQ = useQuery({
+  const routesQ = useTenantQuery({
     queryKey: ["transport", "routes"],
     queryFn: () => transportService.listRoutes(),
   });
 
-  const moveBusesQ = useQuery({
+  const moveBusesQ = useTenantQuery({
     queryKey: ["transport", "route", moveRow?.route_id, "buses-move"],
     queryFn: () =>
       transportService.busesForRoute(moveRow!.route_id, {
@@ -119,7 +120,7 @@ export default function TransportStudentsPage() {
     enabled: !!moveRow?.route_id,
   });
 
-  const editStopsQ = useQuery({
+  const editStopsQ = useTenantQuery({
     queryKey: ["transport", "route", editRow?.route_id, "stops-edit"],
     queryFn: () => transportService.listStops(editRow!.route_id, false),
     enabled: !!editRow?.route_id,

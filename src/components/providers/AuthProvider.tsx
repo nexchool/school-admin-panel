@@ -22,6 +22,7 @@ import {
   setPermissions,
   setEnabledFeatures,
   setRoles,
+  getTenantId,
   setTenantId,
   getTenantName,
   setTenantName,
@@ -66,6 +67,8 @@ interface AuthContextType {
   isFeatureEnabled: (featureKey: string) => boolean;
   /** Resolved school / tenant display name for chrome (sidebar, etc.). */
   tenantName: string | null;
+  /** Active tenant id, mirrored from storage. Used to scope query cache. */
+  tenantId: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -91,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tenantName, setTenantNameState] = useState<string | null>(null);
+  const [tenantId, setTenantIdState] = useState<string | null>(null);
 
   const setAuthData = useCallback(async (data: LoginResponse) => {
     if (!data.access_token || !data.refresh_token || !data.user) return;
@@ -115,6 +119,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     await Promise.all(tasks);
     setSessionCookie();
+    if (data.tenant_id) {
+      // React-mirror of storage so query keys re-scope synchronously when
+      // the active tenant changes (login, tenant switch).
+      setTenantIdState(data.tenant_id);
+    }
     setUser(data.user);
     setPermissionsState(data.permissions || []);
     setEnabledFeaturesState(features);
@@ -157,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedFeatures,
           storedRoles,
           storedTenantName,
+          storedTenantId,
         ] = await Promise.all([
           getAccessToken(),
           getRefreshToken(),
@@ -165,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           getEnabledFeatures(),
           getRoles(),
           getTenantName(),
+          getTenantId(),
         ]);
 
         if (accessToken && refreshToken && userData) {
@@ -173,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setEnabledFeaturesState(storedFeatures || []);
           setRolesState(storedRoles);
           setTenantNameState(storedTenantName);
+          setTenantIdState(storedTenantId);
         }
       } catch (err) {
         console.error("Auth check error:", err);
@@ -239,6 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEnabledFeaturesState([]);
     setRolesState([]);
     setTenantNameState(null);
+    setTenantIdState(null);
   }, [queryClient]);
 
   const hasPermission = useCallback(
@@ -292,6 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasAllPermissions,
         isFeatureEnabled,
         tenantName,
+        tenantId,
       }}
     >
       {children}

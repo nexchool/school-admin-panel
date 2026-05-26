@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { academicYearsService } from "@/services/academicYearsService";
 import {
   BookOpen,
@@ -37,7 +37,7 @@ export default function AcademicsPage() {
   const canManageSettings = hasPermission("class.manage");
   const canManageBells = hasAnyPermission(["academics.manage", "timetable.manage"]);
 
-  const { data: overview, isLoading } = useQuery({
+  const { data: overview, isLoading } = useTenantQuery({
     queryKey: ["academics", "overview"],
     queryFn: () => academicYearsService.getOverview(),
   });

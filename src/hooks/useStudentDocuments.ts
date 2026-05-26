@@ -6,16 +6,18 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { studentDocumentsService } from "@/services/studentDocumentsService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const studentDocumentsKeys = {
   all: (studentId: string) => ["students", studentId, "documents"] as const,
 };
 
 export function useStudentDocuments(studentId: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: studentDocumentsKeys.all(studentId ?? ""),
+    queryKey: [...studentDocumentsKeys.all(studentId ?? ""), tenantId],
     queryFn: () => studentDocumentsService.getDocuments(studentId!),
-    enabled: !!studentId,
+    enabled: !!studentId && !!tenantId,
   });
 }
 

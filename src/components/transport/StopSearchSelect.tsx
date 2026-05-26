@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,7 +49,7 @@ export function StopSearchSelect({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
 
-  const { data: stops = [], isLoading } = useQuery({
+  const { data: stops = [], isLoading } = useTenantQuery({
     queryKey: ["transport", "stop-search", routeId ?? "global"],
     queryFn: () =>
       routeId

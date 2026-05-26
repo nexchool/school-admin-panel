@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
 import { gradesService, type Grade } from "@/services/gradesService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const gradesKeys = {
   all: ["grades"] as const,
@@ -16,9 +17,11 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 }
 
 export function useGrades() {
+  const { tenantId } = useAuth();
   return useQuery<Grade[]>({
-    queryKey: gradesKeys.list(),
+    queryKey: [...gradesKeys.list(), tenantId],
     queryFn: () => gradesService.list(),
+    enabled: !!tenantId,
   });
 }
 

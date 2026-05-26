@@ -57,7 +57,11 @@ const apiRequest = async (
   }
 
   try {
-    const response = await fetch(url, { ...options, headers });
+    // cache: "no-store" — without it, the browser may serve a previous
+    // tenant's GET /api/* response after a tenant switch because the URL
+    // is identical and only the X-Tenant-ID header differs (browsers do
+    // not key the HTTP cache on custom request headers).
+    const response = await fetch(url, { ...options, headers, cache: "no-store" });
 
     // Handle transparent token refresh (backend sends X-New-Access-Token)
     const newAccessToken = response.headers.get("X-New-Access-Token");
