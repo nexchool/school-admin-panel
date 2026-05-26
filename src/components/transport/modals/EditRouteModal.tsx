@@ -18,6 +18,7 @@ import {
   type TransportRoute,
 } from "@/services/transportService";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 const FEE_CYCLES: { value: TransportFeeCycle; label: string }[] = [
   { value: "monthly", label: "Monthly" },
@@ -105,7 +106,7 @@ export function EditRouteModal({ route, open, onOpenChange, defaultFee: initialF
       onSaved();
       onOpenChange(false);
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Update failed");
+      toastError(ex, "Update failed");
     } finally {
       setLoading(false);
     }

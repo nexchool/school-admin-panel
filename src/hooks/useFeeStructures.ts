@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeService, type CreateStructureInput } from "@/services/financeService";
+import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 
 export const feeStructureKeys = {
   all: ["finance", "structures"] as const,
@@ -10,10 +11,20 @@ export const feeStructureKeys = {
   detail: (id: string) => [...feeStructureKeys.all, "detail", id] as const,
 };
 
+/**
+ * If `params.academic_year_id` is undefined, the active academic year context
+ * value is used. Pass an explicit string to override (explicit wins).
+ */
 export function useFeeStructures(params?: { academic_year_id?: string; class_id?: string }) {
+  const { academicYearId } = useActiveAcademicYear();
+  const merged = {
+    ...params,
+    academic_year_id: params?.academic_year_id ?? academicYearId ?? undefined,
+  };
+
   return useQuery({
-    queryKey: feeStructureKeys.list(params),
-    queryFn: () => financeService.getStructures(params),
+    queryKey: feeStructureKeys.list(merged),
+    queryFn: () => financeService.getStructures(merged),
   });
 }
 

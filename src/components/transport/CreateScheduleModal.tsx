@@ -19,6 +19,7 @@ import {
 } from "@/services/transportService";
 import { ScheduleConflictBanner } from "@/components/transport/ScheduleConflictBanner";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 type Props = {
   open: boolean;
@@ -160,7 +161,7 @@ export function CreateScheduleModal({ open, onOpenChange, academicYearId, onCrea
       onCreated();
       onOpenChange(false);
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Could not create schedule");
+      toastError(ex, "Could not create schedule");
     } finally {
       setLoading(false);
     }

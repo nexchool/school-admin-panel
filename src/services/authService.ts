@@ -12,6 +12,8 @@ export interface LoginResponse {
   refresh_token?: string;
   tenant_id?: string;
   subdomain?: string;
+  /** Resolved school / tenant display name (same as Tenant.name). */
+  tenant_name?: string | null;
   user?: {
     id: number;
     email: string;
@@ -60,12 +62,29 @@ export interface ProfileRole {
 /** GET /api/auth/profile — nested user, roles, permissions, enabled_features */
 export interface ProfileResponse {
   user: ProfileUser;
+  /** School / tenant display name */
+  tenant_name?: string | null;
   roles: ProfileRole[];
   permissions: string[];
   enabled_features: string[];
 }
 
 export const getProfile = () => apiGet<ProfileResponse>(API_ENDPOINTS.PROFILE);
+
+/** GET /api/auth/tenant-branding — public; name for resolved tenant (Host / header / default). */
+export const getTenantBranding = () =>
+  apiGet<{ name: string }>(API_ENDPOINTS.TENANT_BRANDING);
+
+/** Same as getTenantBranding but catches errors (e.g. no tenant context) for pre-login UI. */
+export async function getTenantBrandingSafe(): Promise<string | null> {
+  try {
+    const { name } = await getTenantBranding();
+    const n = (name ?? "").trim();
+    return n || null;
+  } catch {
+    return null;
+  }
+}
 
 export interface UpdateProfileResponse {
   user: ProfileUser;

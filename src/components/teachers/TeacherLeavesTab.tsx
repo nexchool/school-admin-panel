@@ -7,6 +7,7 @@ import { teacherLeaveService } from "@/services/teacherConstraintService";
 import type { TeacherLeave } from "@/types/teacher";
 import { Loader2, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 interface TeacherLeavesTabProps {
   teacherId: string;
@@ -49,7 +50,7 @@ export function TeacherLeavesTab({ teacherId }: TeacherLeavesTabProps) {
       await loadData();
       toast.success("Leave approved");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to approve");
+      toastError(err, "Failed to approve");
     } finally {
       setApproving(null);
     }
@@ -62,7 +63,7 @@ export function TeacherLeavesTab({ teacherId }: TeacherLeavesTabProps) {
       await loadData();
       toast.success("Leave rejected");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reject");
+      toastError(err, "Failed to reject");
     } finally {
       setRejecting(null);
     }

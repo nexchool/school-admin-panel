@@ -1,5 +1,6 @@
 "use client";
 
+import { friendlyErrorMessage } from "@/lib/errorToast";
 import { useMemo } from "react";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
@@ -155,7 +156,11 @@ export default function TransportOverviewPage() {
         </Button>
       </div>
 
-      {err && <p className="text-sm text-destructive">{err.message}</p>}
+      {err && (
+        <p className="text-sm text-destructive">
+          {friendlyErrorMessage(err, "Couldn't load transport dashboard.")}
+        </p>
+      )}
 
       {loading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { toastError } from "@/lib/errorToast";
 
 function derivePeriodsFromEntries(entries: TimetableEntry[]): BellSchedulePeriod[] {
   const nums = [...new Set(entries.map((e) => e.period_number))].sort((a, b) => a - b);
@@ -188,7 +189,7 @@ export default function ClassTimetablePage() {
         });
         setSelectedVersionId(v.id);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to create draft");
+        toastError(e, "Failed to create draft");
       }
       return;
     }
@@ -214,7 +215,7 @@ export default function ClassTimetablePage() {
       setSelectedVersionId(v.id);
       setNewDraftBellOpen(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create draft");
+      toastError(e, "Failed to create draft");
     }
   };
 
@@ -223,7 +224,7 @@ export default function ClassTimetablePage() {
       const v = await cloneVersion.mutateAsync({ label: "Copy of active" });
       setSelectedVersionId(v.id);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to clone timetable");
+      toastError(e, "Failed to clone timetable");
     }
   };
 
@@ -233,7 +234,7 @@ export default function ClassTimetablePage() {
       setSelectedVersionId(id);
       toast.success("Timetable activated");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to activate");
+      toastError(e, "Failed to activate");
       throw e;
     }
   };
@@ -245,7 +246,7 @@ export default function ClassTimetablePage() {
       const next = remaining.find((v) => v.status === "draft") ?? remaining[0] ?? null;
       setSelectedVersionId(next?.id ?? null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete draft");
+      toastError(e, "Failed to delete draft");
     }
   };
 
@@ -253,7 +254,7 @@ export default function ClassTimetablePage() {
     try {
       await patchVersion.mutateAsync({ versionId: id, body: { label } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to rename");
+      toastError(e, "Failed to rename");
     }
   };
 
@@ -288,9 +289,7 @@ export default function ClassTimetablePage() {
     try {
       await moveEntry.mutateAsync({ entryId, day, period });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not move entry", {
-        description: "The slot may already be occupied or the teacher has a conflict.",
-      });
+      toastError(e, "Could not move entry");
     }
   }, [moveEntry]);
 
@@ -298,9 +297,7 @@ export default function ClassTimetablePage() {
     try {
       await swapEntries.mutateAsync({ entry_a_id: entryAId, entry_b_id: entryBId });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not swap entries", {
-        description: "Check for teacher conflicts at the target slots.",
-      });
+      toastError(e, "Could not swap entries");
     }
   }, [swapEntries]);
 

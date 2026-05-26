@@ -30,6 +30,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/hooks/useDashboard";
 import type { DashboardAlerts, DashboardData } from "@/services/dashboardService";
+import { SetupStatusPill } from "@/components/school-setup/SetupStatusPill";
+import { SubscriptionWidgets } from "@/components/subscription/SubscriptionWidgets";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -253,6 +255,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <SetupStatusPill />
           <HealthBadge score={health_score} />
           {alerts.total_issues > 0 ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
@@ -268,6 +271,9 @@ function DashboardContent({ data }: { data: DashboardData }) {
         </div>
       </div>
 
+      {/* ── 1a. Subscription health ────────────────────────────────────── */}
+      <SubscriptionWidgets />
+
       {/* ── 1. Overview stats ───────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={GraduationCap} label="Students"      value={overview.total_students} sub="Total enrolled" />
@@ -277,8 +283,9 @@ function DashboardContent({ data }: { data: DashboardData }) {
       </div>
 
       {/* ── 2. Today + Alerts ───────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Today's operations */}
+      <div className={`grid gap-4 ${today.enabled === false ? "" : "lg:grid-cols-2"}`}>
+        {/* Today's operations — hidden when attendance feature is off */}
+        {today.enabled === false ? null : (
         <Card className="shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -340,12 +347,14 @@ function DashboardContent({ data }: { data: DashboardData }) {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Alerts */}
         <AlertsSection alerts={alerts} />
       </div>
 
       {/* ── 3. Finance ──────────────────────────────────────────────────── */}
+      {finance.enabled === false ? null : (
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Finance snapshot */}
         <Card className="shadow-sm lg:col-span-1">
@@ -418,6 +427,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* ── 4. Transport + Pending actions ──────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-2">

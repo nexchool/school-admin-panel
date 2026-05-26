@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Pencil, Camera, KeyRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 const PROFILE_PIC_MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp"];
@@ -75,7 +76,7 @@ export default function ProfilePage() {
       setEditOpen(false);
       toast.success("Profile updated");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update profile");
+      toastError(err, "Failed to update profile");
     } finally {
       setSubmitting(false);
     }
@@ -102,7 +103,7 @@ export default function ProfilePage() {
       await refreshUser();
       toast.success("Profile photo updated");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not upload photo");
+      toastError(err, "Could not upload photo");
     } finally {
       setUploading(false);
     }
@@ -117,7 +118,7 @@ export default function ProfilePage() {
       toast.success("If an account exists for this email, a reset link has been sent.");
       setResetOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Request failed");
+      toastError(err, "Request failed");
     } finally {
       setResetSubmitting(false);
     }

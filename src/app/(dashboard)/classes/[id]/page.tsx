@@ -47,6 +47,7 @@ import {
   User,
   Hash,
 } from "lucide-react";
+import { toastError } from "@/lib/errorToast";
 
 type ClassDetailTab = "students" | "teachers" | "subjects" | "timetable";
 
@@ -54,7 +55,8 @@ export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasAnyPermission } = useAuth();
+  const { hasAnyPermission, isFeatureEnabled } = useAuth();
+  const timetableEnabled = isFeatureEnabled("timetable");
   const id = params?.id as string | undefined;
   const showSubjectsTab = hasAnyPermission([
     "class_subject.read",
@@ -111,7 +113,7 @@ export default function ClassDetailPage() {
       toast.success("Class updated");
       setEditOpen(false);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to update class");
+      toastError(e, "Failed to update class");
       throw e;
     }
   };
@@ -123,7 +125,7 @@ export default function ClassDetailPage() {
       toast.success("Class deleted");
       router.push("/classes");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete class");
+      toastError(e, "Failed to delete class");
       throw e;
     }
   };
@@ -137,7 +139,7 @@ export default function ClassDetailPage() {
       refreshClass();
       toast.success("Student removed from class");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove");
+      toastError(err, "Failed to remove");
       throw err;
     } finally {
       setRemovingStudent(null);
@@ -153,7 +155,7 @@ export default function ClassDetailPage() {
       refreshClass();
       toast.success("Teacher removed from class");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove");
+      toastError(err, "Failed to remove");
       throw err;
     } finally {
       setRemovingTeacher(null);
@@ -213,7 +215,9 @@ export default function ClassDetailPage() {
     ...(showSubjectsTab
       ? [{ id: "subjects" as const, label: "Subjects", icon: BookOpen }]
       : []),
-    { id: "timetable", label: "Timetable", icon: CalendarDays },
+    ...(timetableEnabled
+      ? [{ id: "timetable" as const, label: "Timetable", icon: CalendarDays }]
+      : []),
   ];
 
   return (
@@ -372,7 +376,7 @@ export default function ClassDetailPage() {
             <ClassSubjectsSection classId={id} onRefresh={refreshClass} />
           )}
 
-          {detailTab === "timetable" && id && (
+          {timetableEnabled && detailTab === "timetable" && id && (
             <Card>
               <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
                 <div className="space-y-1">

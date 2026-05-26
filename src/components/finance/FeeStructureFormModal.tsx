@@ -23,6 +23,7 @@ import { useCreateFeeStructure, useUpdateFeeStructure } from "@/hooks/useFeeStru
 import type { FeeStructure, CreateStructureInput } from "@/services/financeService";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 interface FeeStructureFormModalProps {
   open: boolean;
@@ -169,7 +170,7 @@ export function FeeStructureFormModal({
       onOpenChange(false);
     };
     const onMutationError = (err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      toastError(err, "Failed to save");
     };
 
     if (mode === "edit" && initialData) {
@@ -238,7 +239,6 @@ export function FeeStructureFormModal({
                   onClick={() => toggleClass(c.id)}
                 >
                   {c.name}
-                  {c.section ? `-${c.section}` : ""}
                 </Button>
               ))}
               {availableClasses.length === 0 && academicYearId && (

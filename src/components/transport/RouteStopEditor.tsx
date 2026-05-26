@@ -9,6 +9,7 @@ import { transportService, type TransportStop } from "@/services/transportServic
 import { StopSearchSelect } from "./StopSearchSelect";
 import { GripVertical } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 function sortBySeq(st: TransportStop[]) {
   return st.slice().sort((a, b) => a.sequence_order - b.sequence_order);
@@ -95,7 +96,7 @@ export function RouteStopEditor({ routeId, stops }: { routeId: string; stops: Tr
       setPickerKey((k) => k + 1);
       await persist(n);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not add stop");
+      toastError(e, "Could not add stop");
     }
   };
 

@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
+import { toastError } from "@/lib/errorToast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -109,7 +110,7 @@ export default function BellSchedulesPage() {
       setNewName("");
       toast.success("Bell schedule created");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to create"),
+    onError: (e) => toastError(e, "Failed to create"),
   });
 
   const deleteMut = useMutation({
@@ -119,7 +120,7 @@ export default function BellSchedulesPage() {
       setDeletingId(null);
       toast.success("Bell schedule deleted");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to delete"),
+    onError: (e) => toastError(e, "Failed to delete"),
   });
 
   const isTenantDefault = (id: string) => id === tenantDefaultId;

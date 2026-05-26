@@ -30,6 +30,7 @@ import { AssignRouteDriverModal } from "@/components/transport/modals/AssignRout
 import { ConfirmDialog } from "@/components/transport/ConfirmDialog";
 import { AlertTriangle, Bus, MoreHorizontal, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function TransportFleetPage() {
   const queryClient = useQueryClient();
@@ -94,7 +95,7 @@ export default function TransportFleetPage() {
       await transportService.exportBusStudents(b.id);
       toast.success(`Exported students for ${b.bus_number}`);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Export failed");
+      toastError(e, "Export failed");
     }
   };
 
@@ -106,7 +107,7 @@ export default function TransportFleetPage() {
       toast.success("Bus deactivated");
       invalidate();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not deactivate");
+      toastError(e, "Could not deactivate");
       throw e;
     } finally {
       setDeactivateLoading(false);

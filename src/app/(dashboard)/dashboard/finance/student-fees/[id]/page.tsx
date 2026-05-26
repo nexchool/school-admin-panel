@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { StatusBadge } from "@/components/finance/StatusBadge";
 import { PaymentModal } from "@/components/finance/PaymentModal";
+import { FeatureGate } from "@/components/auth/FeatureGate";
 import { useStudentFeeDetail } from "@/hooks/useStudentFees";
 import { toast } from "sonner";
 import { financeService } from "@/services/financeService";
@@ -391,23 +392,25 @@ export default function StudentFeeDetailPage() {
         </Card>
       </div>
 
-      {/* Transport note */}
+      {/* Transport note — only when transport feature is enabled */}
       {fee.fee_structure_name?.toLowerCase().includes("transport") && (
-        <Card className="border-blue-200 bg-blue-50/50">
-          <CardContent className="flex items-center gap-3 py-4">
-            <Bus className="size-5 text-blue-600 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-blue-700">Transport Fee</p>
-              <p className="text-xs text-blue-600">
-                This fee is synced from the transport enrollment. Manage it from the{" "}
-                <Link href="/dashboard/transport" className="underline">
-                  Transport module
-                </Link>
-                .
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <FeatureGate feature="transport">
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardContent className="flex items-center gap-3 py-4">
+              <Bus className="size-5 text-blue-600 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-700">Transport Fee</p>
+                <p className="text-xs text-blue-600">
+                  This fee is synced from the transport enrollment. Manage it from the{" "}
+                  <Link href="/dashboard/transport" className="underline">
+                    Transport module
+                  </Link>
+                  .
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </FeatureGate>
       )}
 
       <PaymentModal

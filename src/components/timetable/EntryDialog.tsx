@@ -1,5 +1,6 @@
 "use client";
 
+import { friendlyErrorMessage } from "@/lib/errorToast";
 import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
@@ -103,7 +104,7 @@ export function EntryDialog({
       });
       onOpenChange(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.");
+      setError(friendlyErrorMessage(e, "Failed to save."));
     } finally {
       setBusy(false);
     }
@@ -116,7 +117,7 @@ export function EntryDialog({
       await onDelete(editing.id);
       onOpenChange(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete.");
+      setError(friendlyErrorMessage(e, "Failed to delete."));
       throw e;
     } finally {
       setBusy(false);

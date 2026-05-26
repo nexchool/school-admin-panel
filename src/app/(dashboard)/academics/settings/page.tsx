@@ -11,6 +11,7 @@ import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { validateBuilderPatternClient } from "@/utils/idFormat/patternFromBuilder";
+import { toastError } from "@/lib/errorToast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export default function AcademicSettingsPage() {
       toast.success("Settings saved");
     },
     onError: (e) => {
-      toast.error(e instanceof Error ? e.message : "Failed to save settings");
+      toastError(e, "Failed to save settings");
     },
   });
 

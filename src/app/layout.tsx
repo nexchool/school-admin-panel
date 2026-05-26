@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "School ERP Admin",
-  description: "Admin web panel for School ERP",
+  title: "School admin",
+  description: "School administration panel",
 };
 
 export default function RootLayout({

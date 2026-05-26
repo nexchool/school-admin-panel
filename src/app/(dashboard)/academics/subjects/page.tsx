@@ -29,6 +29,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function SubjectsPage() {
   const { hasPermission } = useAuth();
@@ -102,7 +103,7 @@ export default function SubjectsPage() {
       setFormOpen(false);
       setEditSubject(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save subject");
+      toastError(e, "Failed to save subject");
       throw e;
     }
   };
@@ -114,7 +115,7 @@ export default function SubjectsPage() {
       toast.success("Subject deleted");
       setDeleteSubject(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete subject");
+      toastError(e, "Failed to delete subject");
     }
   };
 

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { transportService, type TransportBus } from "@/services/transportService";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 type Props = {
   bus: TransportBus | null;
@@ -64,7 +65,7 @@ export function EditBusModal({ bus, open, onOpenChange, onSaved }: Props) {
       onSaved();
       onOpenChange(false);
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Update failed");
+      toastError(ex, "Update failed");
     } finally {
       setLoading(false);
     }

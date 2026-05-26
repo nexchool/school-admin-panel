@@ -42,6 +42,7 @@ import { AssignRouteDriverModal } from "@/components/transport/modals/AssignRout
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 type Row =
   | { kind: "legacy_driver"; id: string; driver: TransportDriver }
@@ -196,7 +197,7 @@ export default function TransportStaffPage() {
       setAddOpen(false);
       invalidate();
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Failed");
+      toastError(ex, "Failed");
     }
   };
 
@@ -214,7 +215,7 @@ export default function TransportStaffPage() {
       }
       invalidate();
     } catch (ex: unknown) {
-      toast.error(ex instanceof Error ? ex.message : "Could not deactivate");
+      toastError(ex, "Could not deactivate");
       throw ex;
     } finally {
       setDeactivatingStaff(false);

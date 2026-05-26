@@ -19,6 +19,7 @@ import { ExceptionModal } from "@/components/transport/ExceptionModal";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function TransportScheduleExceptionsPage() {
   const qc = useQueryClient();
@@ -62,7 +63,7 @@ export default function TransportScheduleExceptionsPage() {
       toast.success("Exception removed");
       invalidateTimelines();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete");
+      toastError(e, "Failed to delete");
       throw e;
     } finally {
       setDeletingException(false);

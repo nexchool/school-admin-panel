@@ -26,6 +26,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { transportService, type TransportGlobalStop } from "@/services/transportService";
 import { Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 function parseApiError(e: unknown): string {
   if (e && typeof e === "object" && "message" in e && typeof (e as { message: string }).message === "string") {
@@ -119,7 +120,7 @@ export default function TransportStopsPage() {
       qc.invalidateQueries({ queryKey: ["transport", "global-stops"] });
       qc.invalidateQueries({ queryKey: ["transport", "stop-search"] });
     },
-    onError: (e: unknown) => toast.error(parseApiError(e)),
+    onError: (e: unknown) => toastError(e),
   });
 
   const deleteMutation = useMutation({
@@ -129,7 +130,7 @@ export default function TransportStopsPage() {
       qc.invalidateQueries({ queryKey: ["transport", "global-stops"] });
       qc.invalidateQueries({ queryKey: ["transport", "stop-search"] });
     },
-    onError: (e: unknown) => toast.error(parseApiError(e)),
+    onError: (e: unknown) => toastError(e),
   });
 
   const requestDeleteStop = (r: TransportGlobalStop) => {

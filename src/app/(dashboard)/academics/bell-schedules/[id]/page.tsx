@@ -43,6 +43,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
+import { toastError } from "@/lib/errorToast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -186,7 +187,7 @@ export default function BellScheduleDetailPage() {
       setEditingName(false);
       toast.success("Schedule renamed");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to rename"),
+    onError: (e) => toastError(e, "Failed to rename"),
   });
 
   const setDefaultMut = useMutation({
@@ -199,7 +200,7 @@ export default function BellScheduleDetailPage() {
       qc.invalidateQueries({ queryKey: BELL_LIST_KEY });
       toast.success(isTenantDefault ? "Default cleared" : "Set as tenant default");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update default"),
+    onError: (e) => toastError(e, "Failed to update default"),
   });
 
   const addPeriodMut = useMutation({
@@ -219,7 +220,7 @@ export default function BellScheduleDetailPage() {
       setEditingPeriodId(null);
       toast.success("Period added");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to add period"),
+    onError: (e) => toastError(e, "Failed to add period"),
   });
 
   const editPeriodMut = useMutation({
@@ -239,7 +240,7 @@ export default function BellScheduleDetailPage() {
       setEditingPeriodId(null);
       toast.success("Period updated");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to update period"),
+    onError: (e) => toastError(e, "Failed to update period"),
   });
 
   const deletePeriodMut = useMutation({
@@ -250,7 +251,7 @@ export default function BellScheduleDetailPage() {
       setDeletingPeriodId(null);
       toast.success("Period deleted");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to delete period"),
+    onError: (e) => toastError(e, "Failed to delete period"),
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────

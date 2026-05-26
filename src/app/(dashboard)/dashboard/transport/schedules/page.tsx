@@ -13,6 +13,7 @@ import { CreateScheduleModal } from "@/components/transport/CreateScheduleModal"
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 export default function TransportSchedulesPage() {
   const qc = useQueryClient();
@@ -52,7 +53,7 @@ export default function TransportSchedulesPage() {
       qc.invalidateQueries({ queryKey: ["transport", "schedule-exceptions"] });
       qc.invalidateQueries({ queryKey: ["transport", "bus"] });
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      toastError(e, "Failed");
       throw e;
     } finally {
       setDeactivatingSchedule(false);

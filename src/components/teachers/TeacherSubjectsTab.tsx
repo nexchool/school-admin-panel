@@ -24,6 +24,7 @@ import type { Subject } from "@/types/subject";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 interface TeacherSubjectsTabProps {
   teacherId: string;
@@ -79,7 +80,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
       setSelectedSubjectId("");
       toast.success("Subject assigned to teacher");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add");
+      toastError(err, "Failed to add");
     } finally {
       setAdding(false);
     }
@@ -95,7 +96,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
       onRefresh();
       toast.success("Subject removed");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove");
+      toastError(err, "Failed to remove");
       throw err;
     } finally {
       setRemoving(null);

@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
+import { SetupGate } from "@/components/school-setup/SetupGate";
+import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 import { useForegroundFCMListener } from "@/hooks/useForegroundFCMListener";
 import { useNotificationInboxStream } from "@/hooks/useNotificationInboxStream";
 
@@ -36,7 +38,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header onMenuClick={toggleSidebar} />
         <NotificationPermissionBanner />
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 md:p-6">
+          <SubscriptionBanner />
+          <SetupGate>{children}</SetupGate>
+        </main>
       </div>
     </div>
   );

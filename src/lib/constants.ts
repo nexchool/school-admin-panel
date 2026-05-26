@@ -18,7 +18,18 @@ function resolveApiBaseUrl(): string {
   if (port !== "3000" && port !== "3001") return "";
 
   const gw = (process.env.NEXT_PUBLIC_GATEWAY_ORIGIN ?? "").trim().replace(/\/$/, "");
-  if (gw) return gw;
+  if (gw) {
+    try {
+      // Preserve gateway scheme+port but replace hostname with the current browser
+      // hostname so subdomain URLs (mts.localhost:3000) send API calls to
+      // mts.localhost:80 instead of localhost:80 (avoids cross-origin block).
+      const u = new URL(gw);
+      u.hostname = window.location.hostname;
+      return u.origin;
+    } catch {
+      // fall through
+    }
+  }
   return `${window.location.protocol}//${window.location.hostname}:80`;
 }
 
@@ -35,6 +46,7 @@ export const API_ENDPOINTS = {
   FORGOT_PASSWORD: "/api/auth/password/forgot",
   RESET_PASSWORD: "/api/auth/password/reset",
   ENABLED_FEATURES: "/api/auth/enabled-features",
+  TENANT_BRANDING: "/api/auth/tenant-branding",
   PROFILE: "/api/auth/profile",
   UPLOAD_PROFILE_PICTURE: "/api/auth/upload-profile-picture",
 } as const;

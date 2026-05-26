@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks";
+import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
+import { getTenantBrandingSafe } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +37,13 @@ export default function LoginPage() {
   const { login, pendingTenantChoice, loginWithTenant, clearPendingTenantChoice } =
     useAuth();
   const [error, setError] = useState<string | null>(null);
+
+  const { data: brandingSchoolName } = useQuery({
+    queryKey: ["tenant-branding"],
+    queryFn: getTenantBrandingSafe,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -91,7 +101,16 @@ export default function LoginPage() {
     <div className="flex flex-col min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>School ERP Admin</CardTitle>
+          <CardTitle className="flex flex-col gap-1 leading-snug sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2 sm:gap-y-0">
+            <SchoolBrandName
+              name={brandingSchoolName}
+              lineClamp={2}
+              className="text-2xl font-semibold tracking-tight"
+            />
+            <span className="text-lg font-semibold text-muted-foreground sm:shrink-0">
+              Admin
+            </span>
+          </CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
         <CardContent>

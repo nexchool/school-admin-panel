@@ -17,6 +17,7 @@ import type { TeacherWorkload } from "@/types/teacher";
 import { AlertTriangle, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { InfoBanner, DetailTable } from "@/components/detail";
+import { toastError } from "@/lib/errorToast";
 
 interface TeacherWorkloadTabProps {
   teacherId: string;
@@ -91,7 +92,7 @@ export function TeacherWorkloadTab({ teacherId }: TeacherWorkloadTabProps) {
       setEditing(false);
       toast.success("Workload saved");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      toastError(err, "Failed to save");
     } finally {
       setSaving(false);
     }

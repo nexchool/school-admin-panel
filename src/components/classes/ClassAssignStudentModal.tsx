@@ -12,6 +12,7 @@ import { classesService } from "@/services/classesService";
 import type { Student } from "@/types/student";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 interface ClassAssignStudentModalProps {
   open: boolean;
@@ -52,7 +53,7 @@ export function ClassAssignStudentModal({
       onOpenChange(false);
       toast.success("Student added to class");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to assign");
+      toastError(err, "Failed to assign");
     } finally {
       setAssigning(null);
     }

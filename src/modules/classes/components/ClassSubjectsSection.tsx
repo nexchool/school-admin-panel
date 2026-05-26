@@ -41,6 +41,7 @@ import { AddClassSubjectModal } from "./AddClassSubjectModal";
 import { EditClassSubjectModal } from "./EditClassSubjectModal";
 import { AssignTeacherModal } from "./AssignTeacherModal";
 import { BookOpen, Plus } from "lucide-react";
+import { toastError } from "@/lib/errorToast";
 
 export interface ClassSubjectsSectionProps {
   classId: string;
@@ -158,7 +159,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
       toast.success("Subject added to class");
       invalidateAll();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not add subject");
+      toastError(e, "Could not add subject");
       throw e;
     }
   };
@@ -179,7 +180,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
       toast.success("Subject updated");
       invalidateAll();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Update failed");
+      toastError(e, "Update failed");
       throw e;
     }
   };
@@ -204,7 +205,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
       toast.success("Order updated");
       invalidateAll();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not reorder");
+      toastError(e, "Could not reorder");
     }
   };
 
@@ -235,7 +236,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
       setConfirmRemove(null);
       invalidateAll();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not remove");
+      toastError(e, "Could not remove");
     }
   };
 
@@ -291,7 +292,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
       toast.success("Teacher unassigned");
       invalidateAll();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not remove");
+      toastError(e, "Could not remove");
     }
   };
 

@@ -86,6 +86,8 @@ export interface Student {
   tc_number?: string;
   house_name?: string;
   student_status?: string;
+  /** Year-end outcome (e.g. pass, fail); used by promotion filters. */
+  academic_result?: string;
   is_transport_opted?: boolean;
   transport?: {
     bus?: Record<string, unknown> | null;
@@ -105,6 +107,7 @@ export interface CreateStudentInput {
   guardian_phone: string;
   class_id?: string;
   academic_year_id?: string;
+  admission_number?: string;
   email?: string;
   phone?: string;
   date_of_birth?: string;

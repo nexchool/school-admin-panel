@@ -8,6 +8,9 @@ export interface DashboardOverview {
 }
 
 export interface DashboardToday {
+  /** Backend returns `{enabled: false}` when the attendance feature is off
+   * for this tenant, in which case the other fields are absent. */
+  enabled?: boolean;
   lectures_today: number;
   attendance_marked_classes: number;
   total_classes: number;
@@ -34,6 +37,8 @@ export interface DailyCollection {
 }
 
 export interface DashboardFinance {
+  /** `{enabled: false}` when the finance feature is off. */
+  enabled?: boolean;
   total_expected: number;
   total_collected: number;
   collection_percentage: number;

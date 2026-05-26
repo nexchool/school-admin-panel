@@ -1,5 +1,6 @@
 "use client";
 
+import { friendlyErrorMessage } from "@/lib/errorToast";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -98,7 +99,7 @@ export function GenerateDialog({
       setResult(r);
       setPhase("result");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed.");
+      setError(friendlyErrorMessage(e, "Generation failed."));
     } finally {
       setBusy(false);
     }

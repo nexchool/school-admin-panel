@@ -27,6 +27,7 @@ import { useAcademicYears } from "@/hooks/useAcademicYears";
 import type { FeeStructure } from "@/services/financeService";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 function fmtDate(s: string) {
   try {
@@ -262,7 +263,7 @@ export default function FeeStructuresPage() {
             await deleteStructureAsync(deleteTarget.id);
             toast.success(`Deleted "${deleteTarget.name}"`);
           } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Delete failed");
+            toastError(err, "Delete failed");
             throw err;
           }
         }}

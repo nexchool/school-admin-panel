@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { transportService } from "@/services/transportService";
 import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 type Props = {
   open: boolean;
@@ -154,7 +155,7 @@ export function ExceptionModal({ open, onOpenChange, academicYearId, onCreated }
       onCreated();
       onOpenChange(false);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Could not save exception");
+      toastError(e, "Could not save exception");
     } finally {
       setLoading(false);
     }

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import type { Student, CreateStudentInput } from "@/types/student";
 import type { ClassItem } from "@/services/classesService";
+import { StructuredClassPicker } from "@/components/students/StructuredClassPicker";
 
 const optionalString = z.string().optional().or(z.literal(""));
 const optionalEmail = z.string().email("Invalid email").optional().or(z.literal(""));
@@ -429,24 +430,12 @@ export function StudentForm({
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="class_id">Class</Label>
-          <Select
+        <div className="space-y-2 sm:col-span-2">
+          <StructuredClassPicker
+            classes={classes}
             value={form.watch("class_id") || ""}
-            onValueChange={(v) => form.setValue("class_id", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select class" />
-            </SelectTrigger>
-            <SelectContent>
-              {classes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                  {c.section ? `-${c.section}` : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(v) => form.setValue("class_id", v)}
+          />
         </div>
 
         <div className="space-y-2">
