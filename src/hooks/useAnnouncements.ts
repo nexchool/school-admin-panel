@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { announcementsService } from "@/services/announcementsService";
 import { useAuth } from "@/components/providers/AuthProvider";
 import type {
+  Announcement,
+  AnnouncementAttachment,
   CreateAnnouncementPayload,
   UpdateAnnouncementPayload,
 } from "@/types/announcement";
@@ -85,45 +87,47 @@ function useInvalidatingMutation<TVar, TRes = unknown>(
 }
 
 export function useCreateAnnouncement() {
-  return useInvalidatingMutation<CreateAnnouncementPayload>((p) =>
+  return useInvalidatingMutation<CreateAnnouncementPayload, Announcement>((p) =>
     announcementsService.create(p),
   );
 }
 
 export function useUpdateAnnouncement(id: string) {
-  return useInvalidatingMutation<UpdateAnnouncementPayload>((p) =>
+  return useInvalidatingMutation<UpdateAnnouncementPayload, Announcement>((p) =>
     announcementsService.update(id, p),
   );
 }
 
 export function usePublishAnnouncement() {
-  return useInvalidatingMutation<string>((id) =>
+  return useInvalidatingMutation<string, Announcement>((id) =>
     announcementsService.publish(id),
   );
 }
 
 export function useScheduleAnnouncement() {
-  return useInvalidatingMutation<{ id: string; scheduled_at: string }>(
+  return useInvalidatingMutation<{ id: string; scheduled_at: string }, Announcement>(
     ({ id, scheduled_at }) => announcementsService.schedule(id, scheduled_at),
   );
 }
 
 export function useUnscheduleAnnouncement() {
-  return useInvalidatingMutation<string>((id) =>
+  return useInvalidatingMutation<string, Announcement>((id) =>
     announcementsService.unschedule(id),
   );
 }
 
 export function useRecallAnnouncement() {
-  return useInvalidatingMutation<{ id: string; reason: string }>(
+  return useInvalidatingMutation<{ id: string; reason: string }, Announcement>(
     ({ id, reason }) => announcementsService.recall(id, reason),
   );
 }
 
 export function useUploadAnnouncementAttachment() {
-  return useInvalidatingMutation<{ file: File; announcement_id?: string }>(
-    ({ file, announcement_id }) =>
-      announcementsService.uploadAttachment(file, announcement_id),
+  return useInvalidatingMutation<
+    { file: File; announcement_id?: string },
+    AnnouncementAttachment
+  >(({ file, announcement_id }) =>
+    announcementsService.uploadAttachment(file, announcement_id),
   );
 }
 

@@ -21,6 +21,7 @@ import {
   Building2,
   CalendarDays,
   HelpCircle,
+  Megaphone,
   Settings2,
   ChevronDown,
   ChevronRight,
@@ -55,6 +56,7 @@ const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance" },
   { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management" },
   { href: "/holidays", label: "Holidays", icon: Calendar, feature: "holiday_management" },
+  { href: "/announcements", label: "Announcements", icon: Megaphone },
   { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel" },
 ];
 
