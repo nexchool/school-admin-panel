@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +72,7 @@ export default function TransportRoutesPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data: rows = [], isLoading, error } = useQuery({
+  const { data: rows = [], isLoading, error } = useTenantQuery({
     queryKey: ["transport", "routes", "table"],
     queryFn: fetchRoutesTable,
   });

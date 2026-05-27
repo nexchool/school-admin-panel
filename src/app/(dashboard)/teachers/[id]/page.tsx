@@ -78,7 +78,8 @@ export default function TeacherDetailPage() {
   );
 
   const refreshTeacher = () => {
-    if (id) queryClient.invalidateQueries({ queryKey: teachersKeys.detail(id) });
+    // Prefix invalidation: covers every tenant-scoped detail key for this id.
+    if (id) queryClient.invalidateQueries({ queryKey: teachersKeys.all });
   };
 
   const handleUpdate = async (data: UpdateTeacherInput) => {

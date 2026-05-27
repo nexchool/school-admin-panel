@@ -34,6 +34,7 @@ import {
   OccupancyRow,
 } from "@/services/hostelService";
 import { toastSuccess } from "@/lib/errorToast";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -82,19 +83,22 @@ export const hostelKeys = {
 export function useHostels(
   options?: Omit<UseQueryOptions<Hostel[]>, "queryKey" | "queryFn">
 ) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.hostels.all,
+    queryKey: [...hostelKeys.hostels.all, tenantId],
     queryFn: () => hostelService.listHostels(),
     staleTime: 30_000,
     ...options,
+    enabled: !!tenantId && (options?.enabled ?? true),
   });
 }
 
 export function useHostel(id: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.hostels.detail(id ?? ""),
+    queryKey: [...hostelKeys.hostels.detail(id ?? ""), tenantId],
     queryFn: () => hostelService.getHostel(id as string),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && !!tenantId,
     staleTime: 30_000,
   });
 }
@@ -152,18 +156,20 @@ export function useDeleteHostel() {
 // ---------------------------------------------------------------------------
 
 export function useRooms(hostelId: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.rooms.forHostel(hostelId ?? ""),
+    queryKey: [...hostelKeys.rooms.forHostel(hostelId ?? ""), tenantId],
     queryFn: () => hostelService.listRooms(hostelId as string),
-    enabled: Boolean(hostelId),
+    enabled: Boolean(hostelId) && !!tenantId,
   });
 }
 
 export function useRoom(roomId: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.rooms.detail(roomId ?? ""),
+    queryKey: [...hostelKeys.rooms.detail(roomId ?? ""), tenantId],
     queryFn: () => hostelService.getRoom(roomId as string),
-    enabled: Boolean(roomId),
+    enabled: Boolean(roomId) && !!tenantId,
   });
 }
 
@@ -263,18 +269,21 @@ export function useAllocations(filters?: {
   status?: AllocationStatus;
   academic_year_id?: string;
 }) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.allocations.list(filters as Record<string, unknown>),
+    queryKey: [...hostelKeys.allocations.list(filters as Record<string, unknown>), tenantId],
     queryFn: () => hostelService.listAllocations(filters),
+    enabled: !!tenantId,
   });
 }
 
 export function useStudentAllocation(studentId: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.allocations.forStudent(studentId ?? ""),
+    queryKey: [...hostelKeys.allocations.forStudent(studentId ?? ""), tenantId],
     queryFn: () =>
       hostelService.getStudentAllocation(studentId as string),
-    enabled: Boolean(studentId),
+    enabled: Boolean(studentId) && !!tenantId,
   });
 }
 
@@ -326,24 +335,29 @@ export function useGatepasses(filters?: {
   status?: GatepassStatus;
   type?: GatepassType;
 }) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.gatepasses.list(filters as Record<string, unknown>),
+    queryKey: [...hostelKeys.gatepasses.list(filters as Record<string, unknown>), tenantId],
     queryFn: () => hostelService.listGatepasses(filters),
+    enabled: !!tenantId,
   });
 }
 
 export function useGatepass(id: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.gatepasses.detail(id ?? ""),
+    queryKey: [...hostelKeys.gatepasses.detail(id ?? ""), tenantId],
     queryFn: () => hostelService.getGatepass(id as string),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && !!tenantId,
   });
 }
 
 export function useOverdueGatepasses(filters?: { hostel_id?: string }) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.gatepasses.overdue,
+    queryKey: [...hostelKeys.gatepasses.overdue, tenantId, filters],
     queryFn: () => hostelService.listOverdueGatepasses(filters),
+    enabled: !!tenantId,
   });
 }
 
@@ -431,19 +445,22 @@ export function useVisitorLogs(filters?: {
   start_date?: string;
   end_date?: string;
 }) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.visitors.logs(filters as Record<string, unknown>),
+    queryKey: [...hostelKeys.visitors.logs(filters as Record<string, unknown>), tenantId],
     queryFn: () => hostelService.listVisitorLogs(filters),
+    enabled: !!tenantId,
     // The "currently inside" panel refreshes every 30s in the spec.
     refetchInterval: filters?.open ? 30_000 : false,
   });
 }
 
 export function useVisitorSearch(phonePrefix: string) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.visitors.search(phonePrefix),
+    queryKey: [...hostelKeys.visitors.search(phonePrefix), tenantId],
     queryFn: () => hostelService.searchVisitors(phonePrefix),
-    enabled: phonePrefix.length >= 3,
+    enabled: phonePrefix.length >= 3 && !!tenantId,
   });
 }
 
@@ -478,17 +495,21 @@ export function useVisitorCheckOut() {
 // ---------------------------------------------------------------------------
 
 export function useHostelDashboard() {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.dashboard,
+    queryKey: [...hostelKeys.dashboard, tenantId],
     queryFn: () => hostelService.getDashboard(),
+    enabled: !!tenantId,
     refetchInterval: 60_000,
   });
 }
 
 export function useOccupancyReport() {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: hostelKeys.reports.occupancy,
+    queryKey: [...hostelKeys.reports.occupancy, tenantId],
     queryFn: () => hostelService.getOccupancyReport(),
+    enabled: !!tenantId,
   });
 }
 

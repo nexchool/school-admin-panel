@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import {
   Dialog,
   DialogContent,
@@ -100,19 +100,19 @@ export function EnrollmentWizardModal({ open, onOpenChange, students, routes, on
     setFeeCycle((selectedRoute.fee_cycle as TransportFeeCycle) ?? "monthly");
   }, [selectedRoute]);
 
-  const stopsQ = useQuery({
+  const stopsQ = useTenantQuery({
     queryKey: ["transport", "route", routeId, "stops-enroll"],
     queryFn: () => transportService.listStops(routeId, false),
     enabled: !!routeId && open,
   });
 
-  const busesQ = useQuery({
+  const busesQ = useTenantQuery({
     queryKey: ["transport", "route", routeId, "buses-enroll", academicYearId],
     queryFn: () => transportService.busesForRoute(routeId, { academicYearId: academicYearId }),
     enabled: !!routeId && !!open,
   });
 
-  const schedHintQ = useQuery({
+  const schedHintQ = useTenantQuery({
     queryKey: ["transport", "schedules", "enroll-hint", routeId, busId, academicYearId],
     queryFn: () =>
       transportService.listSchedules({

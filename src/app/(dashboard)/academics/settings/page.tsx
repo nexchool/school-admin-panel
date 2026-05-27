@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { apiGet, apiPatch } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -85,12 +86,12 @@ function WorkingDaysPicker({
 export default function AcademicSettingsPage() {
   const qc = useQueryClient();
 
-  const { data: settings, isLoading: settingsLoading } = useQuery({
+  const { data: settings, isLoading: settingsLoading } = useTenantQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => apiGet<AcademicSettings>("/api/academics/settings"),
   });
 
-  const { data: bellSchedulesData } = useQuery({
+  const { data: bellSchedulesData } = useTenantQuery({
     queryKey: BELL_SCHEDULES_KEY,
     queryFn: () => apiGet<{ items: BellScheduleItem[] }>("/api/academics/bell-schedules"),
     select: (d) => d.items ?? [],

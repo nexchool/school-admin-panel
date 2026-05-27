@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,7 +37,7 @@ export default function TransportScheduleExceptionsPage() {
     }
   }, [academicYears, academicYearId]);
 
-  const exceptionsQ = useQuery({
+  const exceptionsQ = useTenantQuery({
     queryKey: ["transport", "schedule-exceptions", academicYearId, typeFilter],
     queryFn: () =>
       transportService.listScheduleExceptions({

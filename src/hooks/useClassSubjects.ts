@@ -12,6 +12,7 @@ import type {
   UpdateClassSubjectInput,
   CreateSubjectTeacherInput,
 } from "@/types/classSubject";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const classSubjectsKeys = {
   all: ["class-subjects"] as const,
@@ -21,10 +22,11 @@ export const classSubjectsKeys = {
 };
 
 export function useClassSubjectOfferings(classId: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: classSubjectsKeys.list(classId ?? ""),
+    queryKey: [...classSubjectsKeys.list(classId ?? ""), tenantId],
     queryFn: () => classSubjectsService.listForClass(classId!),
-    enabled: !!classId,
+    enabled: !!classId && !!tenantId,
   });
 }
 
@@ -32,10 +34,11 @@ export function useClassSubjectTeachers(
   classId: string | null,
   options?: { enabled?: boolean }
 ) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: classSubjectsKeys.teachers(classId ?? ""),
+    queryKey: [...classSubjectsKeys.teachers(classId ?? ""), tenantId],
     queryFn: () => classSubjectsService.listSubjectTeachers(classId!),
-    enabled: !!classId && (options?.enabled ?? true),
+    enabled: !!classId && !!tenantId && (options?.enabled ?? true),
   });
 }
 

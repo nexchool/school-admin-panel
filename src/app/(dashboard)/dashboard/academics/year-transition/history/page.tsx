@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks";
 import {
   yearTransitionService,
@@ -90,7 +90,7 @@ export default function PromotionHistoryPage() {
 
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch } = useTenantQuery({
     queryKey: ["year-transition-history", page],
     queryFn: () => yearTransitionService.listPromotionHistory(page, PAGE_SIZE),
     enabled: canAccess,

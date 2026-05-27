@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { apiGet, apiPatch, apiPost, apiDelete } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,14 +159,14 @@ export default function BellScheduleDetailPage() {
 
   // Fetch schedule — the route returns success_response(data=bell_schedule),
   // so handleResponse unwraps to the schedule object directly.
-  const { data: schedule, isLoading } = useQuery({
+  const { data: schedule, isLoading } = useTenantQuery({
     queryKey: bellKey(id),
     queryFn: () => apiGet<BellScheduleDetail>(`/api/academics/bell-schedules/${id}`),
     enabled: !!id,
   });
 
   // Fetch settings for tenant default check
-  const { data: settings } = useQuery({
+  const { data: settings } = useTenantQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => apiGet<AcademicSettings>("/api/academics/settings"),
   });

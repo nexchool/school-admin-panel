@@ -8,6 +8,7 @@ import {
 import { classesService } from "@/services/classesService";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { useAuth } from "@/components/providers/AuthProvider";
 import type { CreateClassInput } from "@/types/class";
 
 type ListFilters = {
@@ -30,6 +31,7 @@ export const classesKeys = {
 export function useClasses(overrides?: ListFilters) {
   const { unitId } = useActiveUnit();
   const { academicYearId } = useActiveAcademicYear();
+  const { tenantId } = useAuth();
 
   const academic_year_id =
     overrides && "academic_year_id" in overrides
@@ -43,20 +45,22 @@ export function useClasses(overrides?: ListFilters) {
   const params: ListFilters = { academic_year_id, school_unit_id };
 
   return useQuery({
-    queryKey: classesKeys.list(params),
+    queryKey: [...classesKeys.list(params), tenantId],
     queryFn: () =>
       classesService.getClasses({
         academic_year_id: academic_year_id ?? undefined,
         school_unit_id: school_unit_id ?? undefined,
       }),
+    enabled: !!tenantId && !!academic_year_id,
   });
 }
 
 export function useClass(id: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: classesKeys.detail(id ?? ""),
+    queryKey: [...classesKeys.detail(id ?? ""), tenantId],
     queryFn: () => classesService.getClass(id!),
-    enabled: !!id,
+    enabled: !!id && !!tenantId,
   });
 }
 

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { timetableService } from "@/services/timetableService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const timetableKeys = {
   all: ["timetable"] as const,
@@ -13,36 +14,40 @@ export const timetableKeys = {
 };
 
 export function useTimetableVersions(classId: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: timetableKeys.versions(classId ?? ""),
+    queryKey: [...timetableKeys.versions(classId ?? ""), tenantId],
     queryFn: () => timetableService.listVersions(classId!),
-    enabled: !!classId,
+    enabled: !!classId && !!tenantId,
     select: (d) => d.items,
   });
 }
 
 export function useTimetableBundle(classId: string | null, versionId?: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: timetableKeys.bundle(classId ?? "", versionId),
+    queryKey: [...timetableKeys.bundle(classId ?? "", versionId), tenantId],
     queryFn: () => timetableService.getBundle(classId!, versionId),
-    enabled: !!classId,
+    enabled: !!classId && !!tenantId,
   });
 }
 
 export function useClassSubjectsForTimetable(classId: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: timetableKeys.subjects(classId ?? ""),
+    queryKey: [...timetableKeys.subjects(classId ?? ""), tenantId],
     queryFn: () => timetableService.listClassSubjects(classId!),
-    enabled: !!classId,
+    enabled: !!classId && !!tenantId,
     select: (d) => d.items.filter((s) => s.status === "active"),
   });
 }
 
 export function useSubjectTeachersForTimetable(classId: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: timetableKeys.teachers(classId ?? ""),
+    queryKey: [...timetableKeys.teachers(classId ?? ""), tenantId],
     queryFn: () => timetableService.listSubjectTeachers(classId!),
-    enabled: !!classId,
+    enabled: !!classId && !!tenantId,
     select: (d) => d.items.filter((t) => t.is_active),
   });
 }

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/services/api";
 import type { Holiday } from "@/services/holidayService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export type { Holiday } from "@/services/holidayService";
 
@@ -20,8 +21,10 @@ export function useHolidays(params?: {
   academic_year_id?: string;
   include_recurring?: boolean;
 }) {
+  const { tenantId } = useAuth();
   return useQuery<Holiday[]>({
-    queryKey: holidayKeys.list(params),
+    queryKey: [...holidayKeys.list(params), tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
       const q = new URLSearchParams();
       if (params?.academic_year_id) q.set("academic_year_id", params.academic_year_id);

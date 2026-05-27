@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,7 +45,7 @@ export default function TransportFleetPage() {
   const [deactivateBus, setDeactivateBus] = useState<TransportBus | null>(null);
   const [deactivateLoading, setDeactivateLoading] = useState(false);
 
-  const { data: rows = [], isLoading, error } = useQuery({
+  const { data: rows = [], isLoading, error } = useTenantQuery({
     queryKey: ["transport", "buses"],
     queryFn: () => transportService.listBuses(),
   });

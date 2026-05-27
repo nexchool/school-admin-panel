@@ -7,6 +7,7 @@ import {
   academicTermsService,
   type AcademicTerm,
 } from "@/services/academicTermsService";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const termsKeys = {
   all: ["academic-terms"] as const,
@@ -20,9 +21,11 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>) {
 }
 
 export function useTerms(academicYearId?: string) {
+  const { tenantId } = useAuth();
   return useQuery<AcademicTerm[]>({
-    queryKey: termsKeys.list(academicYearId),
+    queryKey: [...termsKeys.list(academicYearId), tenantId],
     queryFn: () => academicTermsService.list(academicYearId),
+    enabled: !!tenantId,
   });
 }
 

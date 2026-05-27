@@ -11,6 +11,7 @@ import {
   notificationService,
 } from "@/services/notificationService";
 import type { AppNotification } from "@/types/notification";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const notificationKeys = {
   all: ["notifications"] as const,
@@ -23,8 +24,9 @@ export const notificationKeys = {
  * Paginated inbox (SSE + invalidations refresh pages). No polling.
  */
 export function useNotificationFeed(unreadOnly = false) {
+  const { tenantId } = useAuth();
   return useInfiniteQuery({
-    queryKey: notificationKeys.feed(unreadOnly),
+    queryKey: [...notificationKeys.feed(unreadOnly), tenantId],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) =>
       notificationService.list({
@@ -36,24 +38,27 @@ export function useNotificationFeed(unreadOnly = false) {
       last.pagination.has_more
         ? last.pagination.offset + last.pagination.limit
         : undefined,
+    enabled: !!tenantId,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 }
 
 export function useNotificationDetail(id: string | undefined) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: notificationKeys.detail(id ?? ""),
+    queryKey: [...notificationKeys.detail(id ?? ""), tenantId],
     queryFn: () => notificationService.getById(id!),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && !!tenantId,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 }
 
 export function useUnreadNotificationsCount() {
+  const { tenantId } = useAuth();
   const { data: total = 0 } = useQuery({
-    queryKey: notificationKeys.unreadTotal(),
+    queryKey: [...notificationKeys.unreadTotal(), tenantId],
     queryFn: async () => {
       const res = await notificationService.list({
         unreadOnly: true,
@@ -62,6 +67,7 @@ export function useUnreadNotificationsCount() {
       });
       return res.pagination.total;
     },
+    enabled: !!tenantId,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });

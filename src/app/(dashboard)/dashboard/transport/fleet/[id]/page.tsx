@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,7 +61,7 @@ export default function BusDetailPage() {
     }
   }, [academicYears, timelineAcademicYearId]);
 
-  const detailQ = useQuery({
+  const detailQ = useTenantQuery({
     queryKey: ["transport", "bus", id, "details", timelineAcademicYearId, timelineDate],
     queryFn: () =>
       transportService.getBusDetails(id!, {
@@ -70,20 +71,20 @@ export default function BusDetailPage() {
     enabled: !!id && !!timelineAcademicYearId,
   });
 
-  const assignmentsQ = useQuery({
+  const assignmentsQ = useTenantQuery({
     queryKey: ["transport", "assignments"],
     queryFn: () => transportService.listAssignments(),
     enabled: !!id,
   });
 
   const routeId = detailQ.data?.route?.id;
-  const stopsQ = useQuery({
+  const stopsQ = useTenantQuery({
     queryKey: ["transport", "route", routeId, "stops"],
     queryFn: () => transportService.listStops(routeId!, false),
     enabled: !!routeId,
   });
 
-  const moveBusesQ = useQuery({
+  const moveBusesQ = useTenantQuery({
     queryKey: ["transport", "route", moveRow?.routeId, "buses"],
     queryFn: () =>
       transportService.busesForRoute(moveRow!.routeId, {

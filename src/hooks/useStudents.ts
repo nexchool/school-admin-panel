@@ -16,39 +16,48 @@ import type {
   UpdateStudentInput,
 } from "@/types/student";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 export const studentsKeys = {
   all: ["students"] as const,
-  list: (params?: StudentsListParams) =>
-    [...studentsKeys.all, "list", params] as const,
-  detail: (id: string) => [...studentsKeys.all, "detail", id] as const,
+  list: (tenantId: string | null, params?: StudentsListParams) =>
+    [...studentsKeys.all, "list", tenantId, params] as const,
+  detail: (tenantId: string | null, id: string) =>
+    [...studentsKeys.all, "detail", tenantId, id] as const,
 };
 
 /**
  * If `params.academic_year_id` is undefined, the active academic year context
  * value is used. Pass an explicit string to override (explicit wins).
+ *
+ * Query is disabled until both tenant and academic year are known — this
+ * prevents the wasted "first request with undefined params" that fires while
+ * ActiveScopeProvider is still resolving the active year on a fresh login.
  */
 export function useStudents(params?: StudentsListParams) {
   const { academicYearId } = useActiveAcademicYear();
+  const { tenantId } = useAuth();
+  const academicYear = params?.academic_year_id ?? academicYearId ?? undefined;
   const merged: StudentsListParams = {
     ...params,
-    academic_year_id:
-      params?.academic_year_id ?? academicYearId ?? undefined,
+    academic_year_id: academicYear,
   };
 
   return useQuery<StudentsListResult>({
-    queryKey: studentsKeys.list(merged),
+    queryKey: studentsKeys.list(tenantId, merged),
     queryFn: () => studentsService.getStudents(merged),
+    enabled: !!tenantId && !!academicYear,
     // Keep showing the previous page while a new page/search is fetching.
     placeholderData: keepPreviousData,
   });
 }
 
 export function useStudent(id: string | null) {
+  const { tenantId } = useAuth();
   return useQuery({
-    queryKey: studentsKeys.detail(id ?? ""),
+    queryKey: studentsKeys.detail(tenantId, id ?? ""),
     queryFn: () => studentsService.getStudent(id!),
-    enabled: !!id,
+    enabled: !!id && !!tenantId,
   });
 }
 
@@ -68,11 +77,9 @@ export function useUpdateStudent() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateStudentInput }) =>
       studentsService.updateStudent(id, input),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
+      // Prefix invalidation — covers list + every tenant-scoped detail key.
       queryClient.invalidateQueries({ queryKey: studentsKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: studentsKeys.detail(variables.id),
-      });
     },
   });
 }
