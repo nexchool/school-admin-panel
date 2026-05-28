@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,10 +16,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PASSWORD_MIN_LENGTH } from "@/services/subAdminsService";
 
 const schema = z
   .object({
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z
+      .string()
+      .min(
+        PASSWORD_MIN_LENGTH,
+        `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+      ),
     confirmPassword: z.string().min(1, "Confirm the password"),
   })
   .refine((v) => v.password === v.confirmPassword, {
@@ -55,9 +61,19 @@ export function ResetPasswordDialog({
     defaultValues: { password: "", confirmPassword: "" },
   });
 
-  useEffect(() => {
-    if (open) reset({ password: "", confirmPassword: "" });
-  }, [open, reset]);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Reset the form + clear errors whenever the dialog opens — derived during
+  // render via an open token (the project's "set-state-in-effect"-free pattern,
+  // see SubAdminFormModal). A fresh open reseeds; closing arms the next open.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open && !wasOpen) {
+    setWasOpen(true);
+    reset({ password: "", confirmPassword: "" });
+    setFormError(null);
+  } else if (!open && wasOpen) {
+    setWasOpen(false);
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,16 +89,31 @@ export function ResetPasswordDialog({
 
         <form
           onSubmit={handleSubmit(async (values) => {
-            await onSubmit(values.password);
+            // The dialog stays open on failure so the user sees inline
+            // feedback; the caller closes it on success.
+            setFormError(null);
+            try {
+              await onSubmit(values.password);
+            } catch (err) {
+              setFormError(
+                err instanceof Error ? err.message : "Failed to reset password"
+              );
+            }
           })}
           className="space-y-4"
         >
+          {formError && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {formError}
+            </p>
+          )}
+
           <div className="grid gap-1.5">
             <Label htmlFor="reset-password">New password</Label>
             <Input
               id="reset-password"
               type="password"
-              placeholder="At least 8 characters"
+              placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`}
               aria-invalid={Boolean(errors.password)}
               {...register("password")}
             />

@@ -17,11 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import type {
-  ModuleLevel,
-  SubAdmin,
-  SubAdminModuleCatalogEntry,
-  SubAdminModuleSelection,
+import {
+  PASSWORD_MIN_LENGTH,
+  type ModuleLevel,
+  type SubAdmin,
+  type SubAdminModuleCatalogEntry,
+  type SubAdminModuleSelection,
 } from "@/services/subAdminsService";
 
 // ---------------------------------------------------------------------------
@@ -58,7 +59,12 @@ const baseSchema = z.object({
 
 const createSchema = baseSchema
   .extend({
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z
+      .string()
+      .min(
+        PASSWORD_MIN_LENGTH,
+        `Password must be at least ${PASSWORD_MIN_LENGTH} characters`
+      ),
     confirmPassword: z.string().min(1, "Confirm the password"),
   })
   .refine((v) => v.password === v.confirmPassword, {
@@ -390,7 +396,7 @@ export function SubAdminFormModal({
                   <Input
                     id="password"
                     type="password"
-                    placeholder="At least 8 characters"
+                    placeholder={`At least ${PASSWORD_MIN_LENGTH} characters`}
                     aria-invalid={Boolean(errors.password)}
                     {...register("password")}
                   />

@@ -132,9 +132,11 @@ export default function SubAdminsPage() {
   }
 
   const { data, isLoading, isError, isFetching, refetch } = useSubAdmins(
-    canManage ? listParams : undefined
+    listParams,
+    canManage
   );
-  const { data: catalog = [], isLoading: isCatalogLoading } = useSubAdminModules();
+  const { data: catalog = [], isLoading: isCatalogLoading } =
+    useSubAdminModules(canManage);
 
   const createMutation = useCreateSubAdmin();
   const updateMutation = useUpdateSubAdmin();
@@ -193,10 +195,13 @@ export default function SubAdminsPage() {
       });
       toastSuccess("Sub-admin updated");
     } else {
+      // Create-mode validation (SubAdminFormModal) guarantees a ≥8-char
+      // password; guard narrows the optional field to a required string.
+      if (!payload.password) return;
       await createMutation.mutateAsync({
         name: payload.name,
         email: payload.email,
-        password: payload.password ?? "",
+        password: payload.password,
         modules: payload.modules,
       });
       toastSuccess("Sub-admin created");
@@ -205,14 +210,9 @@ export default function SubAdminsPage() {
 
   const handleResetPassword = async (password: string) => {
     if (!resetTarget) return;
-    try {
-      await resetPasswordMutation.mutateAsync({ id: resetTarget.id, password });
-      toastSuccess("Password reset");
-      setResetTarget(null);
-    } catch (err) {
-      toastError(err, "Failed to reset password");
-      throw err;
-    }
+    await resetPasswordMutation.mutateAsync({ id: resetTarget.id, password });
+    toastSuccess("Password reset");
+    setResetTarget(null);
   };
 
   const handleToggleStatus = async () => {

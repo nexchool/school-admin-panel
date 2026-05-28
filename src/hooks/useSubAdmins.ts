@@ -10,7 +10,6 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import {
   subAdminsService,
   type CreateSubAdminPayload,
-  type SubAdmin,
   type SubAdminModuleCatalogEntry,
   type SubAdminsListParams,
   type SubAdminsListResult,
@@ -28,32 +27,25 @@ export const subAdminsKeys = {
   all: ["sub-admins"] as const,
   list: (params?: SubAdminsListParams) =>
     [...subAdminsKeys.all, "list", params] as const,
-  detail: (id: string) => [...subAdminsKeys.all, "detail", id] as const,
   modules: () => [...subAdminsKeys.all, "modules"] as const,
 };
 
-export function useSubAdmins(params?: SubAdminsListParams) {
+export function useSubAdmins(params?: SubAdminsListParams, enabled = true) {
   return useTenantQuery<SubAdminsListResult>({
     queryKey: subAdminsKeys.list(params),
     queryFn: () => subAdminsService.list(params),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 
-export function useSubAdmin(id: string | null) {
-  return useTenantQuery<SubAdmin>({
-    queryKey: subAdminsKeys.detail(id ?? ""),
-    queryFn: () => subAdminsService.get(id!),
-    enabled: !!id,
-  });
-}
-
-export function useSubAdminModules() {
+export function useSubAdminModules(enabled = true) {
   return useTenantQuery<SubAdminModuleCatalogEntry[]>({
     queryKey: subAdminsKeys.modules(),
     queryFn: () => subAdminsService.getModules(),
     // The catalog is static for the app lifetime; cache it aggressively.
     staleTime: 60 * 60 * 1000,
+    enabled,
   });
 }
 

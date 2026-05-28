@@ -13,6 +13,9 @@ import { apiGet, apiPost, apiPut, apiDelete } from "@/services/api";
 // Types — match serialize_sub_admin / catalog.py exactly
 // ---------------------------------------------------------------------------
 
+/** Minimum length enforced on sub-admin passwords (create + reset). */
+export const PASSWORD_MIN_LENGTH = 8;
+
 export type SubAdminStatus = "active" | "suspended";
 
 export type ModuleLevel = "none" | "view" | "edit" | "operate" | "manage";
