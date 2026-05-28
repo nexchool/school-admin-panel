@@ -2,6 +2,7 @@
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { RouteGuard } from "@/components/layout/RouteGuard";
 
 export default function DashboardRootLayout({
   children,
@@ -10,7 +11,9 @@ export default function DashboardRootLayout({
 }) {
   return (
     <ProtectedRoute>
-      <DashboardLayout>{children}</DashboardLayout>
+      <DashboardLayout>
+        <RouteGuard>{children}</RouteGuard>
+      </DashboardLayout>
     </ProtectedRoute>
   );
 }

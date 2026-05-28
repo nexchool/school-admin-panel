@@ -29,11 +29,13 @@ import {
   CheckCircle2,
   Circle,
   CircleDot,
+  ShieldCheck,
 } from "lucide-react";
 import { useSetupStatus } from "@/hooks/useSchoolSetup";
 import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
+import { ROUTE_PERMISSIONS, TRANSPORT_NAV_PERMS } from "@/lib/navPermissions";
 
 type NavItem = {
   href: string;
@@ -41,6 +43,8 @@ type NavItem = {
   icon: typeof LayoutDashboard;
   /** Tenant feature key required to see this nav item. Omit for core links. */
   feature?: string;
+  /** Permissions (ANY-of) required to see this nav item. Omit for core links. */
+  permissions?: string[];
 };
 
 /** Everything above Profile. Items with `feature` are filtered by the
@@ -48,16 +52,16 @@ type NavItem = {
  * Transport keeps its position (before Profile) for visual continuity. */
 const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/academics", label: "Academics", icon: School },
-  { href: "/students", label: "Students", icon: GraduationCap },
-  { href: "/teachers", label: "Teachers", icon: Users },
-  { href: "/classes", label: "Classes", icon: BookOpen },
-  { href: "/timetable", label: "Timetable", icon: CalendarDays, feature: "timetable" },
-  { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance" },
-  { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management" },
-  { href: "/holidays", label: "Holidays", icon: Calendar, feature: "holiday_management" },
-  { href: "/announcements", label: "Announcements", icon: Megaphone },
-  { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel" },
+  { href: "/academics", label: "Academics", icon: School, permissions: ROUTE_PERMISSIONS["/academics"] },
+  { href: "/students", label: "Students", icon: GraduationCap, permissions: ROUTE_PERMISSIONS["/students"] },
+  { href: "/teachers", label: "Teachers", icon: Users, permissions: ROUTE_PERMISSIONS["/teachers"] },
+  { href: "/classes", label: "Classes", icon: BookOpen, permissions: ROUTE_PERMISSIONS["/classes"] },
+  { href: "/timetable", label: "Timetable", icon: CalendarDays, feature: "timetable", permissions: ROUTE_PERMISSIONS["/timetable"] },
+  { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance", permissions: ROUTE_PERMISSIONS["/attendance"] },
+  { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management", permissions: ROUTE_PERMISSIONS["/dashboard/finance"] },
+  { href: "/holidays", label: "Holidays", icon: Calendar, feature: "holiday_management", permissions: ROUTE_PERMISSIONS["/holidays"] },
+  { href: "/announcements", label: "Announcements", icon: Megaphone, permissions: ROUTE_PERMISSIONS["/announcements"] },
+  { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel", permissions: ROUTE_PERMISSIONS["/hostel"] },
 ];
 
 const SIDEBAR_NAV_PROFILE = { href: "/profile", label: "Profile", icon: User } as const;
@@ -66,6 +70,12 @@ const SIDEBAR_NAV_TRANSPORT = {
   href: "/dashboard/transport",
   label: "Transport",
   icon: Bus,
+} as const;
+
+const SIDEBAR_NAV_SUB_ADMINS = {
+  href: "/sub-admins",
+  label: "Sub-Admins",
+  icon: ShieldCheck,
 } as const;
 
 const SETUP_STEPS: Array<{ key: SetupStepKey; href: string; label: string }> = [
@@ -77,15 +87,6 @@ const SETUP_STEPS: Array<{ key: SetupStepKey; href: string; label: string }> = [
   { key: "subjects", href: "/school-setup/subjects", label: "Subjects" },
   { key: "terms", href: "/school-setup/terms", label: "Terms" },
   { key: "complete", href: "/school-setup/complete", label: "Review & Complete" },
-];
-
-const TRANSPORT_NAV_PERMS = [
-  "transport.buses.read",
-  "transport.enrollment.read",
-  "transport.dashboard.read",
-  "transport.drivers.manage",
-  "transport.routes.manage",
-  "transport.assignments.manage",
 ];
 
 /**
@@ -112,10 +113,13 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const isSetupComplete = setupStatus?.overall.is_setup_complete ?? false;
 
   const visibleCore = SIDEBAR_NAV_CORE.filter(
-    (item) => !item.feature || isFeatureEnabled(item.feature)
+    (item) =>
+      (!item.feature || isFeatureEnabled(item.feature)) &&
+      (!item.permissions || hasAnyPermission(item.permissions))
   );
   const showTransport =
-    isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
+    isFeatureEnabled("transport") && hasAnyPermission([...TRANSPORT_NAV_PERMS]);
+  const showSubAdmins = hasPermission("subadmin.manage");
 
   // School Setup is visible to admins always, plus to anyone when setup is
   // still pending — that way an admin's first login screams "finish setup".
@@ -250,6 +254,23 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
               </Link>
             );
           })}
+
+          {/* Sub-Admins — visible only to subadmin.manage holders (Admin role) */}
+          {showSubAdmins && (
+            <Link
+              href={SIDEBAR_NAV_SUB_ADMINS.href}
+              onClick={handleNavClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isSidebarNavActive(pathname, SIDEBAR_NAV_SUB_ADMINS.href)
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <SIDEBAR_NAV_SUB_ADMINS.icon className="h-5 w-5 shrink-0" />
+              {SIDEBAR_NAV_SUB_ADMINS.label}
+            </Link>
+          )}
 
           {/* Audit Log — visible only to users with audit_log.view permission */}
           {hasPermission("audit_log.view") && (
