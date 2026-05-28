@@ -31,7 +31,6 @@ import {
   CircleDot,
   ShieldCheck,
 } from "lucide-react";
-import { useSetupStatus } from "@/hooks/useSchoolSetup";
 import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
@@ -108,9 +107,14 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, isFeatureEnabled, hasAnyPermission, hasPermission, tenantName } = useAuth();
-  const { data: setupStatus } = useSetupStatus();
-  const isSetupComplete = setupStatus?.overall.is_setup_complete ?? false;
+  const {
+    logout,
+    isFeatureEnabled,
+    hasAnyPermission,
+    hasPermission,
+    tenantName,
+    isSetupComplete,
+  } = useAuth();
 
   const visibleCore = SIDEBAR_NAV_CORE.filter(
     (item) =>
@@ -121,11 +125,15 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
     isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
   const showSubAdmins = hasAnyPermission(ROUTE_PERMISSIONS["/sub-admins"]);
 
-  // School Setup is visible to admins always, plus to anyone when setup is
-  // still pending — that way an admin's first login screams "finish setup".
-  const showSchoolSetup =
-    hasPermission("school_setup.manage") ||
-    (setupStatus ? !isSetupComplete : false);
+  // School Setup is visible ONLY to whoever can run it. The super-admin holds
+  // school_setup.manage (via system.manage) and is the sole persona who can
+  // reach /school-setup (RouteGuard gates the route on school_setup.manage).
+  // School admins/sub-admins lost that permission, so showing them the link
+  // would be a dead-end (RouteGuard bounces them) and the per-step badges would
+  // 403 on the super-admin-only /status endpoint. They rely on SetupGate's
+  // banner (driven by auth-context isSetupComplete) instead.
+  const canManageSetup = hasPermission("school_setup.manage");
+  const showSchoolSetup = canManageSetup;
 
   const [setupExpanded, setSetupExpanded] = useState(
     pathname.startsWith("/school-setup")
@@ -196,7 +204,10 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
               );
             })}
 
-          {/* School Setup collapsible group */}
+          {/* School Setup group — super-admin only. They get the collapsible
+              per-step wizard; the per-step badges read the super-admin-only
+              /status endpoint, which is safe here because no other persona ever
+              renders this branch. */}
           {showSchoolSetup && (
             <div>
               <button

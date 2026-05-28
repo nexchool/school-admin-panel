@@ -47,9 +47,12 @@ function pickFirstIncomplete(
 
 export default function SchoolSetupPage() {
   const router = useRouter();
-  const { hasPermission } = useAuth();
+  const { hasPermission, isPlatformAdmin } = useAuth();
   const canManage = hasPermission("school_setup.manage");
-  const { data, isLoading } = useSetupStatus();
+  // /api/school-setup/status is super-admin-only — gate defensively so a
+  // non-super-admin who somehow lands here (RouteGuard normally redirects)
+  // never fires a 403. Only the super-admin runs setup now.
+  const { data, isLoading } = useSetupStatus({ enabled: isPlatformAdmin });
 
   useEffect(() => {
     if (!canManage) return;

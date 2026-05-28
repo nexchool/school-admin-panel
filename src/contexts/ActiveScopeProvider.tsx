@@ -12,12 +12,19 @@ import {
 } from "./ActiveAcademicYearContext";
 
 function ActiveScopeSync() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isPlatformAdmin } = useAuth();
   // Only pre-fetch tenant scope data when the user is signed in — otherwise
   // these calls 401 on the login page and trigger the auth redirect handler.
   const { data: units } = useSchoolUnits({ enabled: isAuthenticated });
   const { data: years } = useAcademicYears(false, { enabled: isAuthenticated });
-  const { data: status } = useSetupStatus({ enabled: isAuthenticated });
+  // /api/school-setup/status is super-admin-only now (403 for school
+  // admins/sub-admins). We only use it as a *preferred* source for the active
+  // academic year id; the `years` list (available to everyone) carries the same
+  // info via `is_active`, so gating this on isPlatformAdmin keeps active-year
+  // selection working for normal users without firing a 403.
+  const { data: status } = useSetupStatus({
+    enabled: isAuthenticated && isPlatformAdmin,
+  });
   const { unitId, setUnitId } = useActiveUnit();
   const { academicYearId, setAcademicYearId } = useActiveAcademicYear();
 

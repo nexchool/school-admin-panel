@@ -28,8 +28,14 @@ const STEP_TO_STATUS_KEY: Record<SetupStepKey, string> = {
   complete: "overall",
 };
 
-export function useSetupStepStatus(step: SetupStepKey): StepBadge {
-  const { data } = useSetupStatus();
+export function useSetupStepStatus(
+  step: SetupStepKey,
+  options?: { enabled?: boolean },
+): StepBadge {
+  // /api/school-setup/status is super-admin-only; callers that render the
+  // per-step badges for a non-super-admin must pass `enabled: false` to avoid
+  // firing a 403. When disabled the hook degrades to active-step detection only.
+  const { data } = useSetupStatus({ enabled: options?.enabled ?? true });
   const pathname = usePathname() ?? "";
   const isActive =
     pathname === `/school-setup/${step}` ||

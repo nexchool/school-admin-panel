@@ -17,6 +17,7 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { useTerms } from "@/hooks/useTerms";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useHolidays } from "@/hooks/useHolidays";
+import { useAuth } from "@/hooks";
 
 // ── Mode B — post-completion prompt card ────────────────────────────
 
@@ -80,7 +81,13 @@ function SummaryCard({ title, value, ready, href }: SummaryCardProps) {
 // ── Page ─────────────────────────────────────────────────────────────
 
 export default function CompletePage() {
-  const { data: setupStatus, isLoading: statusLoading } = useSetupStatus();
+  // RouteGuard already redirects non-super-admins away from /school-setup/*, but
+  // gate the super-admin-only /status endpoint defensively for consistency with
+  // school-setup/page.tsx so a stray render never fires a 403.
+  const { isPlatformAdmin } = useAuth();
+  const { data: setupStatus, isLoading: statusLoading } = useSetupStatus({
+    enabled: isPlatformAdmin,
+  });
   const completeMutation = useCompleteSetup();
 
   const { academicYearId } = useActiveAcademicYear();

@@ -3,11 +3,17 @@
 import Link from "next/link";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 
+import { useAuth } from "@/hooks";
 import { useSetupStatus } from "@/hooks/useSchoolSetup";
 
 export function SetupStatusPill() {
-  const { data } = useSetupStatus();
-  if (!data) return null;
+  // /api/school-setup/status is super-admin-only. The pill is a setup-progress
+  // indicator only meaningful to whoever can run setup, so gate the fetch on
+  // isPlatformAdmin and render nothing for everyone else (school admins /
+  // sub-admins) — this also stops the dashboard firing a 403 for them.
+  const { isPlatformAdmin } = useAuth();
+  const { data } = useSetupStatus({ enabled: isPlatformAdmin });
+  if (!isPlatformAdmin || !data) return null;
 
   if (data.overall.is_setup_complete && !data.overall.needs_reconfirm) {
     return (
