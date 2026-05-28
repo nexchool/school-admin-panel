@@ -75,6 +75,10 @@ export const ROUTE_PERMISSIONS = {
   "/hostel": ["hostel.read", "hostel.manage"],
   "/sub-admins": ["subadmin.manage"],
   "/audit-log": ["audit_log.view"],
+  // Gated to school-setup managers. A platform super-admin passes via the
+  // `system.manage` superuser shortcut in `hasPermission`. The longest-prefix
+  // matcher covers nested routes like /school-setup/units.
+  "/school-setup": ["school_setup.manage"],
 } as const satisfies Record<string, readonly string[]>;
 
 /**
@@ -84,9 +88,9 @@ export const ROUTE_PERMISSIONS = {
  * Longest-match matters: `/dashboard/finance` and `/dashboard/transport` must
  * resolve to their own permission sets before the bare `/dashboard`.
  *
- * Routes absent from the map — `/dashboard`, `/profile`, `/help`,
- * `/school-setup/*`, and other secondary/unlinked routes — intentionally
- * resolve to `null` and are treated as ungated at the UI layer. The backend
+ * Routes absent from the map — `/dashboard`, `/profile`, `/help`, and other
+ * secondary/unlinked routes — intentionally resolve to `null` and are treated
+ * as ungated at the UI layer. (`/school-setup/*` IS gated — see the map.) The backend
  * still enforces permissions on every request (defense-in-depth); this map only
  * decides what the client hides/redirects.
  */

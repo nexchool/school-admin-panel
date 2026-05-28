@@ -26,6 +26,12 @@ import {
   setTenantId,
   getTenantName,
   setTenantName,
+  getIsPlatformAdmin,
+  setIsPlatformAdmin,
+  getIsSubAdmin,
+  setIsSubAdmin,
+  getIsSetupComplete,
+  setIsSetupComplete,
   clearAuth,
   setSessionCookie,
 } from "@/lib/storage";
@@ -69,6 +75,15 @@ interface AuthContextType {
   tenantName: string | null;
   /** Active tenant id, mirrored from storage. Used to scope query cache. */
   tenantId: string | null;
+  /** True when the user is a platform super-admin (god mode). */
+  isPlatformAdmin: boolean;
+  /** True when the user is a tenant sub-admin. */
+  isSubAdmin: boolean;
+  /**
+   * The active tenant's school-setup completion state. Defaults to `true` so we
+   * never flash a "setup incomplete" banner before login/profile resolves.
+   */
+  isSetupComplete: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -95,10 +110,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [tenantName, setTenantNameState] = useState<string | null>(null);
   const [tenantId, setTenantIdState] = useState<string | null>(null);
+  const [isPlatformAdmin, setIsPlatformAdminState] = useState(false);
+  const [isSubAdmin, setIsSubAdminState] = useState(false);
+  // Default true so first paint (before login/profile resolves) never flashes a
+  // false "setup incomplete" banner.
+  const [isSetupComplete, setIsSetupCompleteState] = useState(true);
 
   const setAuthData = useCallback(async (data: LoginResponse) => {
     if (!data.access_token || !data.refresh_token || !data.user) return;
     const features = data.enabled_features ?? [];
+    const platformAdmin = data.is_platform_admin ?? false;
+    const subAdmin = data.is_subadmin ?? false;
+    // Default true: absence of the flag should never trigger a false banner.
+    const setupComplete = data.is_setup_complete ?? true;
     const tenantLabel =
       data.tenant_name !== undefined
         ? (typeof data.tenant_name === "string" ? data.tenant_name.trim() : "") || null
@@ -111,6 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions(data.permissions || []),
       setEnabledFeatures(features),
       setRoles([]),
+      setIsPlatformAdmin(platformAdmin),
+      setIsSubAdmin(subAdmin),
+      setIsSetupComplete(setupComplete),
     ];
     if (data.tenant_id) tasks.push(setTenantId(data.tenant_id));
     if (tenantLabel !== undefined) {
@@ -128,6 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPermissionsState(data.permissions || []);
     setEnabledFeaturesState(features);
     setRolesState([]);
+    setIsPlatformAdminState(platformAdmin);
+    setIsSubAdminState(subAdmin);
+    setIsSetupCompleteState(setupComplete);
     if (tenantLabel !== undefined) {
       setTenantNameState(tenantLabel);
     }
@@ -138,17 +168,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profile = await getProfile();
       setUser(profile.user);
       await setUserData(profile.user);
+      // For a platform super-admin the profile returns permissions:["system.manage"];
+      // storing it verbatim keeps god mode intact across a refresh.
       setPermissionsState(profile.permissions ?? []);
       setEnabledFeaturesState(profile.enabled_features ?? []);
       const roleList = profile.roles ?? [];
       setRolesState(roleList);
       const tn = profile.tenant_name?.trim() || null;
       setTenantNameState(tn);
+      const platformAdmin = profile.is_platform_admin ?? false;
+      const subAdmin = profile.is_subadmin ?? false;
+      const setupComplete = profile.is_setup_complete ?? true;
+      setIsPlatformAdminState(platformAdmin);
+      setIsSubAdminState(subAdmin);
+      setIsSetupCompleteState(setupComplete);
       await Promise.all([
         setPermissions(profile.permissions ?? []),
         setEnabledFeatures(profile.enabled_features ?? []),
         setRoles(roleList),
         setTenantName(tn),
+        setIsPlatformAdmin(platformAdmin),
+        setIsSubAdmin(subAdmin),
+        setIsSetupComplete(setupComplete),
       ]);
     } catch (err) {
       console.error("Failed to refresh profile:", err);
@@ -167,6 +208,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedRoles,
           storedTenantName,
           storedTenantId,
+          storedIsPlatformAdmin,
+          storedIsSubAdmin,
+          storedIsSetupComplete,
         ] = await Promise.all([
           getAccessToken(),
           getRefreshToken(),
@@ -176,6 +220,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           getRoles(),
           getTenantName(),
           getTenantId(),
+          getIsPlatformAdmin(),
+          getIsSubAdmin(),
+          getIsSetupComplete(),
         ]);
 
         if (accessToken && refreshToken && userData) {
@@ -185,6 +232,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setRolesState(storedRoles);
           setTenantNameState(storedTenantName);
           setTenantIdState(storedTenantId);
+          setIsPlatformAdminState(storedIsPlatformAdmin ?? false);
+          setIsSubAdminState(storedIsSubAdmin ?? false);
+          // null (never persisted) → true, so we never flash a false banner.
+          setIsSetupCompleteState(storedIsSetupComplete ?? true);
         }
       } catch (err) {
         console.error("Auth check error:", err);
@@ -252,6 +303,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRolesState([]);
     setTenantNameState(null);
     setTenantIdState(null);
+    setIsPlatformAdminState(false);
+    setIsSubAdminState(false);
+    setIsSetupCompleteState(true);
   }, [queryClient]);
 
   const hasPermission = useCallback(
@@ -306,6 +360,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isFeatureEnabled,
         tenantName,
         tenantId,
+        isPlatformAdmin,
+        isSubAdmin,
+        isSetupComplete,
       }}
     >
       {children}

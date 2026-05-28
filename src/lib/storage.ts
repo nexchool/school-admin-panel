@@ -13,6 +13,12 @@ const KEYS = {
   TENANT_ID: "tenant_id",
   /** Cached school / tenant display name for UI (sidebar, etc.). */
   TENANT_NAME: "tenant_display_name",
+  /** Whether the logged-in user is a platform super-admin (god mode). */
+  IS_PLATFORM_ADMIN: "is_platform_admin",
+  /** Whether the logged-in user is a tenant sub-admin. */
+  IS_SUBADMIN: "is_subadmin",
+  /** Whether the active tenant's school setup is complete. */
+  IS_SETUP_COMPLETE: "is_setup_complete",
 } as const;
 
 export async function getAccessToken(): Promise<string | null> {
@@ -141,6 +147,48 @@ export async function setTenantName(name: string | null): Promise<void> {
   } else {
     localStorage.setItem(KEYS.TENANT_NAME, name.trim());
   }
+}
+
+/**
+ * Boolean flag helpers. A flag is "true" only when its stored string is exactly
+ * `"true"`. A `null` default (returned when the key is absent) lets callers
+ * distinguish "never persisted" from an explicit `false` if they ever need to —
+ * but most callers just coerce with `?? <default>`.
+ */
+async function getBoolFlag(key: string): Promise<boolean | null> {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(key);
+  if (raw === null) return null;
+  return raw === "true";
+}
+
+async function setBoolFlag(key: string, value: boolean): Promise<void> {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, value ? "true" : "false");
+}
+
+export async function getIsPlatformAdmin(): Promise<boolean | null> {
+  return getBoolFlag(KEYS.IS_PLATFORM_ADMIN);
+}
+
+export async function setIsPlatformAdmin(value: boolean): Promise<void> {
+  return setBoolFlag(KEYS.IS_PLATFORM_ADMIN, value);
+}
+
+export async function getIsSubAdmin(): Promise<boolean | null> {
+  return getBoolFlag(KEYS.IS_SUBADMIN);
+}
+
+export async function setIsSubAdmin(value: boolean): Promise<void> {
+  return setBoolFlag(KEYS.IS_SUBADMIN, value);
+}
+
+export async function getIsSetupComplete(): Promise<boolean | null> {
+  return getBoolFlag(KEYS.IS_SETUP_COMPLETE);
+}
+
+export async function setIsSetupComplete(value: boolean): Promise<void> {
+  return setBoolFlag(KEYS.IS_SETUP_COMPLETE, value);
 }
 
 export async function clearAuth(): Promise<void> {

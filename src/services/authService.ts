@@ -23,6 +23,12 @@ export interface LoginResponse {
   };
   permissions?: string[];
   enabled_features?: string[];
+  /** True when the user is a platform super-admin (god mode). */
+  is_platform_admin?: boolean;
+  /** True when the user is a tenant sub-admin. */
+  is_subadmin?: boolean;
+  /** The active tenant's school-setup completion state. */
+  is_setup_complete?: boolean;
   requires_tenant_choice?: boolean;
   tenants?: TenantChoice[];
 }
@@ -67,6 +73,12 @@ export interface ProfileResponse {
   roles: ProfileRole[];
   permissions: string[];
   enabled_features: string[];
+  /** True when the user is a platform super-admin (god mode). */
+  is_platform_admin?: boolean;
+  /** True when the user is a tenant sub-admin. */
+  is_subadmin?: boolean;
+  /** The active tenant's school-setup completion state. */
+  is_setup_complete?: boolean;
 }
 
 export const getProfile = () => apiGet<ProfileResponse>(API_ENDPOINTS.PROFILE);

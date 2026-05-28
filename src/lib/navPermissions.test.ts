@@ -45,12 +45,31 @@ describe("requiredPermissionsForPath", () => {
   });
 
   describe("always-ungated routes return null", () => {
-    it.each(["/dashboard", "/profile", "/help", "/school-setup/units"])(
-      "%s → null",
-      (path) => {
-        expect(requiredPermissionsForPath(path)).toBeNull();
-      }
-    );
+    it.each(["/dashboard", "/profile", "/help"])("%s → null", (path) => {
+      expect(requiredPermissionsForPath(path)).toBeNull();
+    });
+  });
+
+  describe("/school-setup gating", () => {
+    it("/school-setup resolves to [school_setup.manage]", () => {
+      expect(requiredPermissionsForPath("/school-setup")).toEqual([
+        "school_setup.manage",
+      ]);
+    });
+
+    it("/school-setup/units resolves to [school_setup.manage] (longest-prefix)", () => {
+      expect(requiredPermissionsForPath("/school-setup/units")).toEqual([
+        "school_setup.manage",
+      ]);
+    });
+
+    it("maps to the same array exported in ROUTE_PERMISSIONS", () => {
+      // A super-admin (system.manage) still passes via hasPermission's superuser
+      // shortcut; the matcher itself just returns the configured perms.
+      expect(requiredPermissionsForPath("/school-setup/grades")).toEqual(
+        ROUTE_PERMISSIONS["/school-setup"]
+      );
+    });
   });
 
   describe("unknown routes return null", () => {
