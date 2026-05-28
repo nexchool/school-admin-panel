@@ -28,7 +28,7 @@ export const TRANSPORT_NAV_PERMS = [
  * Map of route path → permissions (ANY-of). Each module includes its `.manage`
  * perm so the main Admin always passes.
  */
-export const ROUTE_PERMISSIONS: Record<string, string[]> = {
+export const ROUTE_PERMISSIONS = {
   "/academics": ["academics.read", "academics.manage"],
   "/students": [
     "student.read.all",
@@ -63,7 +63,7 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
     "fees.invoice.create",
     "fees.payment.record",
   ],
-  "/dashboard/transport": [...TRANSPORT_NAV_PERMS],
+  "/dashboard/transport": TRANSPORT_NAV_PERMS,
   "/holidays": ["holiday.read", "holiday.manage"],
   "/announcements": [
     "announcement.read.all",
@@ -75,36 +75,26 @@ export const ROUTE_PERMISSIONS: Record<string, string[]> = {
   "/hostel": ["hostel.read", "hostel.manage"],
   "/sub-admins": ["subadmin.manage"],
   "/audit-log": ["audit_log.view"],
-};
-
-/**
- * Routes that require no permission — always allowed for any authenticated
- * user. The school-setup flow keeps its own special handling in the Sidebar and
- * must never be gated/redirected here.
- */
-const ALWAYS_ALLOWED_PREFIXES = [
-  "/dashboard",
-  "/profile",
-  "/help",
-  "/school-setup",
-] as const;
-
-function isAlwaysAllowed(pathname: string): boolean {
-  return ALWAYS_ALLOWED_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  );
-}
+} as const satisfies Record<string, readonly string[]>;
 
 /**
  * Return the permission list for the longest-matching known route prefix, or
- * `null` when the route is unguarded / always-allowed.
+ * `null` when the route isn't present in `ROUTE_PERMISSIONS`.
  *
  * Longest-match matters: `/dashboard/finance` and `/dashboard/transport` must
- * resolve to their own permission sets before the always-allowed `/dashboard`.
+ * resolve to their own permission sets before the bare `/dashboard`.
+ *
+ * Routes absent from the map — `/dashboard`, `/profile`, `/help`,
+ * `/school-setup/*`, and other secondary/unlinked routes — intentionally
+ * resolve to `null` and are treated as ungated at the UI layer. The backend
+ * still enforces permissions on every request (defense-in-depth); this map only
+ * decides what the client hides/redirects.
  */
-export function requiredPermissionsForPath(pathname: string): string[] | null {
+export function requiredPermissionsForPath(
+  pathname: string
+): readonly string[] | null {
   // Longest known route prefix wins (handles nested /dashboard/* routes).
-  let bestMatch: { prefix: string; perms: string[] } | null = null;
+  let bestMatch: { prefix: string; perms: readonly string[] } | null = null;
   for (const [prefix, perms] of Object.entries(ROUTE_PERMISSIONS)) {
     const matches = pathname === prefix || pathname.startsWith(`${prefix}/`);
     if (matches && (!bestMatch || prefix.length > bestMatch.prefix.length)) {
@@ -113,8 +103,6 @@ export function requiredPermissionsForPath(pathname: string): string[] | null {
   }
   if (bestMatch) return bestMatch.perms;
 
-  // No guarded prefix matched — allow if it's an always-allowed route,
-  // otherwise treat unknown routes as unguarded (null) too.
-  if (isAlwaysAllowed(pathname)) return null;
+  // Unknown / unguarded route — backend remains the enforcement boundary.
   return null;
 }

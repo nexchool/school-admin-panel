@@ -44,7 +44,7 @@ type NavItem = {
   /** Tenant feature key required to see this nav item. Omit for core links. */
   feature?: string;
   /** Permissions (ANY-of) required to see this nav item. Omit for core links. */
-  permissions?: string[];
+  permissions?: readonly string[];
 };
 
 /** Everything above Profile. Items with `feature` are filtered by the
@@ -118,8 +118,8 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
       (!item.permissions || hasAnyPermission(item.permissions))
   );
   const showTransport =
-    isFeatureEnabled("transport") && hasAnyPermission([...TRANSPORT_NAV_PERMS]);
-  const showSubAdmins = hasPermission("subadmin.manage");
+    isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
+  const showSubAdmins = hasAnyPermission(ROUTE_PERMISSIONS["/sub-admins"]);
 
   // School Setup is visible to admins always, plus to anyone when setup is
   // still pending — that way an admin's first login screams "finish setup".
@@ -273,7 +273,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
           )}
 
           {/* Audit Log — visible only to users with audit_log.view permission */}
-          {hasPermission("audit_log.view") && (
+          {hasAnyPermission(ROUTE_PERMISSIONS["/audit-log"]) && (
             <Link
               href="/audit-log"
               onClick={handleNavClick}

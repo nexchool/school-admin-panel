@@ -62,8 +62,8 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   setAuthData: (data: LoginResponse) => Promise<void>;
   hasPermission: (permission: string) => boolean;
-  hasAnyPermission: (permissions: string[]) => boolean;
-  hasAllPermissions: (permissions: string[]) => boolean;
+  hasAnyPermission: (permissions: readonly string[]) => boolean;
+  hasAllPermissions: (permissions: readonly string[]) => boolean;
   isFeatureEnabled: (featureKey: string) => boolean;
   /** Resolved school / tenant display name for chrome (sidebar, etc.). */
   tenantName: string | null;
@@ -267,12 +267,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const hasAnyPermission = useCallback(
-    (perms: string[]) => perms.some((p) => hasPermission(p)),
+    (perms: readonly string[]) => perms.some((p) => hasPermission(p)),
     [hasPermission]
   );
 
   const hasAllPermissions = useCallback(
-    (perms: string[]) => perms.every((p) => hasPermission(p)),
+    (perms: readonly string[]) => perms.every((p) => hasPermission(p)),
     [hasPermission]
   );
 
