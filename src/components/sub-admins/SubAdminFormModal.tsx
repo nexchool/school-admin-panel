@@ -80,16 +80,16 @@ type FormValues = CreateValues & Partial<EditValues>;
 // Matrix state
 // ---------------------------------------------------------------------------
 
-type ModuleState = {
+export type ModuleState = {
   level: ModuleLevel;
   delete: boolean;
   refund: boolean;
   manage: boolean;
 };
 
-type MatrixState = Record<string, ModuleState>;
+export type MatrixState = Record<string, ModuleState>;
 
-function emptyMatrix(catalog: SubAdminModuleCatalogEntry[]): MatrixState {
+export function emptyMatrix(catalog: SubAdminModuleCatalogEntry[]): MatrixState {
   const state: MatrixState = {};
   for (const mod of catalog) {
     state[mod.key] = { level: "none", delete: false, refund: false, manage: false };
@@ -97,7 +97,7 @@ function emptyMatrix(catalog: SubAdminModuleCatalogEntry[]): MatrixState {
   return state;
 }
 
-function matrixFromSubAdmin(
+export function matrixFromSubAdmin(
   catalog: SubAdminModuleCatalogEntry[],
   subAdmin: SubAdmin
 ): MatrixState {
@@ -114,7 +114,7 @@ function matrixFromSubAdmin(
   return state;
 }
 
-function matrixToSelection(
+export function matrixToSelection(
   catalog: SubAdminModuleCatalogEntry[],
   matrix: MatrixState
 ): SubAdminModuleSelection[] {
@@ -133,7 +133,9 @@ function matrixToSelection(
   return selection;
 }
 
-function selectionGrantsAnything(selection: SubAdminModuleSelection[]): boolean {
+export function selectionGrantsAnything(
+  selection: SubAdminModuleSelection[]
+): boolean {
   return selection.some(
     (s) => s.level !== "none" || s.delete || s.refund || s.manage
   );
