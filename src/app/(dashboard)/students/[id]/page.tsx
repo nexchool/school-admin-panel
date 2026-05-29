@@ -68,7 +68,7 @@ export default function StudentDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string | undefined;
-  const { data: student, isLoading } = useStudent(id ?? null);
+  const { data: student, isLoading, isError } = useStudent(id ?? null);
   const { data: classes = [] } = useClasses();
   const updateMutation = useUpdateStudent();
   const deleteMutation = useDeleteStudent();
@@ -102,13 +102,20 @@ export default function StudentDetailPage() {
     );
   }
 
-  if (!student) {
+  if (isError || !student) {
     return (
-      <div className="space-y-4">
-        <p className="text-destructive">Student not found.</p>
-        <Link href="/students">
-          <Button variant="outline">Back to Students</Button>
-        </Link>
+      <div className="flex min-h-[300px] items-center justify-center">
+        <div className="max-w-md space-y-4 rounded-lg border border-border bg-card p-8 text-center">
+          <p className="text-sm font-medium text-foreground">
+            This student isn&apos;t available
+          </p>
+          <p className="text-sm text-muted-foreground">
+            You may not have access to this branch, or the record was removed.
+          </p>
+          <Link href="/students">
+            <Button variant="outline">Back to Students</Button>
+          </Link>
+        </div>
       </div>
     );
   }

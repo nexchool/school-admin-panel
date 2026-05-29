@@ -64,7 +64,7 @@ export default function ClassDetailPage() {
     "class.manage",
   ]);
   const [detailTab, setDetailTab] = useState<ClassDetailTab>("students");
-  const { data: cls, isLoading } = useClass(id ?? null);
+  const { data: cls, isLoading, isError } = useClass(id ?? null);
   const { data: academicYears = [] } = useAcademicYears(false);
   const [availableTeachers, setAvailableTeachers] = useState<
     { id: string; name: string; employee_id: string }[]
@@ -170,13 +170,20 @@ export default function ClassDetailPage() {
     );
   }
 
-  if (!cls) {
+  if (isError || !cls) {
     return (
-      <div className="space-y-4">
-        <p className="text-destructive">Class not found.</p>
-        <Link href="/classes">
-          <Button variant="outline">Back to Classes</Button>
-        </Link>
+      <div className="flex min-h-[300px] items-center justify-center">
+        <div className="max-w-md space-y-4 rounded-lg border border-border bg-card p-8 text-center">
+          <p className="text-sm font-medium text-foreground">
+            This class isn&apos;t available
+          </p>
+          <p className="text-sm text-muted-foreground">
+            You may not have access to this branch, or the record was removed.
+          </p>
+          <Link href="/classes">
+            <Button variant="outline">Back to Classes</Button>
+          </Link>
+        </div>
       </div>
     );
   }
