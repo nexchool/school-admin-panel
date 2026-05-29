@@ -32,6 +32,8 @@ import {
   setIsSubAdmin,
   getIsSetupComplete,
   setIsSetupComplete,
+  getAllowedUnitIds,
+  setAllowedUnitIds,
   clearAuth,
   setSessionCookie,
 } from "@/lib/storage";
@@ -84,6 +86,12 @@ interface AuthContextType {
    * never flash a "setup incomplete" banner before login/profile resolves.
    */
   isSetupComplete: boolean;
+  /**
+   * Branch (school-unit) ids the user is restricted to. `null` = unrestricted
+   * (all branches — full School Admin / platform admin); an array is the
+   * explicit allowed set used to lock the branch switcher.
+   */
+  allowedUnitIds: string[] | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -115,6 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Default true so first paint (before login/profile resolves) never flashes a
   // false "setup incomplete" banner.
   const [isSetupComplete, setIsSetupCompleteState] = useState(true);
+  // null = unrestricted (default); an array restricts the user to those units.
+  const [allowedUnitIds, setAllowedUnitIdsState] = useState<string[] | null>(
+    null
+  );
 
   const setAuthData = useCallback(async (data: LoginResponse) => {
     if (!data.access_token || !data.refresh_token || !data.user) return;
@@ -123,6 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const subAdmin = data.is_subadmin ?? false;
     // Default true: absence of the flag should never trigger a false banner.
     const setupComplete = data.is_setup_complete ?? true;
+    // null/absent → unrestricted (all branches).
+    const allowedUnits = data.allowed_unit_ids ?? null;
     const tenantLabel =
       data.tenant_name !== undefined
         ? (typeof data.tenant_name === "string" ? data.tenant_name.trim() : "") || null
@@ -138,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsPlatformAdmin(platformAdmin),
       setIsSubAdmin(subAdmin),
       setIsSetupComplete(setupComplete),
+      setAllowedUnitIds(allowedUnits),
     ];
     if (data.tenant_id) tasks.push(setTenantId(data.tenant_id));
     if (tenantLabel !== undefined) {
@@ -158,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsPlatformAdminState(platformAdmin);
     setIsSubAdminState(subAdmin);
     setIsSetupCompleteState(setupComplete);
+    setAllowedUnitIdsState(allowedUnits);
     if (tenantLabel !== undefined) {
       setTenantNameState(tenantLabel);
     }
@@ -179,9 +195,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const platformAdmin = profile.is_platform_admin ?? false;
       const subAdmin = profile.is_subadmin ?? false;
       const setupComplete = profile.is_setup_complete ?? true;
+      const allowedUnits = profile.allowed_unit_ids ?? null;
       setIsPlatformAdminState(platformAdmin);
       setIsSubAdminState(subAdmin);
       setIsSetupCompleteState(setupComplete);
+      setAllowedUnitIdsState(allowedUnits);
       await Promise.all([
         setPermissions(profile.permissions ?? []),
         setEnabledFeatures(profile.enabled_features ?? []),
@@ -190,6 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsPlatformAdmin(platformAdmin),
         setIsSubAdmin(subAdmin),
         setIsSetupComplete(setupComplete),
+        setAllowedUnitIds(allowedUnits),
       ]);
     } catch (err) {
       console.error("Failed to refresh profile:", err);
@@ -211,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedIsPlatformAdmin,
           storedIsSubAdmin,
           storedIsSetupComplete,
+          storedAllowedUnitIds,
         ] = await Promise.all([
           getAccessToken(),
           getRefreshToken(),
@@ -223,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           getIsPlatformAdmin(),
           getIsSubAdmin(),
           getIsSetupComplete(),
+          getAllowedUnitIds(),
         ]);
 
         if (accessToken && refreshToken && userData) {
@@ -236,6 +257,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsSubAdminState(storedIsSubAdmin ?? false);
           // null (never persisted) → true, so we never flash a false banner.
           setIsSetupCompleteState(storedIsSetupComplete ?? true);
+          // null (never persisted) → unrestricted.
+          setAllowedUnitIdsState(storedAllowedUnitIds);
         }
       } catch (err) {
         console.error("Auth check error:", err);
@@ -306,6 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsPlatformAdminState(false);
     setIsSubAdminState(false);
     setIsSetupCompleteState(true);
+    setAllowedUnitIdsState(null);
   }, [queryClient]);
 
   const hasPermission = useCallback(
@@ -363,6 +387,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPlatformAdmin,
         isSubAdmin,
         isSetupComplete,
+        allowedUnitIds,
       }}
     >
       {children}

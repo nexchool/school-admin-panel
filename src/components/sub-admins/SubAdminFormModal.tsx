@@ -24,6 +24,7 @@ import {
   type SubAdminModuleCatalogEntry,
   type SubAdminModuleSelection,
 } from "@/services/subAdminsService";
+import type { SchoolUnit } from "@/services/schoolUnitsService";
 
 // ---------------------------------------------------------------------------
 // Labels for levels / toggles (display only — keys are the contract)
@@ -142,16 +143,80 @@ export function selectionGrantsAnything(
 }
 
 // ---------------------------------------------------------------------------
+// Branch-access pure helpers (mirror server/modules/sub_admins/catalog.py)
+// ---------------------------------------------------------------------------
+
+/** "all" = unrestricted (all branches); "specific" = a fixed branch set. */
+export type BranchMode = "all" | "specific";
+
+/**
+ * Module keys disabled in the matrix for the given branch mode.
+ *
+ * In "specific" mode a branch-restricted sub-admin may only manage
+ * branch-scoped modules, so every non-branch-aware module is disabled. In "all"
+ * mode nothing is disabled. The branch-aware flag comes from the catalog
+ * (server step 0) — never hardcode the module list here.
+ */
+export function disabledModuleKeys(
+  catalog: SubAdminModuleCatalogEntry[],
+  mode: BranchMode
+): Set<string> {
+  if (mode === "all") return new Set();
+  return new Set(catalog.filter((m) => !m.branch_aware).map((m) => m.key));
+}
+
+/**
+ * Validate the branch-access selection, mirroring the backend 422 rules so the
+ * user gets inline errors instead of a server round-trip:
+ *   - "specific" requires ≥1 branch.
+ *   - "specific" forbids granting any non-branch-aware module.
+ *   - "all" allows any module and ignores branch selection.
+ *
+ * Returns null when valid, else a human-readable message.
+ */
+export function validateBranchSelection(
+  catalog: SubAdminModuleCatalogEntry[],
+  mode: BranchMode,
+  branchUnitIds: string[],
+  selection: SubAdminModuleSelection[]
+): string | null {
+  if (mode === "all") return null;
+  if (branchUnitIds.length === 0) {
+    return "Select at least one branch for a branch-restricted sub-admin.";
+  }
+  const nonBranchAware = disabledModuleKeys(catalog, "specific");
+  const granted = selection
+    .filter((s) => s.level !== "none" || s.delete || s.refund || s.manage)
+    .map((s) => s.key);
+  const offenders = granted.filter((key) => nonBranchAware.has(key));
+  if (offenders.length > 0) {
+    const labels = offenders.map(
+      (key) => catalog.find((m) => m.key === key)?.label ?? key
+    );
+    return `Branch-restricted admins can only manage branch-scoped modules. Remove: ${labels.join(", ")}.`;
+  }
+  return null;
+}
+
+/** Resolve the initial branch mode for a sub-admin (edit pre-population). */
+export function branchModeFromSubAdmin(subAdmin?: SubAdmin | null): BranchMode {
+  return subAdmin && subAdmin.branch_unit_ids.length > 0 ? "specific" : "all";
+}
+
+// ---------------------------------------------------------------------------
 // Module matrix sub-component
 // ---------------------------------------------------------------------------
 
 function ModulePermissionMatrix({
   catalog,
   matrix,
+  disabledKeys,
   onChange,
 }: {
   catalog: SubAdminModuleCatalogEntry[];
   matrix: MatrixState;
+  /** Module keys locked because the branch mode forbids granting them. */
+  disabledKeys: Set<string>;
   onChange: (key: string, next: ModuleState) => void;
 }) {
   return (
@@ -159,14 +224,27 @@ function ModulePermissionMatrix({
       {catalog.map((mod) => {
         const state = matrix[mod.key];
         if (!state) return null;
+        const moduleDisabled = disabledKeys.has(mod.key);
         const levelOptions: ModuleLevel[] = ["none", ...mod.levels];
         return (
           <div
             key={mod.key}
-            className="rounded-lg border border-border p-3"
+            className={
+              moduleDisabled
+                ? "rounded-lg border border-dashed border-border bg-muted/40 p-3 opacity-60"
+                : "rounded-lg border border-border p-3"
+            }
+            aria-disabled={moduleDisabled}
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm font-medium">{mod.label}</span>
+              <span className="text-sm font-medium">
+                {mod.label}
+                {moduleDisabled && (
+                  <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal uppercase tracking-wide text-muted-foreground">
+                    Not branch-scoped
+                  </span>
+                )}
+              </span>
               <div className="flex flex-wrap gap-1.5">
                 {levelOptions.map((level) => {
                   const active = state.level === level;
@@ -174,11 +252,12 @@ function ModulePermissionMatrix({
                     <button
                       key={level}
                       type="button"
+                      disabled={moduleDisabled}
                       onClick={() => onChange(mod.key, { ...state, level })}
                       className={
                         active
-                          ? "rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
-                          : "rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted"
+                          ? "rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                          : "rounded-md border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:hover:bg-background"
                       }
                       aria-pressed={active}
                     >
@@ -195,8 +274,9 @@ function ModulePermissionMatrix({
                   const checked = Boolean(
                     state[toggle as keyof ModuleState]
                   );
-                  // Toggles only meaningful once at least "view" is granted.
-                  const disabled = state.level === "none";
+                  // Toggles only meaningful once at least "view" is granted,
+                  // and never on a module disabled by branch mode.
+                  const disabled = moduleDisabled || state.level === "none";
                   return (
                     <label
                       key={toggle}
@@ -240,12 +320,19 @@ interface SubAdminFormModalProps {
   subAdmin?: SubAdmin | null;
   catalog: SubAdminModuleCatalogEntry[];
   isCatalogLoading?: boolean;
+  /**
+   * Branches selectable for "Specific branches" mode. Already limited to the
+   * acting admin's allowed units by the backend (`GET /api/school-units/`).
+   */
+  units?: SchoolUnit[];
+  isUnitsLoading?: boolean;
   saving?: boolean;
   onSubmit: (payload: {
     name: string;
     email: string;
     password?: string;
     modules: SubAdminModuleSelection[];
+    branch_unit_ids: string[];
   }) => Promise<void>;
 }
 
@@ -255,6 +342,8 @@ export function SubAdminFormModal({
   subAdmin,
   catalog,
   isCatalogLoading,
+  units = [],
+  isUnitsLoading,
   saving,
   onSubmit,
 }: SubAdminFormModalProps) {
@@ -278,6 +367,9 @@ export function SubAdminFormModal({
   const [matrix, setMatrix] = useState<MatrixState>(() => emptyMatrix(catalog));
   const [matrixError, setMatrixError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [branchMode, setBranchMode] = useState<BranchMode>("all");
+  const [branchUnitIds, setBranchUnitIds] = useState<string[]>([]);
+  const [branchError, setBranchError] = useState<string | null>(null);
 
   // Re-seed RHF + matrix whenever the modal opens for a new target, or once the
   // catalog finishes loading while open. We derive during render (the project's
@@ -298,11 +390,48 @@ export function SubAdminFormModal({
     setMatrix(
       subAdmin ? matrixFromSubAdmin(catalog, subAdmin) : emptyMatrix(catalog)
     );
+    setBranchMode(branchModeFromSubAdmin(subAdmin));
+    setBranchUnitIds(subAdmin?.branch_unit_ids ?? []);
     setMatrixError(null);
     setFormError(null);
+    setBranchError(null);
   }
 
+  const disabledKeys = useMemo(
+    () => disabledModuleKeys(catalog, branchMode),
+    [catalog, branchMode]
+  );
+
+  // Switching to "Specific branches" clears any selection on now-disabled
+  // (non-branch-aware) modules so a stale grant can never be submitted.
+  const handleBranchModeChange = (mode: BranchMode) => {
+    setBranchMode(mode);
+    setBranchError(null);
+    if (mode === "specific") {
+      const disabled = disabledModuleKeys(catalog, "specific");
+      setMatrix((prev) => {
+        const next: MatrixState = { ...prev };
+        for (const key of disabled) {
+          if (next[key]) {
+            next[key] = { level: "none", delete: false, refund: false, manage: false };
+          }
+        }
+        return next;
+      });
+    }
+  };
+
+  const toggleBranch = (unitId: string) => {
+    setBranchError(null);
+    setBranchUnitIds((prev) =>
+      prev.includes(unitId)
+        ? prev.filter((id) => id !== unitId)
+        : [...prev, unitId]
+    );
+  };
+
   const handleMatrixChange = (key: string, next: ModuleState) => {
+    if (disabledKeys.has(key)) return; // branch mode locks this module
     // Clearing the level to "none" also clears its toggles (backend ignores
     // toggles without a level, but the UI should reflect that).
     const normalized: ModuleState =
@@ -315,9 +444,21 @@ export function SubAdminFormModal({
 
   const submit = handleSubmit(async (values) => {
     setFormError(null);
+    setBranchError(null);
     const selection = matrixToSelection(catalog, matrix);
     if (!selectionGrantsAnything(selection)) {
       setMatrixError("Select at least one module to grant.");
+      return;
+    }
+    // Mirror the backend 422 rules so the user gets inline errors first.
+    const branchValidation = validateBranchSelection(
+      catalog,
+      branchMode,
+      branchUnitIds,
+      selection
+    );
+    if (branchValidation) {
+      setBranchError(branchValidation);
       return;
     }
     try {
@@ -326,6 +467,8 @@ export function SubAdminFormModal({
         email: values.email.trim(),
         ...(isEdit ? {} : { password: values.password }),
         modules: selection,
+        // "All branches" → empty array (unrestricted) per the backend contract.
+        branch_unit_ids: branchMode === "specific" ? branchUnitIds : [],
       });
       onOpenChange(false);
     } catch (err) {
@@ -334,6 +477,9 @@ export function SubAdminFormModal({
         err instanceof Error ? err.message : "Failed to save sub-admin";
       if (/email/i.test(message) && /exist|taken|duplicate/i.test(message)) {
         setError("email", { message });
+      } else if (/branch/i.test(message)) {
+        // Defense in depth: a server-side branch/module mismatch 422.
+        setBranchError(message);
       } else {
         setFormError(message);
       }
@@ -428,6 +574,67 @@ export function SubAdminFormModal({
           </div>
 
           <div className="space-y-2">
+            <Label>Branch access</Label>
+            <div className="flex flex-wrap gap-2">
+              {(["all", "specific"] as BranchMode[]).map((mode) => {
+                const active = branchMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleBranchModeChange(mode)}
+                    className={
+                      active
+                        ? "rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                        : "rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground hover:bg-muted"
+                    }
+                    aria-pressed={active}
+                  >
+                    {mode === "all" ? "All branches" : "Specific branches"}
+                  </button>
+                );
+              })}
+            </div>
+            {branchMode === "specific" && (
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Branch-restricted admins can only manage branch-scoped
+                  modules.
+                </p>
+                {isUnitsLoading ? (
+                  <p className="py-2 text-sm text-muted-foreground">
+                    Loading branches…
+                  </p>
+                ) : units.length === 0 ? (
+                  <p className="py-2 text-sm text-muted-foreground">
+                    No branches available to assign.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {units.map((unit) => (
+                      <label
+                        key={unit.id}
+                        className="flex items-center gap-2 text-sm text-foreground"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={branchUnitIds.includes(unit.id)}
+                          onChange={() => toggleBranch(unit.id)}
+                          className="size-4 rounded border-input"
+                        />
+                        <span>{unit.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {branchError && (
+              <p className="text-sm text-destructive">{branchError}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Module permissions</Label>
               {matrixError && (
@@ -446,6 +653,7 @@ export function SubAdminFormModal({
               <ModulePermissionMatrix
                 catalog={catalog}
                 matrix={matrix}
+                disabledKeys={disabledKeys}
                 onChange={handleMatrixChange}
               />
             )}

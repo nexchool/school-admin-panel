@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  branchModeFromSubAdmin,
+  disabledModuleKeys,
   emptyMatrix,
   matrixFromSubAdmin,
   matrixToSelection,
   selectionGrantsAnything,
+  validateBranchSelection,
 } from "./SubAdminFormModal";
 import type {
   SubAdmin,
@@ -18,12 +21,14 @@ const CATALOG: SubAdminModuleCatalogEntry[] = [
     label: "Students",
     levels: ["view", "edit", "manage"],
     toggles: ["delete"],
+    branch_aware: true,
   },
   {
     key: "classes",
     label: "Classes",
     levels: ["view", "manage"],
     toggles: [],
+    branch_aware: true,
   },
 ];
 
@@ -99,6 +104,7 @@ describe("matrixFromSubAdmin round-trips a summary into matrix state", () => {
       name: "Sub Admin",
       email: "sa@school.com",
       status: "active",
+      branch_unit_ids: [],
       modules: [
         {
           key: "students",
@@ -133,6 +139,7 @@ describe("matrixFromSubAdmin round-trips a summary into matrix state", () => {
       name: "X",
       email: "x@school.com",
       status: "active",
+      branch_unit_ids: [],
       modules: [
         {
           key: "ghost",
@@ -147,5 +154,124 @@ describe("matrixFromSubAdmin round-trips a summary into matrix state", () => {
     const matrix = matrixFromSubAdmin(CATALOG, subAdmin);
     expect(matrix.ghost).toBeUndefined();
     expect(Object.keys(matrix).sort()).toEqual(["classes", "students"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch-access helpers
+// ---------------------------------------------------------------------------
+
+// Mixed catalog: two branch-aware modules + two non-branch-aware ones.
+const MIXED_CATALOG: SubAdminModuleCatalogEntry[] = [
+  {
+    key: "students",
+    label: "Students",
+    levels: ["view", "edit"],
+    toggles: ["delete"],
+    branch_aware: true,
+  },
+  {
+    key: "classes",
+    label: "Classes",
+    levels: ["view", "manage"],
+    toggles: [],
+    branch_aware: true,
+  },
+  {
+    key: "teachers",
+    label: "Teachers",
+    levels: ["view", "edit"],
+    toggles: ["delete"],
+    branch_aware: false,
+  },
+  {
+    key: "transport",
+    label: "Transport",
+    levels: ["view", "manage"],
+    toggles: [],
+    branch_aware: false,
+  },
+];
+
+describe("disabledModuleKeys", () => {
+  it("disables exactly the non-branch-aware modules in specific mode", () => {
+    expect(disabledModuleKeys(MIXED_CATALOG, "specific")).toEqual(
+      new Set(["teachers", "transport"])
+    );
+  });
+
+  it("disables nothing in all-branches mode", () => {
+    expect(disabledModuleKeys(MIXED_CATALOG, "all").size).toBe(0);
+  });
+});
+
+describe("validateBranchSelection", () => {
+  it("rejects specific mode with zero branches", () => {
+    const error = validateBranchSelection(
+      MIXED_CATALOG,
+      "specific",
+      [],
+      [{ key: "students", level: "view" }]
+    );
+    expect(error).toMatch(/at least one branch/i);
+  });
+
+  it("rejects granting a non-branch-aware module in specific mode", () => {
+    const error = validateBranchSelection(
+      MIXED_CATALOG,
+      "specific",
+      ["unit-1"],
+      [{ key: "teachers", level: "view" }]
+    );
+    expect(error).toMatch(/branch-scoped/i);
+    expect(error).toMatch(/Teachers/);
+  });
+
+  it("accepts specific mode with branches + only branch-aware modules", () => {
+    expect(
+      validateBranchSelection(
+        MIXED_CATALOG,
+        "specific",
+        ["unit-1"],
+        [{ key: "students", level: "edit" }]
+      )
+    ).toBeNull();
+  });
+
+  it("accepts any module in all-branches mode and ignores branches", () => {
+    expect(
+      validateBranchSelection(
+        MIXED_CATALOG,
+        "all",
+        [],
+        [{ key: "teachers", level: "edit" }]
+      )
+    ).toBeNull();
+  });
+});
+
+describe("branchModeFromSubAdmin", () => {
+  const base: Omit<SubAdmin, "branch_unit_ids"> = {
+    id: "sa",
+    name: "N",
+    email: "n@s.com",
+    status: "active",
+    modules: [],
+  };
+
+  it("is 'all' when no sub-admin (create mode)", () => {
+    expect(branchModeFromSubAdmin(null)).toBe("all");
+  });
+
+  it("is 'all' when branch_unit_ids is empty (unrestricted)", () => {
+    expect(branchModeFromSubAdmin({ ...base, branch_unit_ids: [] })).toBe(
+      "all"
+    );
+  });
+
+  it("is 'specific' when branch_unit_ids is non-empty", () => {
+    expect(
+      branchModeFromSubAdmin({ ...base, branch_unit_ids: ["u1"] })
+    ).toBe("specific");
   });
 });

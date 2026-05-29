@@ -45,6 +45,7 @@ import {
   useSuspendSubAdmin,
   useUpdateSubAdmin,
 } from "@/hooks/useSubAdmins";
+import { useSchoolUnits } from "@/hooks/useSchoolUnits";
 import type {
   SubAdmin,
   SubAdminModuleSelection,
@@ -137,6 +138,11 @@ export default function SubAdminsPage() {
   );
   const { data: catalog = [], isLoading: isCatalogLoading } =
     useSubAdminModules(canManage);
+  // Branches selectable in "Specific branches" mode — already limited to the
+  // acting admin's allowed units by the backend.
+  const { data: units = [], isLoading: isUnitsLoading } = useSchoolUnits({
+    enabled: canManage,
+  });
 
   const createMutation = useCreateSubAdmin();
   const updateMutation = useUpdateSubAdmin();
@@ -187,11 +193,16 @@ export default function SubAdminsPage() {
     email: string;
     password?: string;
     modules: SubAdminModuleSelection[];
+    branch_unit_ids: string[];
   }) => {
     if (editing) {
       await updateMutation.mutateAsync({
         id: editing.id,
-        payload: { name: payload.name, modules: payload.modules },
+        payload: {
+          name: payload.name,
+          modules: payload.modules,
+          branch_unit_ids: payload.branch_unit_ids,
+        },
       });
       toastSuccess("Sub-admin updated");
     } else {
@@ -203,6 +214,7 @@ export default function SubAdminsPage() {
         email: payload.email,
         password: payload.password,
         modules: payload.modules,
+        branch_unit_ids: payload.branch_unit_ids,
       });
       toastSuccess("Sub-admin created");
     }
@@ -400,6 +412,8 @@ export default function SubAdminsPage() {
         subAdmin={editing}
         catalog={catalog}
         isCatalogLoading={isCatalogLoading}
+        units={units}
+        isUnitsLoading={isUnitsLoading}
         saving={createMutation.isPending || updateMutation.isPending}
         onSubmit={handleFormSubmit}
       />

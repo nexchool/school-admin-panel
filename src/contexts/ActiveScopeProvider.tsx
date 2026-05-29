@@ -3,6 +3,10 @@
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/hooks";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
+import {
+  isLockedToSingleBranch,
+  resolveDefaultUnitId,
+} from "@/lib/branchScope";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useSetupStatus } from "@/hooks/useSchoolSetup";
 import { ActiveUnitProvider, useActiveUnit } from "./ActiveUnitContext";
@@ -12,7 +16,7 @@ import {
 } from "./ActiveAcademicYearContext";
 
 function ActiveScopeSync() {
-  const { user, isAuthenticated, isPlatformAdmin } = useAuth();
+  const { user, isAuthenticated, isPlatformAdmin, allowedUnitIds } = useAuth();
   // Only pre-fetch tenant scope data when the user is signed in — otherwise
   // these calls 401 on the login page and trigger the auth redirect handler.
   const { data: units } = useSchoolUnits({ enabled: isAuthenticated });
@@ -30,13 +34,26 @@ function ActiveScopeSync() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (unitId) return; // already set; don't override user's switcher choice
-    const next =
-      user?.default_unit_id ??
-      units?.find((u) => u.status === "active")?.id ??
-      null;
-    if (next) setUnitId(next);
-  }, [isAuthenticated, user?.default_unit_id, units, unitId, setUnitId]);
+    const unitList = units ?? [];
+    const locked = isLockedToSingleBranch(allowedUnitIds, unitList);
+    // For a restricted-to-one user, force the active unit to the only allowed
+    // branch even if a stale/other unitId is already set. Otherwise respect a
+    // user's existing switcher choice.
+    if (unitId && !locked) return;
+    const next = resolveDefaultUnitId(
+      allowedUnitIds,
+      unitList,
+      user?.default_unit_id
+    );
+    if (next && next !== unitId) setUnitId(next);
+  }, [
+    isAuthenticated,
+    user?.default_unit_id,
+    units,
+    unitId,
+    setUnitId,
+    allowedUnitIds,
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

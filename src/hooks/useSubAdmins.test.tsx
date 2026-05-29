@@ -104,6 +104,7 @@ describe("useSubAdmins mutations invalidate the tenant-agnostic prefix", () => {
       email: "a@b.com",
       password: "password123",
       modules: [],
+      branch_unit_ids: [],
     });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 

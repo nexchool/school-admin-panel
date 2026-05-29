@@ -39,6 +39,11 @@ export interface SubAdmin {
   email: string;
   status: SubAdminStatus;
   modules: SubAdminModuleSummary[];
+  /**
+   * Branch (school-unit) ids this sub-admin is restricted to. An empty array
+   * means ALL branches (unrestricted). Always present on list/detail responses.
+   */
+  branch_unit_ids: string[];
   /** Present only on detail / create / update responses. */
   created_at?: string | null;
   updated_at?: string | null;
@@ -52,6 +57,12 @@ export interface SubAdminModuleCatalogEntry {
   levels: ModuleLevel[];
   /** Toggle keys the module supports (e.g. "delete", "refund", "manage"). */
   toggles: string[];
+  /**
+   * True when the module's data is scoped to a branch and can therefore be
+   * granted to a branch-restricted sub-admin. Non-branch-aware modules may only
+   * be granted to unrestricted (all-branches) sub-admins.
+   */
+  branch_aware: boolean;
 }
 
 /** A single module grant sent to create/update. */
@@ -89,11 +100,15 @@ export interface CreateSubAdminPayload {
   email: string;
   password: string;
   modules: SubAdminModuleSelection[];
+  /** Branch ids to restrict to. Empty array = all branches (unrestricted). */
+  branch_unit_ids: string[];
 }
 
 export interface UpdateSubAdminPayload {
   name?: string;
   modules?: SubAdminModuleSelection[];
+  /** Branch ids to restrict to. Empty array = all branches (unrestricted). */
+  branch_unit_ids?: string[];
 }
 
 // Raw list envelope shape the backend route returns.

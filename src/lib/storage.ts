@@ -19,6 +19,12 @@ const KEYS = {
   IS_SUBADMIN: "is_subadmin",
   /** Whether the active tenant's school setup is complete. */
   IS_SETUP_COMPLETE: "is_setup_complete",
+  /**
+   * Branch (school-unit) ids the user is restricted to. Absent key = never
+   * persisted; stored `"null"` = unrestricted (all branches); JSON array =
+   * the allowed set.
+   */
+  ALLOWED_UNIT_IDS: "allowed_unit_ids",
 } as const;
 
 export async function getAccessToken(): Promise<string | null> {
@@ -189,6 +195,32 @@ export async function getIsSetupComplete(): Promise<boolean | null> {
 
 export async function setIsSetupComplete(value: boolean): Promise<void> {
   return setBoolFlag(KEYS.IS_SETUP_COMPLETE, value);
+}
+
+/**
+ * Branch (school-unit) restriction. `null` means unrestricted (all branches);
+ * an array is the explicit allowed set. The key being absent (never persisted)
+ * is also surfaced as `null` so callers default to "unrestricted".
+ */
+export async function getAllowedUnitIds(): Promise<string[] | null> {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(KEYS.ALLOWED_UNIT_IDS);
+  if (raw === null) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as string[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setAllowedUnitIds(
+  value: string[] | null
+): Promise<void> {
+  if (typeof window === "undefined") return;
+  // Store `null` verbatim so hydration can distinguish "unrestricted" from a
+  // genuine empty allow-list (which would lock the user out of every branch).
+  localStorage.setItem(KEYS.ALLOWED_UNIT_IDS, JSON.stringify(value));
 }
 
 export async function clearAuth(): Promise<void> {

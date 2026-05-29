@@ -29,6 +29,11 @@ export interface LoginResponse {
   is_subadmin?: boolean;
   /** The active tenant's school-setup completion state. */
   is_setup_complete?: boolean;
+  /**
+   * Branch (school-unit) ids the user is restricted to. `null` (or absent) =
+   * unrestricted (all branches); an array is the explicit allowed set.
+   */
+  allowed_unit_ids?: string[] | null;
   requires_tenant_choice?: boolean;
   tenants?: TenantChoice[];
 }
@@ -79,6 +84,11 @@ export interface ProfileResponse {
   is_subadmin?: boolean;
   /** The active tenant's school-setup completion state. */
   is_setup_complete?: boolean;
+  /**
+   * Branch (school-unit) ids the user is restricted to. `null` (or absent) =
+   * unrestricted (all branches); an array is the explicit allowed set.
+   */
+  allowed_unit_ids?: string[] | null;
 }
 
 export const getProfile = () => apiGet<ProfileResponse>(API_ENDPOINTS.PROFILE);

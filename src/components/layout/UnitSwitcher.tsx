@@ -4,6 +4,8 @@ import { Building2, ChevronDown } from "lucide-react";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useUpdateDefaultUnit } from "@/hooks/useDefaultUnit";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { isLockedToSingleBranch } from "@/lib/branchScope";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,9 +18,15 @@ import { Badge } from "@/components/ui/badge";
 export function UnitSwitcher() {
   const { data: units = [] } = useSchoolUnits();
   const { unitId, setUnitId } = useActiveUnit();
+  const { allowedUnitIds } = useAuth();
   const update = useUpdateDefaultUnit();
 
-  if (units.length <= 1) return null;
+  // A restricted user with a single branch has nothing to switch between —
+  // hide the control entirely (the active unit is already locked in
+  // ActiveScopeSync). This also covers the existing ≤1-unit case.
+  if (units.length <= 1 || isLockedToSingleBranch(allowedUnitIds, units)) {
+    return null;
+  }
 
   const active =
     units.find((u) => u.id === unitId) ??
