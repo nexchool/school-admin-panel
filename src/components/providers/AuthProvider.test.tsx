@@ -4,6 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 
 import { AuthProvider, useAuth } from "./AuthProvider";
+import {
+  notifyForbidden,
+  __resetForbiddenHandlerForTests,
+} from "@/lib/forbiddenHandler";
 
 type Auth = ReturnType<typeof useAuth>;
 
@@ -86,6 +90,7 @@ beforeEach(() => {
   loginMock.mockReset();
   getProfileMock.mockReset();
   logoutMock.mockReset();
+  __resetForbiddenHandlerForTests();
 });
 
 describe("AuthProvider allowedUnitIds plumbing", () => {
@@ -181,5 +186,57 @@ describe("AuthProvider allowedUnitIds plumbing", () => {
     });
     expect(holder.current!.allowedUnitIds).toBeNull();
     expect(localStorage.getItem("allowed_unit_ids")).toBeNull();
+  });
+});
+
+describe("AuthProvider 403 self-correct", () => {
+  const PROFILE = {
+    user: { id: 1, email: "a@b.com" },
+    roles: [],
+    permissions: [],
+    enabled_features: [],
+  };
+
+  it("refreshes the profile when a 403 fires after login (loop-guarded to once)", async () => {
+    loginMock.mockResolvedValue({ ...LOGIN_BASE });
+    getProfileMock.mockResolvedValue(PROFILE);
+
+    const holder = renderWithCapture();
+    await waitFor(() => expect(holder.current).not.toBeNull());
+
+    await act(async () => {
+      await holder.current!.login("a@b.com", "password123");
+    });
+
+    // login() already calls refreshUser once; baseline from there.
+    const baseline = getProfileMock.mock.calls.length;
+
+    // Two rapid 403s → registry throttles to a single refresh.
+    await act(async () => {
+      notifyForbidden(1000);
+      notifyForbidden(1100);
+      // Let the async refreshUser settle.
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(getProfileMock.mock.calls.length).toBe(baseline + 1)
+    );
+  });
+
+  it("does not refresh on a 403 when no user is authenticated", async () => {
+    // Fresh mount, never logged in.
+    const holder = renderWithCapture();
+    await waitFor(() => expect(holder.current).not.toBeNull());
+    await waitFor(() => expect(holder.current!.isLoading).toBe(false));
+
+    expect(holder.current!.isAuthenticated).toBe(false);
+
+    await act(async () => {
+      notifyForbidden(1000);
+      await Promise.resolve();
+    });
+
+    expect(getProfileMock).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import { getApiUrl } from "@/lib/constants";
 import { isPublicAuthApiUrl } from "@/lib/auth-api";
+import { notifyForbidden } from "@/lib/forbiddenHandler";
 import { getCurrentSubdomain } from "@/lib/subdomain";
 import {
   getAccessToken,
@@ -133,6 +134,24 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
         data
       );
     }
+  }
+
+  // Self-correct stale permissions on 403. The backend enforces fresh perms
+  // per request, so a 403 can mean a logged-in user's cached permissions went
+  // stale (e.g. a School Admin revoked a sub-admin's module). Ask the auth
+  // layer to re-fetch the profile; the registered handler is throttled
+  // (loop-guarded) and a no-op when unmounted. We exclude the /profile call
+  // itself so a 403 from the refresh can't re-trigger a refresh, and the
+  // public auth URLs (which never carry user perms). We do NOT log out and we
+  // still throw ApiException below so per-call handling (toasts, graceful
+  // states) and the RouteGuard redirect run unchanged.
+  if (
+    response.status === 403 &&
+    typeof window !== "undefined" &&
+    !isPublicAuthApiUrl(responseUrl) &&
+    !responseUrl.includes("/api/auth/profile")
+  ) {
+    notifyForbidden();
   }
 
   if (data && typeof data === "object" && "success" in data) {

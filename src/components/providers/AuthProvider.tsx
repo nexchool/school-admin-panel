@@ -38,6 +38,7 @@ import {
   setSessionCookie,
 } from "@/lib/storage";
 import { getCurrentSubdomain } from "@/lib/subdomain";
+import { registerForbiddenHandler } from "@/lib/forbiddenHandler";
 import {
   login as loginService,
   logout as logoutService,
@@ -214,6 +215,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Failed to refresh profile:", err);
     }
   }, []);
+
+  // Self-correct stale permissions: when any tenant-scoped API call 403s, the
+  // api client invokes this handler so we re-fetch the profile. The refreshed
+  // permissions flow into context state, which the (already-mounted) RouteGuard
+  // reads to redirect off a now-forbidden route to /dashboard. The registry
+  // throttles bursts of 403s to a single refresh (loop guard), and the /profile
+  // call itself is excluded from triggering. We only react when authenticated —
+  // a logged-out 403 should not spin up a profile fetch.
+  useEffect(() => {
+    return registerForbiddenHandler(() => {
+      if (!user) return;
+      void refreshUser();
+    });
+  }, [user, refreshUser]);
 
   useEffect(() => {
     const checkAuth = async () => {
