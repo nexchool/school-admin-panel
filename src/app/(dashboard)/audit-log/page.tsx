@@ -135,14 +135,19 @@ function AuditLogContent() {
   });
 
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const { data, isLoading, isFetching } = useAuditLogs(appliedFilters);
+  const { data, isLoading, isFetching, isError, refetch } = useAuditLogs(appliedFilters);
 
   const rows = data?.data ?? [];
   const pagination = data?.pagination;
   const totalPages = pagination?.total_pages ?? 1;
 
   function handleApply() {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      toast.error('"From" date must be on or before "To" date.');
+      return;
+    }
     const modules = selectedModules
       .split(",")
       .map((m) => m.trim())
@@ -193,6 +198,8 @@ function AuditLogContent() {
   }
 
   const handleExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
     try {
       const blob = await auditLogService.exportXlsx(appliedFilters);
       const url = URL.createObjectURL(blob);
@@ -203,6 +210,8 @@ function AuditLogContent() {
       URL.revokeObjectURL(url);
     } catch {
       toast.error("Failed to export audit log");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -216,9 +225,9 @@ function AuditLogContent() {
             Track all system actions and changes.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleExport}>
+        <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting}>
           <Download className="mr-2 h-4 w-4" />
-          Export to Excel
+          {isExporting ? "Exporting…" : "Export to Excel"}
         </Button>
       </div>
 
@@ -334,6 +343,13 @@ function AuditLogContent() {
           {isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">
               Loading…
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <p className="text-muted-foreground text-sm">Couldn&apos;t load the audit log.</p>
+              <Button size="sm" variant="outline" onClick={() => refetch()}>
+                Retry
+              </Button>
             </div>
           ) : rows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-2">

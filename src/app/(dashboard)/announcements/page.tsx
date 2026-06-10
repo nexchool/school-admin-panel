@@ -70,12 +70,19 @@ function AnnouncementCard({ a }: { a: Announcement }) {
 }
 
 function TabPanel({ tab }: { tab: TabKey }) {
-  const { data: announcements = [], isLoading } = useAnnouncementsList(tab);
+  const { data: announcements = [], isLoading, isError, refetch } = useAnnouncementsList(tab);
   const EmptyIcon = tab === "scheduled" ? Clock : tab === "draft" ? FileEdit : Megaphone;
   return (
     <div className="mt-4 space-y-2">
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : isError ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">
+          <p>Couldn&apos;t load announcements.</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
       ) : announcements.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">
           <EmptyIcon className="size-8 text-muted-foreground/60" />
