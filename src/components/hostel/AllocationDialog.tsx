@@ -101,8 +101,10 @@ export function AllocationDialog({
         <form
           onSubmit={handleSubmit(async (values) => {
             // The backend expects ISO 8601 datetime; check_in_at is a date
-            // input — convert to start-of-day in local time.
-            const checkInIso = new Date(`${values.check_in_at}T00:00:00`).toISOString();
+            // input. Anchor to noon UTC so the calendar date never shifts a day
+            // when serialized (local midnight + toISOString() lands on the
+            // previous day in IST / any positive-offset zone).
+            const checkInIso = new Date(`${values.check_in_at}T12:00:00Z`).toISOString();
             await onSubmit({ ...values, check_in_at: checkInIso });
           })}
         >

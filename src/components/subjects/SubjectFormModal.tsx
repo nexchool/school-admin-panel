@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,17 @@ export function SubjectFormModal({
     initialData?.description ?? ""
   );
   const [submitting, setSubmitting] = useState(false);
+
+  // Reseed when the modal opens or the edited subject changes — the modal is
+  // mounted persistently with initialData toggling null<->row, so a once-only
+  // useState seed would otherwise show stale/blank fields on every edit.
+  useEffect(() => {
+    if (open) {
+      setName(initialData?.name ?? "");
+      setCode(initialData?.code ?? "");
+      setDescription(initialData?.description ?? "");
+    }
+  }, [open, initialData]);
 
   const reset = () => {
     setName(initialData?.name ?? "");
