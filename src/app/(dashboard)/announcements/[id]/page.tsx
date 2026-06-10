@@ -80,7 +80,7 @@ export default function AnnouncementDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
 
-  const { data: announcement, isLoading } = useAnnouncement(id);
+  const { data: announcement, isLoading, isError } = useAnnouncement(id);
   const { data: revisions = [] } = useAnnouncementRevisions(id);
   const recallMutation = useRecallAnnouncement();
 
@@ -89,8 +89,21 @@ export default function AnnouncementDetailPage() {
   const [recallReason, setRecallReason] = useState("");
   const [revisionsOpen, setRevisionsOpen] = useState(false);
 
-  if (isLoading || !announcement) {
+  if (isLoading) {
     return <div className="mx-auto max-w-4xl">Loading…</div>;
+  }
+
+  if (isError || !announcement) {
+    return (
+      <div className="mx-auto max-w-4xl py-16 text-center">
+        <p className="text-muted-foreground">
+          Couldn&apos;t load this announcement. It may have been deleted or you don&apos;t have access to it.
+        </p>
+        <Button asChild variant="outline" className="mt-4">
+          <Link href="/announcements">Back to announcements</Link>
+        </Button>
+      </div>
+    );
   }
 
   const onDownloadAttachment = async (attachmentId: string) => {

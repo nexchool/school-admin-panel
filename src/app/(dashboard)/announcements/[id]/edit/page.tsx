@@ -1,16 +1,30 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useAnnouncement } from "@/hooks/useAnnouncements";
 import { AnnouncementComposer } from "@/components/announcements/AnnouncementComposer";
 
 export default function EditAnnouncementPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
-  const { data, isLoading } = useAnnouncement(id);
+  const { data, isLoading, isError } = useAnnouncement(id);
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return <div className="mx-auto max-w-3xl">Loading…</div>;
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="mx-auto max-w-3xl py-16 text-center">
+        <p className="text-muted-foreground">
+          Couldn&apos;t load this announcement to edit. It may have been deleted or you don&apos;t have access to it.
+        </p>
+        <Link href="/announcements" className="mt-4 inline-block text-sm underline">
+          Back to announcements
+        </Link>
+      </div>
+    );
   }
 
   return (
