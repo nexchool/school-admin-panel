@@ -15,7 +15,6 @@ import {
   TabNav,
   SectionCard,
   DetailTable,
-  ComingSoonCard,
   formatBool,
   formatCurrency,
   formatDate,
@@ -30,7 +29,6 @@ import {
   Users,
   MapPin,
   GraduationCap,
-  Trophy,
   FileText,
   Mail,
   Phone,
@@ -39,7 +37,6 @@ import {
   Home,
   IdCard,
   Heart,
-  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Student, UpdateStudentInput } from "@/types/student";
@@ -51,7 +48,6 @@ type TabId =
   | "family"
   | "address"
   | "academic"
-  | "activities"
   | "documents";
 
 const TABS: TabNavItem<TabId>[] = [
@@ -60,7 +56,6 @@ const TABS: TabNavItem<TabId>[] = [
   { id: "family", label: "Family & Guardian", icon: Users },
   { id: "address", label: "Address", icon: MapPin },
   { id: "academic", label: "Academic", icon: GraduationCap },
-  { id: "activities", label: "Activities", icon: Trophy },
   { id: "documents", label: "Documents", icon: FileText },
 ];
 
@@ -183,7 +178,6 @@ export default function StudentDetailPage() {
           {activeTab === "family" && <FamilyTab student={student} />}
           {activeTab === "address" && <AddressTab student={student} />}
           {activeTab === "academic" && <AcademicTab student={student} />}
-          {activeTab === "activities" && <ActivitiesTab />}
           {activeTab === "documents" && (
             <StudentDocumentsSection studentId={student.id} />
           )}
@@ -467,48 +461,6 @@ function AcademicTab({ student }: { student: Student }) {
           ]}
         />
       </SectionCard>
-
-      <ComingSoonCard
-        title="Report Card"
-        description="Term-wise report cards will be shown here once available."
-        icon={FileText}
-      />
-
-      <ComingSoonCard
-        title="Weekly Test Marks"
-        description="Weekly test scores and trends across subjects."
-        icon={Sparkles}
-      />
-
-      <ComingSoonCard
-        title="Final Result"
-        description="End-of-year result summary and grade card."
-        icon={Trophy}
-        className="lg:col-span-2"
-      />
-    </div>
-  );
-}
-
-function ActivitiesTab() {
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <ComingSoonCard
-        title="Co-curricular Activities"
-        description="Clubs, sports, and other activities the student participates in."
-        icon={Sparkles}
-      />
-      <ComingSoonCard
-        title="Achievements & Awards"
-        description="Awards, certificates and notable achievements."
-        icon={Trophy}
-      />
-      <ComingSoonCard
-        title="Event Participation"
-        description="School events, competitions and performance history."
-        icon={Calendar}
-        className="lg:col-span-2"
-      />
     </div>
   );
 }
