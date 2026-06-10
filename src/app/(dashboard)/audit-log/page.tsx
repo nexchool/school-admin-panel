@@ -47,6 +47,8 @@ const KNOWN_ACTIONS = [
 ];
 
 const PAGE_SIZE = 20;
+// Radix Select forbids an empty-string item value, so "all" is the sentinel for "no unit filter".
+const ALL_UNITS = "all";
 
 function defaultDateFrom(): string {
   const d = new Date();
@@ -121,7 +123,7 @@ function AuditLogContent() {
   const [selectedModules, setSelectedModules] = useState<string>("");
   const [selectedActions, setSelectedActions] = useState<string>("");
   const [userId, setUserId] = useState("");
-  const [unitId, setUnitId] = useState("");
+  const [unitId, setUnitId] = useState(ALL_UNITS);
   const [page, setPage] = useState(1);
 
   // Applied filters (only updated on "Apply")
@@ -157,7 +159,7 @@ function AuditLogContent() {
       module: modules.length > 0 ? modules : undefined,
       action: actions.length > 0 ? actions : undefined,
       user_id: userId.trim() || undefined,
-      unit_id: unitId || undefined,
+      unit_id: unitId !== ALL_UNITS ? unitId : undefined,
       page: 1,
       page_size: PAGE_SIZE,
     });
@@ -171,7 +173,7 @@ function AuditLogContent() {
     setSelectedModules("");
     setSelectedActions("");
     setUserId("");
-    setUnitId("");
+    setUnitId(ALL_UNITS);
     setPage(1);
     setAppliedFilters({
       date_from: newDateFrom,
@@ -258,7 +260,7 @@ function AuditLogContent() {
                     <SelectValue placeholder="All branches" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All units</SelectItem>
+                    <SelectItem value={ALL_UNITS}>All units</SelectItem>
                     {units.map((u) => (
                       <SelectItem key={u.id} value={u.id}>
                         {u.name}
