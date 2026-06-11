@@ -40,6 +40,28 @@ export interface StudentFee {
   }[];
 }
 
+export interface StudentFeesPagination {
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+}
+
+export interface StudentFeesSummary {
+  total_count: number;
+  total_amount: number;
+  paid_amount: number;
+  outstanding_amount: number;
+  paid_count: number;
+  overdue_count: number;
+}
+
+export interface PagedStudentFees {
+  items: StudentFee[];
+  pagination: StudentFeesPagination;
+  summary: StudentFeesSummary;
+}
+
 export interface FinanceSummary {
   total_expected: number;
   total_collected: number;
@@ -101,6 +123,55 @@ export const financeService = {
     const url = `/api/finance/student-fees${q.toString() ? `?${q}` : ""}`;
     const res = await apiGet<{ student_fees: StudentFee[] }>(url);
     return (res?.student_fees ?? []).map(withOutstanding);
+  },
+
+  // Paginated variant for the list page. Sends page/page_size so the server
+  // returns one page plus a `summary` aggregate computed over ALL matching rows
+  // (so the totals row stays correct across pages). The non-paged getStudentFees
+  // above is kept for callers that need the full set (e.g. PaymentModal).
+  getStudentFeesPaged: async (params: {
+    student_id?: string;
+    fee_structure_id?: string;
+    status?: string;
+    academic_year_id?: string;
+    class_id?: string;
+    search?: string;
+    page: number;
+    page_size?: number;
+  }): Promise<PagedStudentFees> => {
+    const pageSize = params.page_size ?? 20;
+    const q = new URLSearchParams();
+    if (params.student_id) q.set("student_id", params.student_id);
+    if (params.fee_structure_id) q.set("fee_structure_id", params.fee_structure_id);
+    if (params.status) q.set("status", params.status);
+    if (params.academic_year_id) q.set("academic_year_id", params.academic_year_id);
+    if (params.class_id) q.set("class_id", params.class_id);
+    if (params.search) q.set("search", params.search);
+    q.set("page", String(params.page));
+    q.set("page_size", String(pageSize));
+    const res = await apiGet<{
+      student_fees: StudentFee[];
+      pagination?: StudentFeesPagination;
+      summary?: StudentFeesSummary;
+    }>(`/api/finance/student-fees?${q}`);
+    const items = (res?.student_fees ?? []).map(withOutstanding);
+    return {
+      items,
+      pagination: res?.pagination ?? {
+        page: params.page,
+        page_size: pageSize,
+        total_items: items.length,
+        total_pages: 1,
+      },
+      summary: res?.summary ?? {
+        total_count: items.length,
+        total_amount: 0,
+        paid_amount: 0,
+        outstanding_amount: 0,
+        paid_count: 0,
+        overdue_count: 0,
+      },
+    };
   },
 
   getStudentFee: async (id: string) => {

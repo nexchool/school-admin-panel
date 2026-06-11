@@ -40,6 +40,33 @@ export function useStudentFees(filters?: StudentFeeFilters) {
   });
 }
 
+/**
+ * Paginated list for the student-fees table. Returns { items, pagination,
+ * summary } — the summary is computed server-side over ALL matching rows, so the
+ * totals row stays correct across pages. tenantId stays the last queryKey
+ * segment so `studentFeeKeys.all` prefix-invalidation still matches.
+ */
+export function useStudentFeesPaged(
+  filters: StudentFeeFilters | undefined,
+  page: number,
+  pageSize: number
+) {
+  const { academicYearId } = useActiveAcademicYear();
+  const { tenantId } = useAuth();
+  const merged: StudentFeeFilters = {
+    ...filters,
+    academic_year_id: filters?.academic_year_id ?? academicYearId ?? undefined,
+  };
+  return useQuery({
+    queryKey: [...studentFeeKeys.list(merged), "paged", page, pageSize, tenantId],
+    queryFn: () =>
+      financeService.getStudentFeesPaged({ ...merged, page, page_size: pageSize }),
+    enabled: !!tenantId && !!merged.academic_year_id,
+    // Keep the previous page visible while the next one loads (no empty flash).
+    placeholderData: (prev) => prev,
+  });
+}
+
 export function useStudentFeeDetail(id: string | undefined) {
   const { tenantId } = useAuth();
   return useQuery({

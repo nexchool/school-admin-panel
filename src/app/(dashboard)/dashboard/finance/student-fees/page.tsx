@@ -25,7 +25,7 @@ import {
   Printer,
   ReceiptText,
 } from "lucide-react";
-import { useStudentFees } from "@/hooks/useStudentFees";
+import { useStudentFeesPaged } from "@/hooks/useStudentFees";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useClasses } from "@/hooks/useClasses";
 import { toast } from "sonner";
@@ -56,22 +56,32 @@ export default function StudentFeesPage() {
   const [feeStructureId] = useState(searchParams.get("fee_structure_id") ?? "");
   const [paymentTarget, setPaymentTarget] = useState<PaymentTarget | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const { data: academicYears = [] } = useAcademicYears(false);
   const { data: classes = [] } = useClasses(
     filters.academic_year_id ? { academic_year_id: filters.academic_year_id } : undefined
   );
 
-  const { data: studentFees = [], isLoading, isError, refetch } = useStudentFees({
-    status: filters.status || undefined,
-    academic_year_id: filters.academic_year_id || undefined,
-    class_id: filters.class_id || undefined,
-    search: filters.search || undefined,
-    fee_structure_id: feeStructureId || undefined,
-  });
+  const { data, isLoading, isError, refetch } = useStudentFeesPaged(
+    {
+      status: filters.status || undefined,
+      academic_year_id: filters.academic_year_id || undefined,
+      class_id: filters.class_id || undefined,
+      search: filters.search || undefined,
+      fee_structure_id: feeStructureId || undefined,
+    },
+    page,
+    PAGE_SIZE
+  );
+  const studentFees = data?.items ?? [];
+  const summary = data?.summary;
+  const totalItems = data?.pagination?.total_items ?? 0;
 
   const handleFiltersChange = useCallback((next: FeeFilters) => {
     setFilters(next);
+    setPage(1); // any filter change resets to the first page
   }, []);
 
   const handleDownloadInvoice = async (row: StudentFee, e: React.MouseEvent) => {
@@ -233,13 +243,6 @@ export default function StudentFeesPage() {
     },
   ];
 
-  const totalOutstanding = studentFees.reduce(
-    (sum, f) => sum + Math.max(0, f.outstanding_amount ?? (f.total_amount ?? 0) - (f.paid_amount ?? 0)),
-    0
-  );
-  const paidCount = studentFees.filter((f) => f.status === "paid").length;
-  const overdueCount = studentFees.filter((f) => f.status === "overdue").length;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -273,24 +276,25 @@ export default function StudentFeesPage() {
         }))}
       />
 
-      {/* Summary row (computed from current list) */}
-      {!isLoading && studentFees.length > 0 && (
+      {/* Summary row — aggregated server-side over ALL matching rows, so the
+          totals are correct regardless of which page is shown. */}
+      {summary && summary.total_count > 0 && (
         <div className="flex flex-wrap gap-4 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
           <span>
-            <span className="font-medium">{studentFees.length}</span>{" "}
+            <span className="font-medium">{summary.total_count}</span>{" "}
             <span className="text-muted-foreground">students</span>
           </span>
           <span>
-            <span className="font-medium text-amber-600">{fmtAmount(totalOutstanding)}</span>{" "}
+            <span className="font-medium text-amber-600">{fmtAmount(summary.outstanding_amount)}</span>{" "}
             <span className="text-muted-foreground">outstanding</span>
           </span>
           <span>
-            <span className="font-medium text-green-600">{paidCount}</span>{" "}
+            <span className="font-medium text-green-600">{summary.paid_count}</span>{" "}
             <span className="text-muted-foreground">paid</span>
           </span>
-          {overdueCount > 0 && (
+          {summary.overdue_count > 0 && (
             <span>
-              <span className="font-medium text-red-600">{overdueCount}</span>{" "}
+              <span className="font-medium text-red-600">{summary.overdue_count}</span>{" "}
               <span className="text-muted-foreground">overdue</span>
             </span>
           )}
@@ -321,6 +325,12 @@ export default function StudentFeesPage() {
                   ? "No results match your filters. Try adjusting or clearing them."
                   : "No fee assignments found. Create a fee structure and it will auto-assign to students."
             }
+            pagination={{
+              page,
+              pageSize: PAGE_SIZE,
+              total: totalItems,
+              onPageChange: setPage,
+            }}
             onRowClick={(r) => router.push(`/dashboard/finance/student-fees/${r.id}`)}
           />
         </CardContent>
