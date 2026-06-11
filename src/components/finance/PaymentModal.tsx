@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +65,11 @@ export function PaymentModal({
 
   const { mutate: recordPayment, isPending } = useRecordPayment();
 
+  // A fresh dedup token per opened payment attempt; if the same key reaches the
+  // server twice (a retry or double-submit), it returns the original payment
+  // instead of charging again.
+  const idempotencyKeyRef = useRef<string>("");
+
   const itemsWithRemaining = useMemo(
     () =>
       (items ?? []).filter(
@@ -76,6 +81,10 @@ export function PaymentModal({
   useEffect(() => {
     if (open) {
       setAllocByItem({});
+      idempotencyKeyRef.current =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
   }, [open, studentFeeId]);
 
@@ -175,6 +184,7 @@ export function PaymentModal({
         method_detail: method === "other" ? otherDetail.trim() : undefined,
         notes: notes.trim() || undefined,
         allocations,
+        idempotency_key: idempotencyKeyRef.current || undefined,
       },
       {
         onSuccess: () => {

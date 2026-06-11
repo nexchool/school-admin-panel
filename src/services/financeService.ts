@@ -242,6 +242,8 @@ export const financeService = {
     notes?: string;
     /** Optional: amounts per student_fee_item; must sum to `amount` when provided */
     allocations?: { item_id: string; amount: number }[];
+    /** Per-attempt dedup token so a retry / double-submit never double-charges. */
+    idempotency_key?: string;
   }) => {
     const body: Record<string, unknown> = {
       student_fee_id: data.student_fee_id,
@@ -257,6 +259,7 @@ export const financeService = {
         amount: a.amount,
       }));
     }
+    if (data.idempotency_key) body.idempotency_key = data.idempotency_key;
     return apiPost("/api/finance/payments", body);
   },
 
