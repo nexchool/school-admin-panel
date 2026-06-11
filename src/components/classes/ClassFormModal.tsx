@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +54,18 @@ export function ClassFormModal({
     initialData?.teacher_id || NONE_VALUE
   );
   const [submitting, setSubmitting] = useState(false);
+
+  // Reseed when opened or when the edited class changes — the modal is mounted
+  // persistently with initialData toggling, so a once-only seed shows stale fields.
+  useEffect(() => {
+    if (open) {
+      setName(initialData?.name ?? "");
+      setSection(initialData?.section ?? "");
+      setAcademicYearId(initialData?.academic_year_id ?? academicYears[0]?.id ?? "");
+      setTeacherId(initialData?.teacher_id || NONE_VALUE);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialData]);
 
   const reset = () => {
     setName(initialData?.name ?? "");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +58,13 @@ export function TeacherFormModal({
     setAddress(initialData?.address ?? "");
     setDateOfJoining(initialData?.date_of_joining ?? "");
   };
+
+  // Reseed when opened or when the edited teacher changes — the modal is mounted
+  // persistently with initialData toggling, so a once-only seed shows stale fields.
+  useEffect(() => {
+    if (open) reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialData]);
 
   const handleClose = (o: boolean) => {
     if (!o) reset();

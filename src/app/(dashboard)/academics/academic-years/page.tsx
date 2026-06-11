@@ -94,6 +94,9 @@ export default function AcademicYearsPage() {
       if (!payload.name || !payload.start_date || !payload.end_date) {
         throw new Error("Name and both dates are required.");
       }
+      if (new Date(payload.end_date) <= new Date(payload.start_date)) {
+        throw new Error("End date must be after the start date.");
+      }
       if (editing) {
         return academicYearsService.updateAcademicYear(editing.id, payload);
       }
