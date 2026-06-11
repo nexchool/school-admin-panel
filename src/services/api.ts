@@ -90,6 +90,11 @@ const apiRequest = async (
 function extractErrorMessage(data: unknown, fallback: string): string {
   if (typeof data === "object" && data !== null) {
     const o = data as Record<string, unknown>;
+    // The backend's validation_error_response keeps `message` generic
+    // ("Validation failed") and puts the specific, human-readable reason in a
+    // string `details`. Prefer that so users see the actual problem. When
+    // `details` is an array/object (field-level errors), fall through to message.
+    if (typeof o.details === "string" && o.details.trim()) return o.details;
     if (typeof o.message === "string" && o.message.trim()) return o.message;
     if (typeof o.error === "string" && o.error.trim()) return o.error;
   }
