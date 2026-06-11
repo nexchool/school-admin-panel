@@ -137,7 +137,14 @@ export default function HostelsOverviewPage() {
       ) : isError ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-destructive">Failed to load hostels.</p>
+            <p className="text-destructive">
+              {/* Surface the API's reason — e.g. god-mode hitting a tenant with
+                  the hostel feature disabled gets the backend's "disabled for
+                  your school" message instead of a misleading generic failure. */}
+              {hostelsQuery.error instanceof Error && hostelsQuery.error.message
+                ? hostelsQuery.error.message
+                : "Failed to load hostels."}
+            </p>
             <Button
               variant="outline"
               onClick={() => hostelsQuery.refetch()}
