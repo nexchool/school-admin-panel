@@ -340,7 +340,7 @@ export default function StudentsPage() {
     [url]
   );
 
-  const { data, isLoading, isFetching } = useStudents(queryParams);
+  const { data, isLoading, isFetching, isError, refetch } = useStudents(queryParams);
   const { data: classes = [] } = useClasses();
   const { data: academicYears = [] } = useAcademicYears();
   const createMutation = useCreateStudent();
@@ -883,6 +883,9 @@ export default function StudentsPage() {
             data={items}
             getRowId={(row) => row.id}
             isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
+            errorMessage="Couldn't load students. Check your connection and retry."
             emptyMessage={
               url.search || activeCount > 0
                 ? "No students match the current filters."

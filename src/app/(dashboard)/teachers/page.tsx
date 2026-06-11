@@ -445,7 +445,7 @@ export default function TeachersPage() {
     [url]
   );
 
-  const { data, isLoading, isFetching } = useTeachers(queryParams);
+  const { data, isLoading, isFetching, isError, refetch } = useTeachers(queryParams);
   const createMutation = useCreateTeacher();
 
   const items = data?.items ?? [];
@@ -894,6 +894,9 @@ export default function TeachersPage() {
               data={items}
               getRowId={(row) => row.id}
               isLoading={isLoading}
+              isError={isError}
+              onRetry={() => refetch()}
+              errorMessage="Couldn't load teachers. Check your connection and retry."
               emptyMessage={
                 url.search || activeCount > 0
                   ? "No teachers match the current filters."

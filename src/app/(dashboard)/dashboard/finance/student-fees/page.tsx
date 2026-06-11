@@ -62,7 +62,7 @@ export default function StudentFeesPage() {
     filters.academic_year_id ? { academic_year_id: filters.academic_year_id } : undefined
   );
 
-  const { data: studentFees = [], isLoading } = useStudentFees({
+  const { data: studentFees = [], isLoading, isError, refetch } = useStudentFees({
     status: filters.status || undefined,
     academic_year_id: filters.academic_year_id || undefined,
     class_id: filters.class_id || undefined,
@@ -311,6 +311,9 @@ export default function StudentFeesPage() {
             data={studentFees}
             getRowId={(r) => r.id}
             isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
+            errorMessage="Couldn't load fee assignments. Check your connection and retry."
             emptyMessage={
               isLoading
                 ? "Loading…"

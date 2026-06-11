@@ -39,7 +39,7 @@ export default function SubjectsPage() {
   const [editSubject, setEditSubject] = useState<Subject | null>(null);
   const [deleteSubject, setDeleteSubject] = useState<Subject | null>(null);
   const [search, setSearch] = useState("");
-  const { data: subjects = [], isLoading } = useSubjects();
+  const { data: subjects = [], isLoading, isError, refetch } = useSubjects();
   const createMutation = useCreateSubject();
   const updateMutation = useUpdateSubject();
   const deleteMutation = useDeleteSubject();
@@ -161,6 +161,9 @@ export default function SubjectsPage() {
             data={filtered}
             getRowId={(row) => row.id}
             isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
+            errorMessage="Couldn't load subjects. Check your connection and retry."
             emptyMessage="No subjects yet. Add one to get started."
           />
         </CardContent>

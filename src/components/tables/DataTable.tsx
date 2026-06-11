@@ -39,6 +39,12 @@ export interface DataTableProps<T> {
   data: T[];
   getRowId: (row: T) => string;
   isLoading?: boolean;
+  /** When true (and not loading), shows an error row instead of the empty state. */
+  isError?: boolean;
+  /** Message shown in the error row. */
+  errorMessage?: string;
+  /** When provided, the error row shows a Retry button. */
+  onRetry?: () => void;
   emptyMessage?: string;
   pagination?: DataTablePagination;
   /** Controlled sort state — provide alongside onSortChange for server-side sort. */
@@ -60,6 +66,9 @@ export function DataTable<T extends object>({
   data,
   getRowId,
   isLoading,
+  isError,
+  errorMessage = "Couldn't load this data.",
+  onRetry,
   emptyMessage = "No data",
   pagination,
   sort,
@@ -132,6 +141,22 @@ export function DataTable<T extends object>({
                   className="px-4 py-12 text-center text-muted-foreground"
                 >
                   Loading...
+                </td>
+              </tr>
+            ) : isError ? (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                  <p className="text-muted-foreground">{errorMessage}</p>
+                  {onRetry && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={onRetry}
+                    >
+                      Retry
+                    </Button>
+                  )}
                 </td>
               </tr>
             ) : data.length === 0 ? (
