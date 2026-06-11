@@ -19,11 +19,7 @@ const DEFAULT_LABELS: Record<string, string> = {
   transport: "Transport",
   notifications: "Notifications",
   holiday_management: "Holidays",
-  library: "Library",
   hostel: "Hostel",
-  inventory: "Inventory",
-  examinations: "Examinations",
-  reports: "Reports",
 };
 
 /**
