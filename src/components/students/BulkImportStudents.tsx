@@ -239,7 +239,9 @@ export function BulkImportStudents({
             Upload a single-sheet .xlsx file. Row 1 must be headers. Required
             columns: name, email, class_name, section. Admission numbers are assigned
             automatically from your school&apos;s format (Academic settings). Other
-            columns are mapped when they match known fields.
+            columns are mapped when they match known fields. If the same class name
+            exists in more than one medium or board, add a medium (or programme)
+            column so each student lands in the right class.
           </DialogDescription>
         </DialogHeader>
 
