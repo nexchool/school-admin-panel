@@ -37,7 +37,9 @@ const STREAM_OPTIONS = [
 ] as const;
 
 const classFormSchema = z.object({
-  name: z.string().min(1, "Section name is required"),
+  // Maps to the class `section` column (varchar(10)) — cap it so a long value
+  // gives a clean inline error instead of a backend data-length failure.
+  name: z.string().min(1, "Section name is required").max(10, "Keep it to 10 characters or fewer"),
   grade_id: z.string().min(1, "Grade is required"),
   programme_id: z.string().min(1, "Programme is required"),
   medium_id: z.string().optional(),
