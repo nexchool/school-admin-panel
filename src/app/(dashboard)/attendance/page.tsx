@@ -86,7 +86,10 @@ function statusBadge(status: string | null, marked: boolean) {
 }
 
 export default function AttendancePage() {
-  const today = new Date().toISOString().split("T")[0];
+  // Local date, not UTC — toISOString() returns the previous day before ~05:30
+  // IST, which would open the page on yesterday's attendance.
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [classes, setClasses] = useState<ClassItem[]>([]);

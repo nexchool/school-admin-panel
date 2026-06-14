@@ -139,7 +139,7 @@ function AuditLogContent() {
 
   const { data, isLoading, isFetching, isError, refetch } = useAuditLogs(appliedFilters);
 
-  const rows = data?.data ?? [];
+  const rows = data?.items ?? [];
   const pagination = data?.pagination;
   const totalPages = pagination?.total_pages ?? 1;
 

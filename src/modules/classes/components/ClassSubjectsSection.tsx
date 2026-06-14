@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { toast } from "sonner";
 import {
   Card,
@@ -69,13 +70,16 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
     enabled: !!classId && subjectTeachersEnabled,
   });
 
-  const catalogQuery = useQuery({
+  // useTenantQuery appends the active tenantId to the key and gates enabled on
+  // !!tenantId — these catalogs are tenant-scoped (/api/subjects/*) and must not
+  // be shared across tenants (query-conventions.md).
+  const catalogQuery = useTenantQuery({
     queryKey: ["subjects", "catalog", "include-inactive"],
     queryFn: () => subjectsService.getSubjects({ includeInactive: true }),
     enabled: canView && !!classId,
   });
 
-  const availableTeachersQuery = useQuery({
+  const availableTeachersQuery = useTenantQuery({
     queryKey: ["classes", "subject-teacher-candidates", classId],
     queryFn: () => classSubjectsService.listSubjectTeacherCandidates(classId),
     enabled: canManage && !!classId && subjectTeachersEnabled,

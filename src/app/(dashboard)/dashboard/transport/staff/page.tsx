@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ type Row =
 
 export default function TransportStaffPage() {
   const queryClient = useQueryClient();
+  const { tenantId } = useAuth();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [form, setForm] = useState({
@@ -97,13 +99,13 @@ export default function TransportStaffPage() {
 
   const workloadQueries = useQueries({
     queries: transportStaffIds.map((sid) => ({
-      queryKey: ["transport", "workload", sid, todayStr, academicYearId],
+      queryKey: ["transport", "workload", sid, todayStr, academicYearId, tenantId],
       queryFn: () =>
         transportService.getDriverWorkload(sid, {
           date: todayStr,
           academicYearId,
         }),
-      enabled: !!academicYearId && transportStaffIds.length > 0,
+      enabled: !!tenantId && !!academicYearId && transportStaffIds.length > 0,
     })),
   });
 

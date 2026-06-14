@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
@@ -54,11 +54,11 @@ export function SubjectsSetup() {
   const [gradeId, setGradeId] = useState("");
 
   const enabled = !!programmeId && !!gradeId;
-  const { data: serverContexts = [] } = useSubjectContexts(
-    programmeId,
-    gradeId,
-    enabled,
-  );
+  const {
+    data: serverContexts = [],
+    isSuccess: contextsLoaded,
+    isFetching: contextsFetching,
+  } = useSubjectContexts(programmeId, gradeId, enabled);
 
   const upsertMut = useBulkUpsertSubjectContexts();
   const applyMut = useApplySubjectContexts();
@@ -68,14 +68,21 @@ export function SubjectsSetup() {
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
   const currentKey = enabled ? `${programmeId}/${gradeId}` : null;
-  if (currentKey && currentKey !== hydratedKey) {
+  // Hydrate from the SETTLED server data for the current (programme, grade).
+  // Gating on contextsLoaded && !contextsFetching avoids the race where the
+  // previous run stamped hydratedKey from an empty list before the new key's
+  // fetch resolved — which made existing assignments show unchecked and let
+  // Save (delete_missing: true) wipe them.
+  useEffect(() => {
+    if (!currentKey || currentKey === hydratedKey) return;
+    if (!contextsLoaded || contextsFetching) return;
     const next: Record<string, number> = {};
     for (const c of serverContexts) {
       next[c.subject_id] = c.default_weekly_periods ?? DEFAULT_PERIODS;
     }
     setSelected(next);
     setHydratedKey(currentKey);
-  }
+  }, [currentKey, hydratedKey, contextsLoaded, contextsFetching, serverContexts]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {

@@ -4,6 +4,7 @@ import { friendlyErrorMessage } from "@/lib/errorToast";
 import { useMemo } from "react";
 import Link from "next/link";
 import { useQueries } from "@tanstack/react-query";
+import { useAuth } from "@/components/providers/AuthProvider";
 import {
   Card,
   CardContent,
@@ -73,27 +74,35 @@ function InsightCard({
 }
 
 export default function TransportOverviewPage() {
+  // Tenant-scope every key + gate on tenant context (query-conventions.md) —
+  // these were shared across tenants and fired before tenant was known.
+  const { tenantId } = useAuth();
   const results = useQueries({
     queries: [
       {
-        queryKey: ["transport", "dashboard"],
+        queryKey: ["transport", "dashboard", tenantId],
         queryFn: () => transportService.getDashboard(),
+        enabled: !!tenantId,
       },
       {
-        queryKey: ["transport", "buses"],
+        queryKey: ["transport", "buses", tenantId],
         queryFn: () => transportService.listBuses(),
+        enabled: !!tenantId,
       },
       {
-        queryKey: ["transport", "routes"],
+        queryKey: ["transport", "routes", tenantId],
         queryFn: () => transportService.listRoutes(),
+        enabled: !!tenantId,
       },
       {
-        queryKey: ["transport", "enrollments"],
+        queryKey: ["transport", "enrollments", tenantId],
         queryFn: () => transportService.listEnrollments(),
+        enabled: !!tenantId,
       },
       {
-        queryKey: ["students", "all"],
+        queryKey: ["students", "all", tenantId],
         queryFn: () => studentsService.getStudents(),
+        enabled: !!tenantId,
       },
     ],
   });

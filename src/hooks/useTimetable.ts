@@ -79,9 +79,12 @@ export function useActivateTimetableVersion(classId: string) {
   return useMutation({
     mutationFn: (versionId: string) =>
       timetableService.activateVersion(classId, versionId),
-    onSuccess: (_, versionId) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: timetableKeys.versions(classId) });
-      qc.invalidateQueries({ queryKey: timetableKeys.bundle(classId, versionId) });
+      // Invalidate EVERY version's bundle for this class, not just the newly
+      // activated one — activation archives the previously-active version, whose
+      // cached `editable`/status would otherwise stay stale.
+      qc.invalidateQueries({ queryKey: [...timetableKeys.all, "bundle", classId] });
     },
   });
 }

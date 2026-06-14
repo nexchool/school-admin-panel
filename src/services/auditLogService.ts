@@ -48,7 +48,10 @@ function toQuery(f: AuditLogFilters): string {
 
 export const auditLogService = {
   list: (filters: AuditLogFilters) =>
-    apiGet<{ data: AuditLogEntry[]; pagination: AuditLogPagination }>(
+    // Backend envelope is { items, pagination } (success_response data). The
+    // api client unwraps the outer { success, data } and returns this inner
+    // object, so the rows live under `items`, not `data`.
+    apiGet<{ items: AuditLogEntry[]; pagination: AuditLogPagination }>(
       `/api/audit-logs/${toQuery(filters) ? `?${toQuery(filters)}` : ""}`,
     ),
   exportXlsx: (filters: AuditLogFilters) =>

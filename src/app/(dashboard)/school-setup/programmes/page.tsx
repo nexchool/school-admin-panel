@@ -55,9 +55,18 @@ export default function ProgrammesPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    toast.success("Programme deleted");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Programme deleted");
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      // e.g. 409 "Programme is referenced by existing classes" — surface it
+      // instead of silently failing (ConfirmDialog swallows the rejection).
+      toast.error(
+        (err instanceof Error ? err.message : null) || "Failed to delete programme",
+      );
+      throw err; // re-throw so the dialog stays open
+    }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;

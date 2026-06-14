@@ -131,9 +131,17 @@ export default function TermsPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    toast.success("Term deleted");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Term deleted");
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      // Surface FK/validation rejections instead of failing silently.
+      toast.error(
+        (err instanceof Error ? err.message : null) || "Failed to delete term",
+      );
+      throw err; // re-throw so the dialog stays open
+    }
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;

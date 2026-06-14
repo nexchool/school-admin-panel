@@ -53,9 +53,17 @@ export default function UnitsPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    await deleteMutation.mutateAsync(deleteTarget.id);
-    toast.success("Branch deleted");
-    setDeleteTarget(null);
+    try {
+      await deleteMutation.mutateAsync(deleteTarget.id);
+      toast.success("Branch deleted");
+      setDeleteTarget(null);
+    } catch (err: unknown) {
+      // e.g. 409 "School unit is referenced by existing classes" — surface it.
+      toast.error(
+        (err instanceof Error ? err.message : null) || "Failed to delete branch",
+      );
+      throw err; // re-throw so the dialog stays open
+    }
   };
 
   const isSaving =

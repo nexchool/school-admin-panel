@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,18 +37,27 @@ interface FilterBarProps {
 
 export function FilterBar({ filters, onChange, academicYears, classes }: FilterBarProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Always merge against the latest filters, not the ones captured when a
+  // debounced search keystroke was scheduled — otherwise a status/class/year
+  // change made within the debounce window gets reverted when the timer fires.
+  const latestFilters = useRef(filters);
+  latestFilters.current = filters;
 
   const setFilter = useCallback(
     <K extends keyof FeeFilters>(key: K, value: FeeFilters[K]) => {
-      onChange({ ...filters, [key]: value });
+      onChange({ ...latestFilters.current, [key]: value });
     },
-    [filters, onChange]
+    [onChange]
   );
 
   const handleSearchChange = (value: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => setFilter("search", value), 350);
   };
+
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  }, []);
 
   const hasActiveFilters =
     filters.academic_year_id || filters.class_id || filters.status || filters.search;
