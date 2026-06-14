@@ -9,7 +9,6 @@ import {
   Building2,
   CalendarDays,
   ChevronLeft,
-  ClipboardList,
   ExternalLink,
   Phone,
   RotateCcw,
@@ -346,23 +345,6 @@ export default function HostelStudentDetailPage() {
               ))}
             </ul>
           </SectionCard>
-
-          {/* Disciplinary placeholder */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <ClipboardList className="size-4 text-muted-foreground" />
-                Disciplinary notes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Disciplinary tracking is not yet implemented. Wardens will be
-                able to record incidents and outcomes here in a future
-                release.
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

@@ -191,7 +191,7 @@ export default function VisitorsPage() {
                           href={`/hostel/students/${row.student_id}`}
                           className="text-primary hover:underline"
                         >
-                          {row.student_id.slice(0, 8)}…
+                          {row.student_name || `${row.student_id.slice(0, 8)}…`}
                         </Link>
                       </td>
                       <td className="px-4 py-2">{row.purpose ?? "—"}</td>
@@ -222,7 +222,9 @@ function CurrentlyInsideCard({
   return (
     <li className="flex flex-col gap-2 rounded-lg border bg-card p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="font-medium">{log.purpose ?? "Visit"}</p>
+        <p className="font-medium">
+          {log.visitor_name || log.purpose || "Visit"}
+        </p>
         <Badge variant="default">Inside</Badge>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -235,7 +237,7 @@ function CurrentlyInsideCard({
           href={`/hostel/students/${log.student_id}`}
           className="text-primary hover:underline"
         >
-          {log.student_id.slice(0, 8)}…
+          {log.student_name || `${log.student_id.slice(0, 8)}…`}
         </Link>
       </p>
       <Button

@@ -188,7 +188,7 @@ export default function HostelDashboardPage() {
               <Skeleton className="h-32 w-full" />
             ) : (dashboardQuery.data?.overdue_gatepasses ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No overdue gatepasses. 🎉
+                No overdue gatepasses.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -334,7 +334,7 @@ function OverdueGatepassRow({
           href={`/hostel/gatepasses/${gp.id}`}
           className="font-medium text-rose-900 hover:underline dark:text-rose-100"
         >
-          {gp.student_id.slice(0, 8)}…
+          {gp.student_name || `${gp.student_id.slice(0, 8)}…`}
         </Link>
         <Badge variant="destructive">Overdue</Badge>
       </div>

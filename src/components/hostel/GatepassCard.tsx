@@ -50,7 +50,12 @@ export function GatepassCard({ gp, actions, className }: GatepassCardProps) {
           className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
         >
           <User className="size-3.5 text-muted-foreground" />
-          {gp.student_id.slice(0, 8)}…
+          {gp.student_name || `${gp.student_id.slice(0, 8)}…`}
+          {gp.admission_number ? (
+            <span className="text-xs text-muted-foreground">
+              · {gp.admission_number}
+            </span>
+          ) : null}
         </Link>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-2 text-sm">

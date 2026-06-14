@@ -82,6 +82,10 @@ export interface HostelAllocation {
   id: string;
   tenant_id: string;
   student_id: string;
+  // Enriched by the backend (batch student lookup) — may be null if the student
+  // record is missing.
+  student_name?: string | null;
+  admission_number?: string | null;
   hostel_id: string;
   room_id: string;
   bed_id: string;
@@ -99,6 +103,9 @@ export interface HostelGatepass {
   id: string;
   tenant_id: string;
   student_id: string;
+  // Enriched by the backend (batch student lookup).
+  student_name?: string | null;
+  admission_number?: string | null;
   hostel_id: string;
   type: GatepassType;
   status: GatepassStatus;
@@ -144,6 +151,11 @@ export interface HostelVisitorLog {
   id: string;
   visitor_id: string;
   student_id: string;
+  // Enriched by the backend (batch student lookup).
+  student_name?: string | null;
+  admission_number?: string | null;
+  visitor_name?: string | null;
+  visitor_phone?: string | null;
   hostel_id: string;
   room_id: string | null;
   check_in_at: string;

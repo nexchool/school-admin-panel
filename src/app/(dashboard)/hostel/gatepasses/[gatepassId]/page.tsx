@@ -105,8 +105,13 @@ export default function GatepassDetailPage() {
                 href={`/hostel/students/${gatepass.student_id}`}
                 className="text-primary hover:underline"
               >
-                {gatepass.student_id}
+                {gatepass.student_name || `${gatepass.student_id.slice(0, 8)}…`}
               </Link>
+              {gatepass.admission_number ? (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {gatepass.admission_number}
+                </span>
+              ) : null}
             </Row>
             <Row label="Departure">
               {new Date(gatepass.departure_datetime).toLocaleString()}

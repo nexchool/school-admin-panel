@@ -305,7 +305,7 @@ export default function RoomDetailPage() {
                             href={`/hostel/students/${row.student_id}`}
                             className="text-primary hover:underline"
                           >
-                            {row.student_id.slice(0, 8)}…
+                            {row.student_name || `${row.student_id.slice(0, 8)}…`}
                           </Link>
                         </td>
                         <td className="px-4 py-2 tabular-nums">
