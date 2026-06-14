@@ -23,7 +23,7 @@ import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import type { AcademicYear } from "@/services/academicYearsService";
 
 export default function AcademicYearPage() {
-  const { data: years = [], isLoading } = useAcademicYears();
+  const { data: years = [], isLoading, isError, refetch } = useAcademicYears();
   const createMutation = useCreateAcademicYear();
   const updateMutation = useUpdateAcademicYear();
   const deleteMutation = useDeleteAcademicYear();
@@ -112,6 +112,13 @@ export default function AcademicYearPage() {
             <p className="py-6 text-center text-sm text-muted-foreground">
               Loading…
             </p>
+          ) : isError ? (
+            <div className="flex flex-col items-center gap-2 py-6 text-center text-sm">
+              <p className="text-destructive">Couldn&apos;t load academic years. Please retry.</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
           ) : (
             <>
               {/* Active year card */}

@@ -31,7 +31,7 @@ const SUBJECT_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function SubjectsPage() {
-  const { data: subjects = [], isLoading } = useSubjects();
+  const { data: subjects = [], isLoading, isError, refetch } = useSubjects();
   const { data: templatesResult, isLoading: templatesLoading } = useTemplates();
   const templates = templatesResult ?? [];
 
@@ -218,6 +218,13 @@ export default function SubjectsPage() {
               <p className="py-6 text-center text-sm text-muted-foreground">
                 Loading…
               </p>
+            ) : isError ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center text-sm">
+                <p className="text-destructive">Couldn&apos;t load subjects. Please retry.</p>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm">

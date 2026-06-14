@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WizardShell } from "@/components/school-setup/wizard/WizardShell";
 import {
@@ -21,7 +22,7 @@ import {
 import type { AcademicProgramme } from "@/services/programmesService";
 
 export default function ProgrammesPage() {
-  const { data: programmes = [], isLoading } = useProgrammes();
+  const { data: programmes = [], isLoading, isError, refetch } = useProgrammes();
 
   const createMutation = useCreateProgramme();
   const updateMutation = useUpdateProgramme();
@@ -71,6 +72,38 @@ export default function ProgrammesPage() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
+  const columns: DataTableColumn<AcademicProgramme>[] = [
+    { key: "name", header: "Name", cell: (p) => <span className="font-medium">{p.name}</span> },
+    { key: "board", header: "Board", className: "text-muted-foreground", cell: (p) => p.board },
+    { key: "medium", header: "Medium", className: "text-muted-foreground", cell: (p) => p.medium ?? "—" },
+    { key: "code", header: "Code", className: "font-mono text-xs text-muted-foreground", cell: (p) => p.code },
+    {
+      key: "status",
+      header: "Status",
+      cell: (p) => (
+        <Badge variant={p.status === "active" ? "default" : "outline"} className="capitalize">
+          {p.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (p) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => handleEditClick(p)} aria-label={`Edit ${p.name}`}>
+            <Pencil className="size-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(p)} aria-label={`Delete ${p.name}`}>
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
       <WizardShell
@@ -89,102 +122,16 @@ export default function ProgrammesPage() {
             </Button>
           </div>
 
-          {isLoading ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Loading…
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/40">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Board
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Medium
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Code
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {programmes.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-4 py-8 text-center text-muted-foreground"
-                      >
-                        No programmes yet. Click &ldquo;Add Programme&rdquo; to
-                        get started.
-                      </td>
-                    </tr>
-                  ) : (
-                    programmes.map((programme) => (
-                      <tr
-                        key={programme.id}
-                        className="border-b last:border-0 hover:bg-muted/20"
-                      >
-                        <td className="px-4 py-3 font-medium">
-                          {programme.name}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {programme.board}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {programme.medium ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                          {programme.code}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge
-                            variant={
-                              programme.status === "active"
-                                ? "default"
-                                : "outline"
-                            }
-                          >
-                            {programme.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditClick(programme)}
-                              aria-label={`Edit ${programme.name}`}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteTarget(programme)}
-                              aria-label={`Delete ${programme.name}`}
-                            >
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={programmes}
+            getRowId={(p) => p.id}
+            isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
+            errorMessage="Couldn't load programmes. Please retry."
+            emptyMessage={'No programmes yet. Click "Add Programme" to get started.'}
+          />
         </div>
       </WizardShell>
 

@@ -48,7 +48,7 @@ const TERM_PRESETS: TermPreset[] = [
 
 export default function TermsPage() {
   const { academicYearId } = useActiveAcademicYear();
-  const { data: terms = [], isLoading } = useTerms(academicYearId ?? undefined);
+  const { data: terms = [], isLoading, isError, refetch } = useTerms(academicYearId ?? undefined);
   const { data: academicYears = [] } = useAcademicYears();
   const activeYearName =
     academicYears.find((y) => y.id === academicYearId)?.name ?? null;
@@ -214,6 +214,13 @@ export default function TermsPage() {
               <p className="py-6 text-center text-sm text-muted-foreground">
                 Loading…
               </p>
+            ) : isError ? (
+              <div className="flex flex-col items-center gap-2 py-6 text-center text-sm">
+                <p className="text-destructive">Couldn&apos;t load terms. Please retry.</p>
+                <Button variant="outline" size="sm" onClick={() => refetch()}>
+                  Retry
+                </Button>
+              </div>
             ) : (
               <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm">
