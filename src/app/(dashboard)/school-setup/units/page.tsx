@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { WizardShell } from "@/components/school-setup/wizard/WizardShell";
 import {
@@ -21,7 +22,7 @@ import {
 import type { SchoolUnit } from "@/services/schoolUnitsService";
 
 export default function UnitsPage() {
-  const { data: units = [], isLoading } = useSchoolUnits();
+  const { data: units = [], isLoading, isError, refetch } = useSchoolUnits();
 
   const createMutation = useCreateSchoolUnit();
   const updateMutation = useUpdateSchoolUnit();
@@ -69,6 +70,43 @@ export default function UnitsPage() {
   const isSaving =
     createMutation.isPending || updateMutation.isPending;
 
+  const columns: DataTableColumn<SchoolUnit>[] = [
+    { key: "name", header: "Name", cell: (u) => <span className="font-medium">{u.name}</span> },
+    { key: "code", header: "Code", className: "text-muted-foreground", cell: (u) => u.code },
+    { key: "dise", header: "U-DISE", className: "text-muted-foreground", cell: (u) => u.dise_no ?? "—" },
+    {
+      key: "gr",
+      header: "GR Scheme",
+      className: "font-mono text-xs text-muted-foreground",
+      cell: (u) => u.gr_number_scheme ?? "—",
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (u) => (
+        <Badge variant={u.status === "active" ? "default" : "outline"} className="capitalize">
+          {u.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (u) => (
+        <div className="flex items-center justify-end gap-1">
+          <Button variant="ghost" size="sm" onClick={() => handleEditClick(u)} aria-label={`Edit ${u.name}`}>
+            <Pencil className="size-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(u)} aria-label={`Delete ${u.name}`}>
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
       <WizardShell
@@ -87,98 +125,16 @@ export default function UnitsPage() {
             </Button>
           </div>
 
-          {isLoading ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Loading…
-            </p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/40">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Code
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      U-DISE
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      GR Scheme
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {units.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-4 py-8 text-center text-muted-foreground"
-                      >
-                        No branches yet. Click &ldquo;Add Branch&rdquo; to get
-                        started.
-                      </td>
-                    </tr>
-                  ) : (
-                    units.map((unit) => (
-                      <tr
-                        key={unit.id}
-                        className="border-b last:border-0 hover:bg-muted/20"
-                      >
-                        <td className="px-4 py-3 font-medium">{unit.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {unit.code}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {unit.dise_no ?? "—"}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                          {unit.gr_number_scheme ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Badge
-                            variant={
-                              unit.status === "active" ? "default" : "outline"
-                            }
-                          >
-                            {unit.status}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditClick(unit)}
-                              aria-label={`Edit ${unit.name}`}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteTarget(unit)}
-                              aria-label={`Delete ${unit.name}`}
-                            >
-                              <Trash2 className="size-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={units}
+            getRowId={(u) => u.id}
+            isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
+            errorMessage="Couldn't load branches. Please retry."
+            emptyMessage={'No branches yet. Click "Add Branch" to get started.'}
+          />
         </div>
       </WizardShell>
 

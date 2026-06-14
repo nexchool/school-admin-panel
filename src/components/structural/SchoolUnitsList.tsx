@@ -35,7 +35,7 @@ export function SchoolUnitsList() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission("school_unit.manage");
 
-  const { data = [], isLoading } = useSchoolUnits();
+  const { data = [], isLoading, isError, refetch } = useSchoolUnits();
   const createMut = useCreateSchoolUnit();
   const deleteMut = useDeleteSchoolUnit();
 
@@ -119,6 +119,13 @@ export function SchoolUnitsList() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading…
             </p>
+          ) : isError ? (
+            <div className="flex flex-col items-start gap-2 text-sm">
+              <p className="text-destructive">Couldn&apos;t load branches. Please retry.</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
           ) : data.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No units yet. Add at least one to continue.

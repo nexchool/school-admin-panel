@@ -36,7 +36,7 @@ export function TermsList() {
   const defaultYear = years.find((y) => y.is_active !== false) ?? years[0];
   const yearId = yearIdRaw || (defaultYear ? defaultYear.id : "");
 
-  const { data: terms = [], isLoading } = useTerms(yearId || undefined);
+  const { data: terms = [], isLoading, isError, refetch } = useTerms(yearId || undefined);
   const createMut = useCreateTerm();
   const deleteMut = useDeleteTerm();
 
@@ -188,6 +188,13 @@ export function TermsList() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Loading…
                 </p>
+              ) : isError ? (
+                <div className="flex flex-col items-start gap-2 text-sm">
+                  <p className="text-destructive">Couldn&apos;t load terms. Please retry.</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                    Retry
+                  </Button>
+                </div>
               ) : sortedTerms.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No terms for the selected year.

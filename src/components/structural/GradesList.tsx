@@ -36,7 +36,7 @@ export function GradesList() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission("grade.manage");
 
-  const { data = [], isLoading } = useGrades();
+  const { data = [], isLoading, isError, refetch } = useGrades();
   const createMut = useCreateGrade();
   const deleteMut = useDeleteGrade();
 
@@ -182,6 +182,13 @@ export function GradesList() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading…
             </p>
+          ) : isError ? (
+            <div className="flex flex-col items-start gap-2 text-sm">
+              <p className="text-destructive">Couldn&apos;t load grades. Please retry.</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
           ) : sortedGrades.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No grades yet. Add at least one to continue.

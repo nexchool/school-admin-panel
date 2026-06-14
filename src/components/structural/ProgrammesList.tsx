@@ -35,7 +35,7 @@ export function ProgrammesList() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission("programme.manage");
 
-  const { data = [], isLoading } = useProgrammes();
+  const { data = [], isLoading, isError, refetch } = useProgrammes();
   const createMut = useCreateProgramme();
   const deleteMut = useDeleteProgramme();
 
@@ -129,6 +129,13 @@ export function ProgrammesList() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading…
             </p>
+          ) : isError ? (
+            <div className="flex flex-col items-start gap-2 text-sm">
+              <p className="text-destructive">Couldn&apos;t load programmes. Please retry.</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
           ) : data.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No programmes yet. Add at least one to continue.
