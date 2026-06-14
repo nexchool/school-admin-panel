@@ -52,6 +52,28 @@ export function useStudents(params?: StudentsListParams) {
   });
 }
 
+/**
+ * Student search for pickers (hostel allocation, gatepass, visitor check-in,
+ * gatekeeper). Unlike {@link useStudents} this is gated only on tenant — it must
+ * work even when no active academic year is set, since picking a resident or a
+ * visitor's student is not year-scoped. The backend list endpoint treats
+ * `academic_year_id` as optional, so omitting it returns all matching students.
+ * Cached under a separate `"search"` namespace so it never collides with the
+ * year-scoped main list.
+ */
+export function useStudentSearch(
+  params?: StudentsListParams,
+  opts?: { enabled?: boolean },
+) {
+  const { tenantId } = useAuth();
+  return useQuery<StudentsListResult>({
+    queryKey: [...studentsKeys.all, "search", tenantId, params],
+    queryFn: () => studentsService.getStudents(params ?? {}),
+    enabled: !!tenantId && (opts?.enabled ?? true),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useStudent(id: string | null) {
   const { tenantId } = useAuth();
   return useQuery({

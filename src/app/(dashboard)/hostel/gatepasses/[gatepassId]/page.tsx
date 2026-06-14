@@ -145,10 +145,10 @@ export default function GatepassDetailPage() {
                 busy={busy}
                 onApprove={() => approve.mutate(gatepass.id)}
                 onReject={() => {
-                  const reason =
-                    window.prompt("Reason for rejection (optional):") ??
-                    undefined;
-                  reject.mutate({ id: gatepass.id, reason });
+                  // null = Cancel → abort; "" = OK with empty → proceed.
+                  const input = window.prompt("Reason for rejection (optional):");
+                  if (input === null) return;
+                  reject.mutate({ id: gatepass.id, reason: input.trim() || undefined });
                 }}
                 onCheckout={() => checkout.mutate(gatepass.id)}
                 onCheckin={() => checkin.mutate(gatepass.id)}

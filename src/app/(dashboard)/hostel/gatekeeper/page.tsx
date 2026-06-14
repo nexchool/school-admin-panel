@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-import { useStudents } from "@/hooks/useStudents";
+import { useStudentSearch } from "@/hooks/useStudents";
 import {
   useGatepassCheckin,
   useGatepassCheckout,
@@ -59,25 +59,26 @@ export default function GatekeeperPage() {
 
   // Pull the student list when the gatekeeper has typed something. Keep
   // results tight (10) so the page doesn't drown them.
-  const studentsQuery = useStudents({
+  const studentsQuery = useStudentSearch({
     search: search.trim() || undefined,
     per_page: 10,
   });
 
   // Once a student is picked, pull their gatepasses with status filters
   // that matter for the gate.
-  const approvedGpQuery = useGatepasses({
-    student_id: selectedStudent?.id,
-    status: "approved",
-  });
-  const activeGpQuery = useGatepasses({
-    student_id: selectedStudent?.id,
-    status: "active",
-  });
-  const overdueGpQuery = useGatepasses({
-    student_id: selectedStudent?.id,
-    status: "overdue",
-  });
+  const gateEnabled = !!selectedStudent?.id;
+  const approvedGpQuery = useGatepasses(
+    { student_id: selectedStudent?.id, status: "approved" },
+    { enabled: gateEnabled },
+  );
+  const activeGpQuery = useGatepasses(
+    { student_id: selectedStudent?.id, status: "active" },
+    { enabled: gateEnabled },
+  );
+  const overdueGpQuery = useGatepasses(
+    { student_id: selectedStudent?.id, status: "overdue" },
+    { enabled: gateEnabled },
+  );
 
   const checkout = useGatepassCheckout();
   const checkin = useGatepassCheckin();

@@ -329,17 +329,22 @@ export function useCheckoutAllocation() {
 // Gatepasses
 // ---------------------------------------------------------------------------
 
-export function useGatepasses(filters?: {
-  hostel_id?: string;
-  student_id?: string;
-  status?: GatepassStatus;
-  type?: GatepassType;
-}) {
+export function useGatepasses(
+  filters?: {
+    hostel_id?: string;
+    student_id?: string;
+    status?: GatepassStatus;
+    type?: GatepassType;
+  },
+  options?: { enabled?: boolean },
+) {
   const { tenantId } = useAuth();
   return useQuery({
     queryKey: [...hostelKeys.gatepasses.list(filters as Record<string, unknown>), tenantId],
     queryFn: () => hostelService.listGatepasses(filters),
-    enabled: !!tenantId,
+    // Callers (e.g. the gatekeeper) gate on a selected student so we don't fetch
+    // every gatepass in the tenant with only a status filter before one is picked.
+    enabled: !!tenantId && (options?.enabled ?? true),
   });
 }
 

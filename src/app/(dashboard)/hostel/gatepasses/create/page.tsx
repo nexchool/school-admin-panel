@@ -25,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-import { useStudents } from "@/hooks/useStudents";
+import { useStudentSearch } from "@/hooks/useStudents";
 import { useCreateGatepass } from "@/hooks/useHostel";
 import { hostelService } from "@/services/hostelService";
 import type {
@@ -86,7 +86,7 @@ export default function CreateGatepassPage() {
   const [allocation, setAllocation] = useState<HostelAllocation | null>(null);
   const [resolvingAllocation, setResolvingAllocation] = useState(false);
 
-  const studentsQuery = useStudents({
+  const studentsQuery = useStudentSearch({
     search: studentSearch.trim() || undefined,
     per_page: 20,
   });

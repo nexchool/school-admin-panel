@@ -220,11 +220,12 @@ export default function GatepassesKanbanPage() {
                           // + the global mutation cache toast.
                           onApprove={() => approve.mutate(gp.id)}
                           onReject={() => {
-                            const reason =
-                              window.prompt(
-                                "Reason for rejection (optional):"
-                              ) ?? undefined;
-                            reject.mutate({ id: gp.id, reason });
+                            // null = Cancel → abort; "" = OK with empty → proceed.
+                            const input = window.prompt(
+                              "Reason for rejection (optional):"
+                            );
+                            if (input === null) return;
+                            reject.mutate({ id: gp.id, reason: input.trim() || undefined });
                           }}
                           onCheckout={() => checkout.mutate(gp.id)}
                           onCheckin={() => checkin.mutate(gp.id)}

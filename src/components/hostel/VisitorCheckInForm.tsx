@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toastError } from "@/lib/errorToast";
 import { cn } from "@/lib/utils";
 
-import { useStudents } from "@/hooks/useStudents";
+import { useStudentSearch } from "@/hooks/useStudents";
 import { useVisitorSearch } from "@/hooks/useHostel";
 
 import {
@@ -93,7 +93,7 @@ export function VisitorCheckInForm({ onSubmit, saving }: VisitorCheckInFormProps
 
   // Student search.
   const [studentSearch, setStudentSearch] = useState("");
-  const studentsQuery = useStudents({
+  const studentsQuery = useStudentSearch({
     search: studentSearch.trim() || undefined,
     per_page: 15,
   });

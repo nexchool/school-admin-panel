@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-import { useStudents } from "@/hooks/useStudents";
+import { useStudentSearch } from "@/hooks/useStudents";
 
 /**
  * Allocate a student to a specific bed.
@@ -59,7 +59,7 @@ export function AllocationDialog({
   saving,
 }: AllocationDialogProps) {
   const [search, setSearch] = useState("");
-  const studentsQuery = useStudents({
+  const studentsQuery = useStudentSearch({
     search: search.trim() || undefined,
     per_page: 25,
   });
