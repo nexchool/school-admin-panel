@@ -31,9 +31,19 @@ import { useStudentSearch } from "@/hooks/useStudents";
  * student already has an active allocation or the bed is occupied — we
  * surface those errors via onSubmit's rejection.
  */
+function todayLocalISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const allocationFormSchema = z.object({
   student_id: z.string().min(1, "Pick a student to allocate."),
-  check_in_at: z.string().min(1, "Check-in date is required."),
+  check_in_at: z
+    .string()
+    .min(1, "Check-in date is required.")
+    // Date-only string (YYYY-MM-DD); lexical compare is valid. Block future
+    // dates so a typo can't create an allocation that starts "in the future".
+    .refine((v) => v <= todayLocalISO(), "Check-in date can't be in the future."),
   notes: z.string().optional().or(z.literal("")),
 });
 
@@ -74,7 +84,7 @@ export function AllocationDialog({
     resolver: zodResolver(allocationFormSchema),
     defaultValues: {
       student_id: "",
-      check_in_at: new Date().toISOString().slice(0, 10),
+      check_in_at: todayLocalISO(),
       notes: "",
     },
   });
@@ -83,7 +93,7 @@ export function AllocationDialog({
     if (open) {
       reset({
         student_id: "",
-        check_in_at: new Date().toISOString().slice(0, 10),
+        check_in_at: todayLocalISO(),
         notes: "",
       });
       setSearch("");
@@ -195,6 +205,7 @@ export function AllocationDialog({
               <Input
                 id="check_in_at"
                 type="date"
+                max={todayLocalISO()}
                 aria-invalid={Boolean(errors.check_in_at)}
                 {...register("check_in_at")}
               />

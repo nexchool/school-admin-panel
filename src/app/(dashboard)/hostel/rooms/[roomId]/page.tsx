@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { ChevronLeft, BedDouble, Plus, RotateCcw, Wrench } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,14 @@ export default function RoomDetailPage() {
 
   async function handleAddBed() {
     if (!room) return;
+    // Don't let the bed count exceed the room's declared capacity — otherwise
+    // "Vacant" goes negative-clamped and occupancy math breaks.
+    if (beds.length >= room.capacity) {
+      toast.error(
+        `This room is at its capacity of ${room.capacity} beds. Increase the capacity to add more.`,
+      );
+      return;
+    }
     setAdding(true);
     try {
       // Auto-generate a bed_number: next free letter slot (A1, A2, ...).
@@ -113,6 +122,8 @@ export default function RoomDetailPage() {
         room_id: room.id,
         bed_number: next,
       });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't add the bed.");
     } finally {
       setAdding(false);
     }
@@ -156,7 +167,17 @@ export default function RoomDetailPage() {
           <Button
             variant="outline"
             onClick={handleAddBed}
-            disabled={!room || adding || createBed.isPending}
+            disabled={
+              !room ||
+              adding ||
+              createBed.isPending ||
+              (!!room && beds.length >= room.capacity)
+            }
+            title={
+              !!room && beds.length >= room.capacity
+                ? `Room is at capacity (${room.capacity} beds)`
+                : undefined
+            }
           >
             <Plus className="mr-2 size-4" />
             {adding || createBed.isPending ? "Adding bed…" : "Add bed"}
@@ -241,6 +262,7 @@ export default function RoomDetailPage() {
                     occupantName={occupant?.name ?? null}
                     occupantAdmission={occupant?.admission_number ?? null}
                     occupantStudentId={occupant?.student_id ?? null}
+                    hasActiveAllocation={!!allocation}
                     onAllocate={() => setAllocateBed(bed)}
                     onCheckout={
                       allocation
@@ -357,6 +379,7 @@ function BedCard({
   occupantName,
   occupantAdmission,
   occupantStudentId,
+  hasActiveAllocation,
   onAllocate,
   onCheckout,
   checkingOut,
@@ -365,12 +388,17 @@ function BedCard({
   occupantName: string | null;
   occupantAdmission: string | null;
   occupantStudentId: string | null;
+  /** True when an active allocation row points at this bed (parent-resolved). */
+  hasActiveAllocation?: boolean;
   onAllocate: () => void;
   onCheckout?: () => void | Promise<void>;
   checkingOut?: boolean;
 }) {
   const isMaintenance = bed.status === "maintenance";
-  const isAllocated = Boolean(occupantName) || bed.is_allocated;
+  // Treat a bed as occupied if any signal says so — guards against showing
+  // "Allocate" (and a double-allocation) when is_allocated is stale relative to
+  // the live allocation list.
+  const isAllocated = Boolean(occupantName) || bed.is_allocated || !!hasActiveAllocation;
 
   return (
     <Card

@@ -35,7 +35,8 @@ const roomFormSchema = z.object({
   capacity: z
     .number({ error: "Capacity must be a number" })
     .int("Capacity must be a whole number")
-    .positive("Capacity must be greater than zero"),
+    .positive("Capacity must be greater than zero")
+    .max(50, "Capacity looks too high — max 50 beds per room"),
 });
 
 export type RoomFormValues = z.infer<typeof roomFormSchema>;
@@ -141,6 +142,7 @@ export function RoomFormDialog({
                 id="capacity"
                 type="number"
                 min={1}
+                max={50}
                 aria-invalid={Boolean(errors.capacity)}
                 {...register("capacity", { valueAsNumber: true })}
               />
