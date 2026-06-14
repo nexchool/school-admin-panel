@@ -56,7 +56,7 @@ export default function FeeStructuresPage() {
   }>({ open: false, mode: "create" });
 
   const { data: academicYears = [] } = useAcademicYears(false);
-  const { data: structures = [], isLoading } = useFeeStructures({
+  const { data: structures = [], isLoading, isError, refetch } = useFeeStructures({
     academic_year_id: yearFilter || undefined,
   });
   const { mutateAsync: deleteStructureAsync, isPending: deleting } = useDeleteFeeStructure();
@@ -229,6 +229,9 @@ export default function FeeStructuresPage() {
             data={structures}
             getRowId={(r) => r.id}
             isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
+            errorMessage="Couldn't load fee structures. Please retry."
             emptyMessage={
               isLoading
                 ? "Loading…"

@@ -71,7 +71,7 @@ export default function StudentFeeDetailPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const { data: fee, isLoading } = useStudentFeeDetail(id);
+  const { data: fee, isLoading, isError, refetch } = useStudentFeeDetail(id);
 
   const outstanding = fee
     ? Math.max(0, fee.outstanding_amount ?? (fee.total_amount ?? 0) - (fee.paid_amount ?? 0))
@@ -141,6 +141,23 @@ export default function StudentFeeDetailPage() {
     return (
       <div className="flex min-h-[200px] items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Distinguish a recoverable load error (offer Retry) from a genuine 404.
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <p className="text-destructive">Couldn&apos;t load this fee record.</p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => refetch()}>
+            Retry
+          </Button>
+          <Button asChild variant="ghost">
+            <Link href="/dashboard/finance/student-fees">Back to Student Fees</Link>
+          </Button>
+        </div>
       </div>
     );
   }

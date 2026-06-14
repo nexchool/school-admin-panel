@@ -31,14 +31,17 @@ export default function HolidaysPage() {
   const [editHoliday, setEditHoliday] = useState<Holiday | null>(null);
   const [deleteHoliday, setDeleteHoliday] = useState<Holiday | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const loadHolidays = () => {
     setLoading(true);
+    setLoadError(false);
     holidayService
       .getHolidays({ include_recurring: true })
       .then(setHolidays)
       .catch(() => {
         setHolidays([]);
+        setLoadError(true);
         toast.error("Could not load holidays");
       })
       .finally(() => setLoading(false));
@@ -190,6 +193,9 @@ export default function HolidaysPage() {
             data={holidays}
             getRowId={(row) => row.id}
             isLoading={loading}
+            isError={loadError}
+            onRetry={loadHolidays}
+            errorMessage="Couldn't load holidays. Please retry."
             emptyMessage="No holidays found. Add a holiday to get started."
           />
         </CardContent>

@@ -381,20 +381,21 @@ export function StudentForm({
   });
 
   const isSameAsPermanent = form.watch("is_same_as_permanent_address") === true;
+  // Watch the permanent fields too — otherwise, with "same as permanent" on,
+  // editing a permanent field after toggling left the (disabled) current fields
+  // stale and saved the wrong current address.
+  const permAddress = form.watch("permanent_address");
+  const permCity = form.watch("permanent_city");
+  const permState = form.watch("permanent_state");
+  const permPincode = form.watch("permanent_pincode");
 
   useEffect(() => {
     if (!isSameAsPermanent) return;
-    const perm = {
-      permanent_address: form.getValues("permanent_address") || "",
-      permanent_city: form.getValues("permanent_city") || "",
-      permanent_state: form.getValues("permanent_state") || "",
-      permanent_pincode: form.getValues("permanent_pincode") || "",
-    };
-    form.setValue("current_address", perm.permanent_address);
-    form.setValue("current_city", perm.permanent_city);
-    form.setValue("current_state", perm.permanent_state);
-    form.setValue("current_pincode", perm.permanent_pincode);
-  }, [isSameAsPermanent, form]);
+    form.setValue("current_address", permAddress || "");
+    form.setValue("current_city", permCity || "");
+    form.setValue("current_state", permState || "");
+    form.setValue("current_pincode", permPincode || "");
+  }, [isSameAsPermanent, permAddress, permCity, permState, permPincode, form]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

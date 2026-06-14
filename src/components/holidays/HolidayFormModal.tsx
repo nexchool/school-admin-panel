@@ -75,6 +75,10 @@ export function HolidayFormModal({
       toast.error("Start date is required for non-recurring holiday");
       return;
     }
+    if (!isRecurring && endDate && endDate < startDate) {
+      toast.error("End date cannot be before the start date");
+      return;
+    }
     setSubmitting(true);
     try {
       await onSubmit({

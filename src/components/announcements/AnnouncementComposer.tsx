@@ -193,7 +193,23 @@ export function AnnouncementComposer({ announcementId, initialData }: Props) {
   });
 
   const openSchedule = () => {
-    setScheduleAt(initialData?.scheduled_at?.slice(0, 16) ?? "");
+    // scheduled_at is a UTC ISO string; a datetime-local input expects LOCAL
+    // wall-clock. Slicing the UTC string fed the wrong time into the picker and
+    // shifted the schedule by the tz offset on re-confirm. Convert UTC -> local.
+    const iso = initialData?.scheduled_at;
+    if (iso) {
+      const d = new Date(iso);
+      if (!Number.isNaN(d.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        setScheduleAt(
+          `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`,
+        );
+      } else {
+        setScheduleAt("");
+      }
+    } else {
+      setScheduleAt("");
+    }
     setScheduleOpen(true);
   };
 
