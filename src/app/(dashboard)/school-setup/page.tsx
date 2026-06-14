@@ -56,6 +56,14 @@ export default function SchoolSetupPage() {
 
   useEffect(() => {
     if (!canManage) return;
+    // The status payload is super-admin-only, so a non-super-admin manager has
+    // no `data` to route from — send them straight to the first step instead of
+    // spinning forever on a permanently-disabled query. The wizard steps work
+    // for them (they use tenant-scoped queries, not the status endpoint).
+    if (!isPlatformAdmin) {
+      router.replace("/school-setup/units");
+      return;
+    }
     if (isLoading || !data) return;
 
     const overall = (data as { overall?: { is_setup_complete?: boolean } }).overall;
@@ -72,7 +80,7 @@ export default function SchoolSetupPage() {
 
     const target = pickFirstIncomplete(data as unknown as Record<string, unknown>);
     router.replace(target.href);
-  }, [canManage, isLoading, data, router]);
+  }, [canManage, isPlatformAdmin, isLoading, data, router]);
 
   if (!canManage) {
     return (
