@@ -9,6 +9,7 @@ import { classesService } from "@/services/classesService";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
 import type { CreateClassInput } from "@/types/class";
 
 type ListFilters = {
@@ -70,6 +71,8 @@ export function useCreateClass() {
     mutationFn: (data: CreateClassInput) => classesService.createClass(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: classesKeys.all });
+      // Keep the wizard's completion status fresh (matches the other masters).
+      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
     },
   });
 }
@@ -87,6 +90,7 @@ export function useUpdateClass() {
       queryClient.invalidateQueries({
         queryKey: classesKeys.detail(variables.id),
       });
+      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
     },
   });
 }
@@ -97,6 +101,7 @@ export function useDeleteClass() {
     mutationFn: (id: string) => classesService.deleteClass(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: classesKeys.all });
+      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
     },
   });
 }

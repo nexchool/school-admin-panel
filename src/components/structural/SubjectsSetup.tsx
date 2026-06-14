@@ -75,7 +75,13 @@ export function SubjectsSetup() {
   // Save (delete_missing: true) wipe them.
   useEffect(() => {
     if (!currentKey || currentKey === hydratedKey) return;
-    if (!contextsLoaded || contextsFetching) return;
+    if (!contextsLoaded || contextsFetching) {
+      // Key just changed and the new grade's data hasn't settled — clear the
+      // previous grade's selections so they can't be shown or (via Save with
+      // delete_missing:true) written onto the newly-selected grade.
+      setSelected({});
+      return;
+    }
     const next: Record<string, number> = {};
     for (const c of serverContexts) {
       next[c.subject_id] = c.default_weekly_periods ?? DEFAULT_PERIODS;
@@ -83,6 +89,9 @@ export function SubjectsSetup() {
     setSelected(next);
     setHydratedKey(currentKey);
   }, [currentKey, hydratedKey, contextsLoaded, contextsFetching, serverContexts]);
+
+  // True only when `selected` reflects the settled data for the current grade.
+  const hydratedForCurrentKey = !!currentKey && currentKey === hydratedKey;
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -107,6 +116,9 @@ export function SubjectsSetup() {
 
   const onSave = async () => {
     if (!enabled) return;
+    // Never save while the displayed selections aren't the settled data for the
+    // current grade — guards against writing a prior grade's set onto this one.
+    if (!hydratedForCurrentKey) return;
     if (Object.keys(selected).length === 0) {
       toast.error("Pick at least one subject.");
       return;
@@ -284,7 +296,11 @@ export function SubjectsSetup() {
               <Button
                 type="button"
                 onClick={onSave}
-                disabled={isPending || Object.keys(selected).length === 0}
+                disabled={
+                  isPending ||
+                  !hydratedForCurrentKey ||
+                  Object.keys(selected).length === 0
+                }
                 className="gap-2"
               >
                 {isPending ? (

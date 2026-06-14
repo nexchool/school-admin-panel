@@ -82,6 +82,7 @@ export function ClassFormDialog({
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ClassFormValues>({
     resolver: zodResolver(classFormSchema),
@@ -98,6 +99,13 @@ export function ClassFormDialog({
   const watchedGradeId = watch("grade_id");
   const selectedGrade = grades.find((g) => g.id === watchedGradeId);
   const showStream = isSeniorSecondary(selectedGrade?.sequence);
+
+  // Clear any stream when the grade isn't senior-secondary — otherwise a stream
+  // picked for Grade 11/12 stays in form state after switching to a junior grade
+  // and would be saved onto a class that shouldn't have one.
+  useEffect(() => {
+    if (!showStream) setValue("stream", "");
+  }, [showStream, setValue]);
 
   useEffect(() => {
     if (open) {

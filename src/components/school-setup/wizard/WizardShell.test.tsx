@@ -18,6 +18,12 @@ vi.mock("@/hooks/useSetupStepStatus", async (orig) => {
   };
 });
 
+// The step rail reads the setup-status payload; stub it (no QueryClient in unit test).
+vi.mock("@/hooks/useSchoolSetup", () => ({
+  useSetupStatus: () => ({ data: undefined }),
+  schoolSetupKeys: { status: ["school-setup", "status"] },
+}));
+
 import { useSetupStepStatus } from "@/hooks/useSetupStepStatus";
 
 function renderShell(overrides: Partial<React.ComponentProps<typeof WizardShell>> = {}) {
@@ -38,7 +44,7 @@ describe("WizardShell", () => {
 
   it("renders the step title and description", () => {
     renderShell();
-    expect(screen.getByText("Branches")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Branches" })).toBeInTheDocument();
     expect(screen.getByText(/Step 1 of 8/)).toBeInTheDocument();
   });
 
@@ -50,7 +56,7 @@ describe("WizardShell", () => {
 
   it("disables the continue button when canContinue is false", () => {
     renderShell({ canContinue: false });
-    expect(screen.getByRole("button", { name: /Save & Continue/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Continue/})).toBeDisabled();
   });
 
   it("disables back button on first step", () => {
@@ -68,17 +74,17 @@ describe("WizardShell", () => {
     expect(screen.queryByRole("button", { name: /^Skip$/ })).not.toBeInTheDocument();
   });
 
-  it("always uses 'Save & Continue' label regardless of step status", () => {
+  it("uses the 'Continue' label regardless of step status", () => {
     vi.mocked(useSetupStepStatus).mockReturnValue("done");
     renderShell({ stepKey: "units" });
-    expect(screen.getByRole("button", { name: /Save & Continue/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Continue/})).toBeInTheDocument();
   });
 
   it("calls onContinue and navigates to next step when not done", async () => {
     const onContinue = vi.fn();
     vi.mocked(useSetupStepStatus).mockReturnValue("now");
     renderShell({ stepKey: "units", onContinue });
-    fireEvent.click(screen.getByRole("button", { name: /Save & Continue/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Continue/}));
     await vi.waitFor(() => expect(onContinue).toHaveBeenCalled());
     await vi.waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith("/school-setup/programmes"),
@@ -89,7 +95,7 @@ describe("WizardShell", () => {
     const onContinue = vi.fn();
     vi.mocked(useSetupStepStatus).mockReturnValue("done");
     renderShell({ stepKey: "units", onContinue });
-    fireEvent.click(screen.getByRole("button", { name: /Save & Continue/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Continue/}));
     await vi.waitFor(() => expect(onContinue).toHaveBeenCalled());
     await vi.waitFor(() =>
       expect(pushMock).toHaveBeenCalledWith("/school-setup/programmes"),

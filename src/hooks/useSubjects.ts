@@ -12,6 +12,7 @@ import type {
   UpdateSubjectInput,
 } from "@/types/subject";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
 
 export const subjectsKeys = {
   all: ["subjects"] as const,
@@ -44,6 +45,8 @@ export function useCreateSubject() {
       subjectsService.createSubject(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: subjectsKeys.all });
+      // Keep the wizard's completion status fresh (matches the other masters).
+      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
     },
   });
 }
@@ -58,6 +61,7 @@ export function useUpdateSubject() {
       queryClient.invalidateQueries({
         queryKey: subjectsKeys.detail(variables.id),
       });
+      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
     },
   });
 }
@@ -68,6 +72,7 @@ export function useDeleteSubject() {
     mutationFn: (id: string) => subjectsService.deleteSubject(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: subjectsKeys.all });
+      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
     },
   });
 }

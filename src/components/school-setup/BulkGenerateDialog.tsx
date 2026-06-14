@@ -47,9 +47,9 @@ function parseSections(raw: string): string[] {
 
 export function BulkGenerateDialog({ open, onOpenChange, initialCells, onSuccess }: Props) {
   const { academicYearId } = useActiveAcademicYear();
-  const { data: grades = [] } = useGrades();
-  const { data: units = [] } = useSchoolUnits();
-  const { data: programmes = [] } = useProgrammes();
+  const { data: grades = [], isLoading: gradesLoading } = useGrades();
+  const { data: units = [], isLoading: unitsLoading } = useSchoolUnits();
+  const { data: programmes = [], isLoading: programmesLoading } = useProgrammes();
   const mutation = useBulkGenerate();
 
   // cells[gradeId][colKey] = raw comma-separated string
@@ -186,7 +186,10 @@ export function BulkGenerateDialog({ open, onOpenChange, initialCells, onSuccess
     onOpenChange(nextOpen);
   };
 
-  const isLoading = !grades.length || !units.length || !programmes.length;
+  // Derive from the actual query states — NOT array emptiness, which would spin
+  // forever (and hide the "Complete Steps 1–2 first" guidance) when a tenant
+  // legitimately has zero grades/units/programmes.
+  const isLoading = gradesLoading || unitsLoading || programmesLoading;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

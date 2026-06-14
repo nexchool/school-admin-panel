@@ -4,20 +4,22 @@ export type WizardStep = {
   key: SetupStepKey;
   number: number;
   title: string;
+  /** Compact label used in the step rail. */
+  shortTitle: string;
   description: string;
   href: string;
   optional: boolean;
 };
 
 export const WIZARD_STEPS: WizardStep[] = [
-  { key: "units", number: 1, title: "Branches", description: "Configure your school's campuses or branches.", href: "/school-setup/units", optional: false },
-  { key: "programmes", number: 2, title: "Academic Programmes", description: "Define the boards and mediums you offer.", href: "/school-setup/programmes", optional: false },
-  { key: "grades", number: 3, title: "Grades", description: "List the grades or standards your school runs.", href: "/school-setup/grades", optional: false },
-  { key: "academic-year", number: 4, title: "Academic Year", description: "Set the active academic session.", href: "/school-setup/academic-year", optional: false },
-  { key: "classes", number: 5, title: "Classes", description: "Create class sections for each grade.", href: "/school-setup/classes", optional: false },
-  { key: "subjects", number: 6, title: "Subjects", description: "Configure subjects offered at your school.", href: "/school-setup/subjects", optional: false },
-  { key: "terms", number: 7, title: "Terms", description: "Split your academic year into terms.", href: "/school-setup/terms", optional: true },
-  { key: "complete", number: 8, title: "Review & Complete", description: "Confirm setup and move on.", href: "/school-setup/complete", optional: false },
+  { key: "units", number: 1, title: "Branches", shortTitle: "Branches", description: "Configure your school's campuses or branches.", href: "/school-setup/units", optional: false },
+  { key: "programmes", number: 2, title: "Academic Programmes", shortTitle: "Programmes", description: "Define the boards and mediums you offer.", href: "/school-setup/programmes", optional: false },
+  { key: "grades", number: 3, title: "Grades", shortTitle: "Grades", description: "List the grades or standards your school runs.", href: "/school-setup/grades", optional: false },
+  { key: "academic-year", number: 4, title: "Academic Year", shortTitle: "Year", description: "Set the active academic session.", href: "/school-setup/academic-year", optional: false },
+  { key: "classes", number: 5, title: "Classes", shortTitle: "Classes", description: "Create class sections for each grade.", href: "/school-setup/classes", optional: false },
+  { key: "subjects", number: 6, title: "Subjects", shortTitle: "Subjects", description: "Configure subjects offered at your school.", href: "/school-setup/subjects", optional: false },
+  { key: "terms", number: 7, title: "Terms", shortTitle: "Terms", description: "Split your academic year into terms.", href: "/school-setup/terms", optional: true },
+  { key: "complete", number: 8, title: "Review & Complete", shortTitle: "Review", description: "Confirm setup and move on.", href: "/school-setup/complete", optional: false },
 ];
 
 export function getStep(key: SetupStepKey): WizardStep {
