@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+import { isSchoolSetupEnabled } from "@/lib/featureFlags";
+
 /**
  * School Setup is hidden during white-glove onboarding (a backend seed script
  * builds the academic foundation instead). This server-component layout guards
@@ -11,7 +13,7 @@ export default function SchoolSetupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (process.env.NEXT_PUBLIC_ENABLE_SCHOOL_SETUP !== "true") {
+  if (!isSchoolSetupEnabled()) {
     redirect("/dashboard");
   }
   return <>{children}</>;

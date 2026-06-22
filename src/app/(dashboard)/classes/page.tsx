@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useClasses } from "@/hooks/useClasses";
 import { useAuth } from "@/hooks";
+import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import type { ClassItem } from "@/types/class";
 import { Plus, BookOpen } from "lucide-react";
 
@@ -113,11 +114,11 @@ export default function ClassesPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Classes</h1>
           <p className="text-muted-foreground">
-            Read-only list grouped by Branch → Programme → Grade. Use the
-            guided builder to add new sections.
+            Read-only list grouped by Branch → Programme → Grade.
+            {isSchoolSetupEnabled() && " Use the guided builder to add new sections."}
           </p>
         </div>
-        {canCreate && (
+        {canCreate && isSchoolSetupEnabled() && (
           <Button asChild className="gap-2">
             <Link href="/school-setup">
               <Plus className="size-4" />
@@ -134,15 +135,18 @@ export default function ClassesPage() {
           <CardHeader>
             <CardTitle>No classes yet</CardTitle>
             <CardDescription>
-              Use School Setup to add your first batch of classes via the
-              guided builder.
+              {isSchoolSetupEnabled()
+                ? "Use School Setup to add your first batch of classes via the guided builder."
+                : "Classes are added by your administrator during onboarding."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/school-setup">Open School Setup</Link>
-            </Button>
-          </CardContent>
+          {isSchoolSetupEnabled() && (
+            <CardContent>
+              <Button asChild>
+                <Link href="/school-setup">Open School Setup</Link>
+              </Button>
+            </CardContent>
+          )}
         </Card>
       ) : (
         <div className="space-y-6">

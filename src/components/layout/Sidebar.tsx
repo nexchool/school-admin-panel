@@ -35,6 +35,7 @@ import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatu
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 import { ROUTE_PERMISSIONS, TRANSPORT_NAV_PERMS } from "@/lib/navPermissions";
+import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 
 type NavItem = {
   href: string;
@@ -135,8 +136,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   const canManageSetup = hasPermission("school_setup.manage");
   // Wizard hidden by default during white-glove onboarding (seed script handles
   // setup). Set NEXT_PUBLIC_ENABLE_SCHOOL_SETUP=true to bring it back (e.g. dev).
-  const showSchoolSetup =
-    canManageSetup && process.env.NEXT_PUBLIC_ENABLE_SCHOOL_SETUP === "true";
+  const showSchoolSetup = canManageSetup && isSchoolSetupEnabled();
 
   const [setupExpanded, setSetupExpanded] = useState(
     pathname.startsWith("/school-setup")

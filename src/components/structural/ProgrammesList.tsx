@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks";
+import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import {
   useCreateProgramme,
   useDeleteProgramme,
@@ -102,12 +103,14 @@ export function ProgrammesList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href="/school-setup">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to setup
-          </Link>
-        </Button>
+        {isSchoolSetupEnabled() && (
+          <Button asChild variant="outline" size="sm" className="gap-1">
+            <Link href="/school-setup">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to setup
+            </Link>
+          </Button>
+        )}
         {canManage ? (
           <Button type="button" onClick={() => setOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" /> Add programme

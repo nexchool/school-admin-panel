@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import { useGrades } from "@/hooks/useGrades";
 import { useProgrammes } from "@/hooks/useProgrammes";
 import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
@@ -166,14 +167,16 @@ export function SubjectsSetup() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <Button asChild variant="outline" size="sm" className="gap-1">
-          <Link href="/school-setup">
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to setup
-          </Link>
-        </Button>
-      </div>
+      {isSchoolSetupEnabled() && (
+        <div className="flex items-center justify-between gap-3">
+          <Button asChild variant="outline" size="sm" className="gap-1">
+            <Link href="/school-setup">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to setup
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
