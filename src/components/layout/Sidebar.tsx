@@ -133,7 +133,10 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   // 403 on the super-admin-only /status endpoint. They rely on SetupGate's
   // banner (driven by auth-context isSetupComplete) instead.
   const canManageSetup = hasPermission("school_setup.manage");
-  const showSchoolSetup = canManageSetup;
+  // Wizard hidden by default during white-glove onboarding (seed script handles
+  // setup). Set NEXT_PUBLIC_ENABLE_SCHOOL_SETUP=true to bring it back (e.g. dev).
+  const showSchoolSetup =
+    canManageSetup && process.env.NEXT_PUBLIC_ENABLE_SCHOOL_SETUP === "true";
 
   const [setupExpanded, setSetupExpanded] = useState(
     pathname.startsWith("/school-setup")
