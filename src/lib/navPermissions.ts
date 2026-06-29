@@ -79,6 +79,9 @@ export const ROUTE_PERMISSIONS = {
   // `system.manage` superuser shortcut in `hasPermission`. The longest-prefix
   // matcher covers nested routes like /school-setup/units.
   "/school-setup": ["school_setup.manage"],
+  // Onboarding (YAML/JSON upload → preview → apply) — super-admin only,
+  // gated like school-setup but independent of the wizard feature flag.
+  "/onboarding": ["school_setup.manage"],
 } as const satisfies Record<string, readonly string[]>;
 
 /**

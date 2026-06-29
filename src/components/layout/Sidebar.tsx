@@ -30,11 +30,13 @@ import {
   Circle,
   CircleDot,
   ShieldCheck,
+  FileUp,
 } from "lucide-react";
 import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 import { ROUTE_PERMISSIONS, TRANSPORT_NAV_PERMS } from "@/lib/navPermissions";
+import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 
 type NavItem = {
   href: string;
@@ -133,7 +135,9 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   // 403 on the super-admin-only /status endpoint. They rely on SetupGate's
   // banner (driven by auth-context isSetupComplete) instead.
   const canManageSetup = hasPermission("school_setup.manage");
-  const showSchoolSetup = canManageSetup;
+  // Wizard hidden by default during white-glove onboarding (seed script handles
+  // setup). Set NEXT_PUBLIC_ENABLE_SCHOOL_SETUP=true to bring it back (e.g. dev).
+  const showSchoolSetup = canManageSetup && isSchoolSetupEnabled();
 
   const [setupExpanded, setSetupExpanded] = useState(
     pathname.startsWith("/school-setup")
@@ -243,6 +247,24 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Onboarding (YAML/JSON upload) — super-admin only, shown regardless
+              of the wizard flag since it's the scripted-onboarding entry point. */}
+          {canManageSetup && (
+            <Link
+              href="/onboarding"
+              onClick={handleNavClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isSidebarNavActive(pathname, "/onboarding")
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <FileUp className="h-5 w-5 shrink-0" />
+              Onboarding
+            </Link>
           )}
 
           {/* Remaining core nav items */}

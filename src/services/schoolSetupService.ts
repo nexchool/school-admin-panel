@@ -159,6 +159,49 @@ export type TemplateItem = {
   sort_order?: number;
 };
 
+// ── YAML/JSON onboarding upload (preview + apply) ─────────────────────
+
+export interface SeedEntityItem {
+  key?: string;
+  name?: string | null;
+  label?: string;
+  exists: boolean;
+}
+
+export interface SeedEntitySummary {
+  total: number;
+  new: number;
+  existing: number;
+  items?: SeedEntityItem[];
+}
+
+export interface SeedPreview {
+  valid: boolean;
+  errors: string[];
+  tenant: {
+    subdomain?: string | null;
+    active_subdomain?: string | null;
+    matches?: boolean;
+  };
+  academic_year: { name?: string | null; exists: boolean; active: boolean };
+  entities: {
+    units: SeedEntitySummary;
+    programmes: SeedEntitySummary;
+    grades: SeedEntitySummary;
+    subjects: SeedEntitySummary;
+    offerings: SeedEntitySummary;
+    classes: SeedEntitySummary;
+  };
+}
+
+export interface SeedApplyResult {
+  academic_year_id: string;
+  classes: { created: number; skipped: number };
+  class_subjects: { created: number; skipped: number };
+  setup_complete: boolean;
+  status: SetupStatus;
+}
+
 // ── Setup aggregator ─────────────────────────────────────────────────
 
 const setup = {
@@ -209,6 +252,19 @@ const setup = {
 
   downloadImportTemplate: () =>
     apiGetBlob("/api/school-setup/import/template"),
+
+  // Onboarding upload: dry-run preview (no writes) then apply.
+  seedPreview: async (file: File): Promise<SeedPreview> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return apiPostForm<SeedPreview>("/api/school-setup/seed/preview", fd);
+  },
+
+  seedApply: async (file: File): Promise<SeedApplyResult> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return apiPostForm<SeedApplyResult>("/api/school-setup/seed/apply", fd);
+  },
 };
 
 export const schoolSetupService = { setup };
