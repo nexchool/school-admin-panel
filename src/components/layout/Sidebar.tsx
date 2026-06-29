@@ -30,6 +30,7 @@ import {
   Circle,
   CircleDot,
   ShieldCheck,
+  FileUp,
 } from "lucide-react";
 import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
@@ -246,6 +247,24 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Onboarding (YAML/JSON upload) — super-admin only, shown regardless
+              of the wizard flag since it's the scripted-onboarding entry point. */}
+          {canManageSetup && (
+            <Link
+              href="/onboarding"
+              onClick={handleNavClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                isSidebarNavActive(pathname, "/onboarding")
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <FileUp className="h-5 w-5 shrink-0" />
+              Onboarding
+            </Link>
           )}
 
           {/* Remaining core nav items */}

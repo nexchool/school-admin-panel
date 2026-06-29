@@ -20,6 +20,9 @@ export interface ClassItem {
   programme_name?: string | null;
   grade_id?: string | null;
   grade_name?: string | null;
+  /** Grade ordering (Grade.sequence). Used to sort grade groups correctly
+   *  (e.g. Nursery < LKG < UKG < 1 < … < 10) instead of by name string. */
+  grade_sequence?: number | null;
   created_at?: string;
 }
 
