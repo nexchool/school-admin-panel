@@ -88,9 +88,10 @@ export default function OnboardingPage() {
     applyMut.reset();
   };
 
+  // A subdomain mismatch is informational only — the upload always applies to
+  // the tenant you're operating in, so it does not block Confirm & apply.
   const tenantMismatch = preview?.tenant?.matches === false;
-  const canApply =
-    !!file && !!preview && preview.valid && !tenantMismatch && !applyMut.isPending;
+  const canApply = !!file && !!preview && preview.valid && !applyMut.isPending;
 
   return (
     <div className="space-y-6">
@@ -174,9 +175,10 @@ export default function OnboardingPage() {
               <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                 <span>
-                  This config targets tenant <b>{preview.tenant.subdomain}</b>, but
-                  you are operating in <b>{preview.tenant.active_subdomain}</b>.
-                  Switch to the correct school before applying.
+                  Heads up: this file is labeled for tenant{" "}
+                  <b>{preview.tenant.subdomain}</b>, but it will be applied to the
+                  school you&rsquo;re operating in:{" "}
+                  <b>{preview.tenant.active_subdomain}</b>.
                 </span>
               </div>
             )}
