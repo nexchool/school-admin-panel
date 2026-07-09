@@ -76,7 +76,7 @@ function MiniCard({
 }
 
 /**
- * Three-up tile row for the dashboard.
+ * Three-up tile row shown on the Subscription page.
  *
  *  - Subscription status + days remaining when on trial
  *  - Active students count (live billable count)

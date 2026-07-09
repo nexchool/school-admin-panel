@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FieldError } from "@/components/ui/field-error";
+import { requiredString, optionalString } from "@/lib/validation/fields";
 import type { ClassItem } from "@/types/class";
 import type { AcademicYear } from "@/services/academicYearsService";
-import { toast } from "sonner";
 
 interface TeacherOption {
   id: string;
@@ -36,6 +40,17 @@ interface ClassFormModalProps {
   onSubmit: (data: { name: string; section: string; academic_year_id: string; teacher_id?: string }) => Promise<void>;
 }
 
+const NONE_VALUE = "__none__";
+
+const classSchema = z.object({
+  name: requiredString("Name"),
+  section: requiredString("Section"),
+  academic_year_id: requiredString("Academic year"),
+  teacher_id: optionalString,
+});
+
+type ClassFormValues = z.infer<typeof classSchema>;
+
 export function ClassFormModal({
   open,
   onOpenChange,
@@ -44,62 +59,46 @@ export function ClassFormModal({
   availableTeachers,
   onSubmit,
 }: ClassFormModalProps) {
-  const [name, setName] = useState(initialData?.name ?? "");
-  const [section, setSection] = useState(initialData?.section ?? "");
-  const [academicYearId, setAcademicYearId] = useState(
-    initialData?.academic_year_id ?? academicYears[0]?.id ?? ""
-  );
-  const NONE_VALUE = "__none__";
-  const [teacherId, setTeacherId] = useState(
-    initialData?.teacher_id || NONE_VALUE
-  );
-  const [submitting, setSubmitting] = useState(false);
+  const toDefaults = (): ClassFormValues => ({
+    name: initialData?.name ?? "",
+    section: initialData?.section ?? "",
+    academic_year_id: initialData?.academic_year_id ?? academicYears[0]?.id ?? "",
+    teacher_id: initialData?.teacher_id ?? "",
+  });
+
+  const form = useForm<ClassFormValues>({
+    resolver: zodResolver(classSchema) as any,
+    defaultValues: toDefaults(),
+  });
 
   // Reseed when opened or when the edited class changes — the modal is mounted
   // persistently with initialData toggling, so a once-only seed shows stale fields.
   useEffect(() => {
-    if (open) {
-      setName(initialData?.name ?? "");
-      setSection(initialData?.section ?? "");
-      setAcademicYearId(initialData?.academic_year_id ?? academicYears[0]?.id ?? "");
-      setTeacherId(initialData?.teacher_id || NONE_VALUE);
-    }
+    if (open) form.reset(toDefaults());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialData]);
 
-  const reset = () => {
-    setName(initialData?.name ?? "");
-    setSection(initialData?.section ?? "");
-    setAcademicYearId(initialData?.academic_year_id ?? academicYears[0]?.id ?? "");
-    setTeacherId(initialData?.teacher_id || NONE_VALUE);
-  };
-
   const handleClose = (o: boolean) => {
-    if (!o) reset();
+    if (!o) form.reset(toDefaults());
     onOpenChange(o);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim() || !section.trim() || !academicYearId) {
-      toast.error("Name, section, and academic year are required.");
-      return;
-    }
-    setSubmitting(true);
+  const handleSubmit = form.handleSubmit(async (values) => {
     try {
       await onSubmit({
-        name: name.trim(),
-        section: section.trim(),
-        academic_year_id: academicYearId,
-        teacher_id: teacherId === NONE_VALUE ? undefined : teacherId,
+        name: values.name.trim(),
+        section: values.section.trim(),
+        academic_year_id: values.academic_year_id,
+        teacher_id: values.teacher_id ? values.teacher_id : undefined,
       });
       handleClose(false);
     } catch {
       // Parent handler toasts API errors and rethrows when applicable.
-    } finally {
-      setSubmitting(false);
     }
-  };
+  });
+
+  const { errors, isSubmitting } = form.formState;
+  const teacherId = form.watch("teacher_id") || "";
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -109,31 +108,22 @@ export function ClassFormModal({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Name</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Class 10"
-              required
-            />
+            <Label htmlFor="class_name">Name *</Label>
+            <Input id="class_name" {...form.register("name")} placeholder="e.g. Class 10" />
+            <FieldError message={errors.name?.message} />
           </div>
           <div className="space-y-2">
-            <Label>Section</Label>
-            <Input
-              value={section}
-              onChange={(e) => setSection(e.target.value)}
-              placeholder="e.g. A"
-              required
-            />
+            <Label htmlFor="class_section">Section *</Label>
+            <Input id="class_section" {...form.register("section")} placeholder="e.g. A" />
+            <FieldError message={errors.section?.message} />
           </div>
           <div className="space-y-2">
-            <Label>Academic Year</Label>
+            <Label htmlFor="class_academic_year">Academic Year *</Label>
             <Select
-              value={academicYearId || undefined}
-              onValueChange={setAcademicYearId}
-              required
+              value={form.watch("academic_year_id") || undefined}
+              onValueChange={(v) => form.setValue("academic_year_id", v, { shouldValidate: true })}
             >
-              <SelectTrigger>
+              <SelectTrigger id="class_academic_year">
                 <SelectValue placeholder="Select year" />
               </SelectTrigger>
               <SelectContent>
@@ -144,11 +134,15 @@ export function ClassFormModal({
                 ))}
               </SelectContent>
             </Select>
+            <FieldError message={errors.academic_year_id?.message} />
           </div>
           <div className="space-y-2">
-            <Label>Class Teacher (optional)</Label>
-            <Select value={teacherId || NONE_VALUE} onValueChange={setTeacherId}>
-              <SelectTrigger>
+            <Label htmlFor="class_teacher">Class Teacher (optional)</Label>
+            <Select
+              value={teacherId || NONE_VALUE}
+              onValueChange={(v) => form.setValue("teacher_id", v === NONE_VALUE ? "" : v)}
+            >
+              <SelectTrigger id="class_teacher">
                 <SelectValue placeholder="None" />
               </SelectTrigger>
               <SelectContent>
@@ -165,8 +159,8 @@ export function ClassFormModal({
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : initialData ? "Save" : "Create"}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving…" : initialData ? "Save" : "Create"}
             </Button>
           </div>
         </form>
