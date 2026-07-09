@@ -93,9 +93,19 @@ export interface ProfileResponse {
 
 export const getProfile = () => apiGet<ProfileResponse>(API_ENDPOINTS.PROFILE);
 
-/** GET /api/auth/tenant-branding — public; name for resolved tenant (Host / header / default). */
+/** Public branding for the resolved tenant, shown pre-auth on the login screen. */
+export interface TenantBranding {
+  name: string;
+  subdomain?: string;
+  logo_url?: string | null;
+  tagline?: string | null;
+  /** Opt-in per-tenant login layout key; "default" (or absent) = standard login. */
+  login_variant?: string;
+}
+
+/** GET /api/auth/tenant-branding — public; branding for resolved tenant (Host / header / default). */
 export const getTenantBranding = () =>
-  apiGet<{ name: string }>(API_ENDPOINTS.TENANT_BRANDING);
+  apiGet<TenantBranding>(API_ENDPOINTS.TENANT_BRANDING);
 
 /** Same as getTenantBranding but catches errors (e.g. no tenant context) for pre-login UI. */
 export async function getTenantBrandingSafe(): Promise<string | null> {
