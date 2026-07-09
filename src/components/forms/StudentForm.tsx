@@ -392,6 +392,16 @@ export function StudentForm({
     await onSubmit(payload);
   });
 
+  // If an existing student carries a legacy, non-canonical status (the field
+  // used to be free text), surface it as an option so the edit dropdown shows
+  // the real value instead of an empty box — the admin can then re-pick a
+  // canonical status (required, since both FE and BE now validate the enum).
+  const legacyStatus =
+    initialData?.student_status &&
+    !STUDENT_STATUS_VALUES.includes(initialData.student_status)
+      ? initialData.student_status
+      : null;
+
   const isSameAsPermanent = form.watch("is_same_as_permanent_address") === true;
   // Watch the permanent fields too — otherwise, with "same as permanent" on,
   // editing a permanent field after toggling left the (disabled) current fields
@@ -930,6 +940,9 @@ export function StudentForm({
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
+                  {legacyStatus && (
+                    <SelectItem value={legacyStatus}>{legacyStatus} (legacy)</SelectItem>
+                  )}
                   {STUDENT_STATUS_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
