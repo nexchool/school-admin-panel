@@ -14,42 +14,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
+import { FieldError } from "@/components/ui/field-error";
 import type { Student, CreateStudentInput } from "@/types/student";
 import type { ClassItem } from "@/services/classesService";
 import { StructuredClassPicker } from "@/components/students/StructuredClassPicker";
-
-const optionalString = z.string().optional().or(z.literal(""));
-const optionalEmail = z.string().email("Invalid email").optional().or(z.literal(""));
-const optionalNumber: z.ZodType<number | undefined> = z
-  .preprocess((v) => (v === "" || v == null ? undefined : v), z.coerce.number())
-  .optional();
-const optionalBoolean: z.ZodType<boolean | undefined> = z
-  .preprocess((v) => {
-    if (v === "" || v == null) return undefined;
-    if (typeof v === "boolean") return v;
-    if (v === "true") return true;
-    if (v === "false") return false;
-    return v;
-  }, z.boolean())
-  .optional();
+import {
+  NATIONALITIES,
+  LANGUAGES,
+  INDIAN_STATES,
+  DEFAULT_NATIONALITY,
+  DEFAULT_MOTHER_TONGUE,
+} from "@/lib/data/referenceData";
+import {
+  STUDENT_STATUS_OPTIONS,
+  STUDENT_STATUS_VALUES,
+} from "@/constants/studentStatus";
+import {
+  requiredString,
+  requiredPhone,
+  optionalString,
+  optionalEmail,
+  optionalPhoneLoose,
+  optionalAadhar,
+  optionalPincode,
+  optionalDate,
+  optionalBoolean,
+  optionalEnum,
+  optionalNumberInRange,
+  optionalNonNegativeNumber,
+} from "@/lib/validation/fields";
 
 const studentSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: requiredString("Name"),
   email: optionalEmail,
-  guardian_name: z.string().min(1, "Guardian name is required"),
-  guardian_relationship: z.string().min(1, "Relationship is required"),
-  guardian_phone: z.string().min(1, "Guardian phone is required"),
+  guardian_name: requiredString("Guardian name"),
+  guardian_relationship: requiredString("Relationship"),
+  guardian_phone: requiredPhone("Guardian phone"),
   guardian_email: optionalEmail,
   class_id: z.string().optional(),
-  phone: optionalString,
-  date_of_birth: optionalString,
+  phone: optionalPhoneLoose,
+  date_of_birth: optionalDate,
   gender: optionalString,
   address: optionalString,
 
   // Health / Physical
   blood_group: optionalString,
-  height_cm: optionalNumber.optional(),
-  weight_kg: optionalNumber.optional(),
+  height_cm: optionalNumberInRange(0, 300, "Height"),
+  weight_kg: optionalNumberInRange(0, 500, "Weight"),
   medical_allergies: optionalString,
   medical_conditions: optionalString,
   disability_details: optionalString,
@@ -57,23 +69,23 @@ const studentSchema = z.object({
 
   // Parent / Family
   father_name: optionalString,
-  father_phone: optionalString,
+  father_phone: optionalPhoneLoose,
   father_email: optionalEmail,
   father_occupation: optionalString,
-  father_annual_income: optionalNumber.optional(),
+  father_annual_income: optionalNonNegativeNumber("Father's annual income"),
 
   mother_name: optionalString,
-  mother_phone: optionalString,
+  mother_phone: optionalPhoneLoose,
   mother_email: optionalEmail,
   mother_occupation: optionalString,
-  mother_annual_income: optionalNumber.optional(),
+  mother_annual_income: optionalNonNegativeNumber("Mother's annual income"),
 
   guardian_address: optionalString,
   guardian_occupation: optionalString,
-  guardian_aadhar_number: optionalString,
+  guardian_aadhar_number: optionalAadhar,
 
   // Identity / Demographic
-  aadhar_number: optionalString,
+  aadhar_number: optionalAadhar,
   apaar_id: optionalString,
   emis_number: optionalString,
   udise_student_id: optionalString,
@@ -88,32 +100,32 @@ const studentSchema = z.object({
   current_address: optionalString,
   current_city: optionalString,
   current_state: optionalString,
-  current_pincode: optionalString,
+  current_pincode: optionalPincode,
 
   permanent_address: optionalString,
   permanent_city: optionalString,
   permanent_state: optionalString,
-  permanent_pincode: optionalString,
+  permanent_pincode: optionalPincode,
 
-  is_same_as_permanent_address: optionalBoolean.optional(),
-  is_commuting_from_outstation: optionalBoolean.optional(),
+  is_same_as_permanent_address: optionalBoolean,
+  is_commuting_from_outstation: optionalBoolean,
   commute_location: optionalString,
   commute_notes: optionalString,
 
   // Emergency
   emergency_contact_name: optionalString,
   emergency_contact_relationship: optionalString,
-  emergency_contact_phone: optionalString,
-  emergency_contact_alt_phone: optionalString,
+  emergency_contact_phone: optionalPhoneLoose,
+  emergency_contact_alt_phone: optionalPhoneLoose,
 
   // Academic / School internal
-  admission_date: optionalString,
+  admission_date: optionalDate,
   previous_school_name: optionalString,
   previous_school_class: optionalString,
   last_school_board: optionalString,
   tc_number: optionalString,
   house_name: optionalString,
-  student_status: optionalString,
+  student_status: optionalEnum(STUDENT_STATUS_VALUES, "student status"),
 });
 
 type StudentFormValues = z.infer<typeof studentSchema>;
@@ -260,8 +272,8 @@ export function StudentForm({
           religion: "",
           category: "",
           caste: "",
-          nationality: "",
-          mother_tongue: "",
+          nationality: DEFAULT_NATIONALITY,
+          mother_tongue: DEFAULT_MOTHER_TONGUE,
           place_of_birth: "",
 
           current_address: "",
@@ -379,6 +391,16 @@ export function StudentForm({
     }
     await onSubmit(payload);
   });
+
+  // If an existing student carries a legacy, non-canonical status (the field
+  // used to be free text), surface it as an option so the edit dropdown shows
+  // the real value instead of an empty box — the admin can then re-pick a
+  // canonical status (required, since both FE and BE now validate the enum).
+  const legacyStatus =
+    initialData?.student_status &&
+    !STUDENT_STATUS_VALUES.includes(initialData.student_status)
+      ? initialData.student_status
+      : null;
 
   const isSameAsPermanent = form.watch("is_same_as_permanent_address") === true;
   // Watch the permanent fields too — otherwise, with "same as permanent" on,
@@ -499,6 +521,7 @@ export function StudentForm({
         <div className="space-y-2">
           <Label htmlFor="phone">Student Phone</Label>
           <Input id="phone" {...form.register("phone")} placeholder="Optional" />
+          <FieldError message={form.formState.errors.phone?.message} />
         </div>
 
         <div className="space-y-2">
@@ -508,6 +531,7 @@ export function StudentForm({
             type="date"
             {...form.register("date_of_birth")}
           />
+          <FieldError message={form.formState.errors.date_of_birth?.message} />
         </div>
 
         <div className="space-y-2">
@@ -544,10 +568,12 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="father_phone">Father Phone</Label>
             <Input id="father_phone" {...form.register("father_phone")} placeholder="e.g. 9876543210" />
+            <FieldError message={form.formState.errors.father_phone?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="father_email">Father Email</Label>
             <Input id="father_email" type="email" {...form.register("father_email")} placeholder="e.g. father@example.com" />
+            <FieldError message={form.formState.errors.father_email?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="father_occupation">Father Occupation</Label>
@@ -556,6 +582,7 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="father_annual_income">Father Annual Income</Label>
             <Input id="father_annual_income" type="number" {...form.register("father_annual_income" as any)} placeholder="e.g. 500000" />
+            <FieldError message={form.formState.errors.father_annual_income?.message} />
           </div>
 
           <div className="space-y-2">
@@ -565,10 +592,12 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="mother_phone">Mother Phone</Label>
             <Input id="mother_phone" {...form.register("mother_phone")} placeholder="e.g. 9876543210" />
+            <FieldError message={form.formState.errors.mother_phone?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="mother_email">Mother Email</Label>
             <Input id="mother_email" type="email" {...form.register("mother_email")} placeholder="e.g. mother@example.com" />
+            <FieldError message={form.formState.errors.mother_email?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="mother_occupation">Mother Occupation</Label>
@@ -577,6 +606,7 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="mother_annual_income">Mother Annual Income</Label>
             <Input id="mother_annual_income" type="number" {...form.register("mother_annual_income" as any)} placeholder="e.g. 300000" />
+            <FieldError message={form.formState.errors.mother_annual_income?.message} />
           </div>
         </div>
 
@@ -597,6 +627,7 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="guardian_aadhar_number">Guardian Aadhar Number</Label>
             <Input id="guardian_aadhar_number" {...form.register("guardian_aadhar_number")} placeholder="Enter aadhar number" />
+            <FieldError message={form.formState.errors.guardian_aadhar_number?.message} />
           </div>
         </div>
       </div>
@@ -611,10 +642,12 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="height_cm">Height (cm)</Label>
             <Input id="height_cm" type="number" {...form.register("height_cm" as any)} placeholder="e.g. 140" />
+            <FieldError message={form.formState.errors.height_cm?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="weight_kg">Weight (kg)</Label>
             <Input id="weight_kg" type="number" step="0.01" {...form.register("weight_kg" as any)} placeholder="e.g. 35.5" />
+            <FieldError message={form.formState.errors.weight_kg?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="identification_marks">Identification Marks</Label>
@@ -658,6 +691,7 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="aadhar_number">Aadhar Number</Label>
             <Input id="aadhar_number" {...form.register("aadhar_number")} placeholder="Enter aadhar number" />
+            <FieldError message={form.formState.errors.aadhar_number?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="apaar_id">APAAR ID</Label>
@@ -685,11 +719,29 @@ export function StudentForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="nationality">Nationality</Label>
-            <Input id="nationality" {...form.register("nationality")} placeholder="e.g. Indian" />
+            <Combobox
+              id="nationality"
+              options={NATIONALITIES}
+              value={form.watch("nationality") || ""}
+              onChange={(val) => form.setValue("nationality", val, { shouldValidate: true })}
+              allowCustom
+              placeholder="Select nationality"
+              searchPlaceholder="Search nationality…"
+            />
+            <FieldError message={form.formState.errors.nationality?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="mother_tongue">Mother Tongue</Label>
-            <Input id="mother_tongue" {...form.register("mother_tongue")} placeholder="e.g. Gujarati" />
+            <Combobox
+              id="mother_tongue"
+              options={LANGUAGES}
+              value={form.watch("mother_tongue") || ""}
+              onChange={(val) => form.setValue("mother_tongue", val, { shouldValidate: true })}
+              allowCustom
+              placeholder="Select mother tongue"
+              searchPlaceholder="Search language…"
+            />
+            <FieldError message={form.formState.errors.mother_tongue?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="place_of_birth">Place of Birth</Label>
@@ -771,19 +823,38 @@ export function StudentForm({
           </div>
           <div className="space-y-2">
             <Label htmlFor="permanent_state">Permanent State</Label>
-            <Input id="permanent_state" {...form.register("permanent_state")} placeholder="e.g. Gujarat" />
+            <Combobox
+              id="permanent_state"
+              options={INDIAN_STATES}
+              value={form.watch("permanent_state") || ""}
+              onChange={(val) => form.setValue("permanent_state", val, { shouldValidate: true })}
+              allowCustom
+              placeholder="Select state"
+              searchPlaceholder="Search state…"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="current_state">Current State</Label>
-            <Input id="current_state" {...form.register("current_state")} disabled={isSameAsPermanent} placeholder="e.g. Gujarat" />
+            <Combobox
+              id="current_state"
+              options={INDIAN_STATES}
+              value={form.watch("current_state") || ""}
+              onChange={(val) => form.setValue("current_state", val, { shouldValidate: true })}
+              allowCustom
+              disabled={isSameAsPermanent}
+              placeholder="Select state"
+              searchPlaceholder="Search state…"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="permanent_pincode">Permanent Pincode</Label>
             <Input id="permanent_pincode" {...form.register("permanent_pincode")} placeholder="e.g. 395007" />
+            <FieldError message={form.formState.errors.permanent_pincode?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="current_pincode">Current Pincode</Label>
             <Input id="current_pincode" {...form.register("current_pincode")} disabled={isSameAsPermanent} placeholder="e.g. 395007" />
+            <FieldError message={form.formState.errors.current_pincode?.message} />
           </div>
         </div>
 
@@ -818,10 +889,12 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="emergency_contact_phone">Phone</Label>
             <Input id="emergency_contact_phone" {...form.register("emergency_contact_phone")} placeholder="e.g. 9876543210" />
+            <FieldError message={form.formState.errors.emergency_contact_phone?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="emergency_contact_alt_phone">Alt Phone</Label>
             <Input id="emergency_contact_alt_phone" {...form.register("emergency_contact_alt_phone")} placeholder="Optional" />
+            <FieldError message={form.formState.errors.emergency_contact_alt_phone?.message} />
           </div>
         </div>
       </div>
@@ -832,6 +905,7 @@ export function StudentForm({
           <div className="space-y-2">
             <Label htmlFor="admission_date">Admission Date</Label>
             <Input id="admission_date" type="date" {...form.register("admission_date")} />
+            <FieldError message={form.formState.errors.admission_date?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="previous_school_name">Previous School Name</Label>
@@ -853,10 +927,32 @@ export function StudentForm({
             <Label htmlFor="house_name">House Name</Label>
             <Input id="house_name" {...form.register("house_name")} placeholder="e.g. Red" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="student_status">Student Status</Label>
-            <Input id="student_status" {...form.register("student_status")} placeholder="active / inactive / transferred ..." />
-          </div>
+          {initialData && (
+            <div className="space-y-2">
+              <Label htmlFor="student_status">Student Status</Label>
+              <Select
+                value={form.watch("student_status") || ""}
+                onValueChange={(val) =>
+                  form.setValue("student_status", val, { shouldValidate: true })
+                }
+              >
+                <SelectTrigger id="student_status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {legacyStatus && (
+                    <SelectItem value={legacyStatus}>{legacyStatus} (legacy)</SelectItem>
+                  )}
+                  {STUDENT_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError message={form.formState.errors.student_status?.message} />
+            </div>
+          )}
         </div>
       </div>
 

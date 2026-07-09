@@ -31,7 +31,6 @@ import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/hooks/useDashboard";
 import type { DashboardAlerts, DashboardData } from "@/services/dashboardService";
 import { SetupStatusPill } from "@/components/school-setup/SetupStatusPill";
-import { SubscriptionWidgets } from "@/components/subscription/SubscriptionWidgets";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -270,9 +269,6 @@ function DashboardContent({ data }: { data: DashboardData }) {
           )}
         </div>
       </div>
-
-      {/* ── 1a. Subscription health ────────────────────────────────────── */}
-      <SubscriptionWidgets />
 
       {/* ── 1. Overview stats ───────────────────────────────────────────── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -31,6 +31,7 @@ import {
   CircleDot,
   ShieldCheck,
   FileUp,
+  CreditCard,
 } from "lucide-react";
 import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
@@ -63,6 +64,7 @@ const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/holidays", label: "Holidays", icon: Calendar, feature: "holiday_management", permissions: ROUTE_PERMISSIONS["/holidays"] },
   { href: "/announcements", label: "Announcements", icon: Megaphone, permissions: ROUTE_PERMISSIONS["/announcements"] },
   { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel", permissions: ROUTE_PERMISSIONS["/hostel"] },
+  { href: "/subscription", label: "Subscription", icon: CreditCard },
 ];
 
 const SIDEBAR_NAV_PROFILE = { href: "/profile", label: "Profile", icon: User } as const;
