@@ -1,6 +1,6 @@
-import { GraduationCap } from "lucide-react";
-import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
+import { GraduationCap, ShieldCheck, LifeBuoy } from "lucide-react";
 import type { TenantBranding } from "@/services/authService";
+import { SUPPORT_EMAIL } from "@/lib/externalLinks";
 
 export interface LoginLayoutProps {
   branding: TenantBranding | null;
@@ -8,71 +8,131 @@ export interface LoginLayoutProps {
   children: React.ReactNode;
 }
 
-const DEFAULT_WELCOME = "Welcome back. Sign in to manage your school.";
+const DEFAULT_TAGLINE = "Simplify · Manage · Educate";
+const DEFAULT_DESCRIPTION =
+  "A complete platform to manage your school efficiently and empower education.";
+
+/** School name with the last word accented, echoing the reference design. */
+function BrandTitle({ name }: { name: string }) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return <>{name}</>;
+  const last = parts[parts.length - 1];
+  const head = parts.slice(0, -1).join(" ");
+  return (
+    <>
+      {head} <span className="text-blue-300">{last}</span>
+    </>
+  );
+}
 
 function LogoMark({ branding, size }: { branding: TenantBranding | null; size: "sm" | "lg" }) {
-  const box = size === "lg" ? "size-12 rounded-2xl" : "size-9 rounded-xl";
-  const icon = size === "lg" ? "size-6" : "size-5";
+  const box = size === "lg" ? "size-14 rounded-2xl" : "size-10 rounded-xl";
+  const icon = size === "lg" ? "size-7" : "size-5";
   if (branding?.logo_url) {
     return (
       <img
         src={branding.logo_url}
         alt={branding?.name ? `${branding.name} logo` : "School logo"}
-        className={`${box} bg-primary-foreground/10 object-contain p-1`}
+        className={`${box} bg-white/10 object-contain p-1.5 ring-1 ring-white/15`}
       />
     );
   }
   return (
     <div
-      className={`${box} flex items-center justify-center bg-primary-foreground/15 text-primary-foreground`}
+      className={`${box} flex items-center justify-center bg-blue-500 text-white shadow-lg shadow-blue-900/40 ring-1 ring-white/15`}
     >
       <GraduationCap className={icon} aria-hidden="true" />
     </div>
   );
 }
 
+/** Decorative, non-interactive brand-panel flourishes (dot grid + soft arcs). */
+function PanelDecor() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div
+        className="absolute right-8 top-8 h-28 w-40 opacity-40"
+        style={{
+          backgroundImage: "radial-gradient(rgba(255,255,255,0.35) 1px, transparent 1px)",
+          backgroundSize: "16px 16px",
+        }}
+      />
+      <div className="absolute -bottom-24 -right-24 size-80 rounded-full border border-white/10" />
+      <div className="absolute -bottom-10 right-10 size-56 rounded-full border border-white/10" />
+    </div>
+  );
+}
+
 /**
- * Default login layout: a split-screen with a brand panel beside the sign-in
- * form. On desktop the brand panel fills the left column; on mobile it collapses
- * to a compact header band above the form so no branding is lost.
+ * Default login layout: a split-screen with a rich gradient brand panel beside a
+ * floating sign-in card. On desktop the brand panel fills the left column; on
+ * mobile it collapses to a compact gradient header above the card.
  */
 export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
-  const name = branding?.name ?? null;
-  const welcome = branding?.tagline?.trim() || DEFAULT_WELCOME;
+  const name = branding?.name?.trim() || "School";
+  const tagline = branding?.tagline?.trim() || DEFAULT_TAGLINE;
+  const year = new Date().getFullYear();
+
+  const panelGradient =
+    "bg-[linear-gradient(150deg,#12163a_0%,#1e2a6e_50%,#3730a3_100%)] text-white";
 
   return (
-    <div className="min-h-screen w-full bg-background md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-      <aside className="bg-primary text-primary-foreground">
-        {/* Desktop brand panel */}
-        <div className="hidden h-full flex-col justify-between p-10 md:flex lg:p-14">
+    <div className="min-h-screen w-full bg-[#f4f5fb] md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      {/* ── Brand panel ─────────────────────────────────────────────── */}
+      <aside className={`relative ${panelGradient}`}>
+        <PanelDecor />
+
+        {/* Desktop */}
+        <div className="relative hidden h-full flex-col justify-between p-10 md:flex lg:p-14">
           <LogoMark branding={branding} size="lg" />
-          <div className="space-y-3">
-            <SchoolBrandName
-              name={name}
-              lineClamp={3}
-              className="text-3xl font-semibold tracking-tight"
-            />
-            <p className="max-w-sm text-sm leading-relaxed text-primary-foreground/80">
-              {welcome}
+
+          <div className="space-y-5">
+            <h1 className="text-4xl font-bold leading-tight tracking-tight lg:text-5xl">
+              <BrandTitle name={name} />
+            </h1>
+            <div>
+              <p className="text-lg font-medium text-blue-100/90">{tagline}</p>
+              <div className="mt-3 h-1 w-12 rounded-full bg-blue-400" />
+            </div>
+            <p className="max-w-sm text-sm leading-relaxed text-blue-100/70">
+              {DEFAULT_DESCRIPTION}
             </p>
           </div>
-          <p className="text-xs text-primary-foreground/60">Powered by Nexchool</p>
+
+          <div className="flex items-center gap-2 text-sm text-blue-100/80">
+            <ShieldCheck className="size-4 text-blue-300" aria-hidden="true" />
+            <span>Secure · Reliable · Trusted</span>
+          </div>
         </div>
 
-        {/* Mobile compact brand band */}
-        <div className="flex items-center gap-3 px-6 py-5 md:hidden">
+        {/* Mobile compact header */}
+        <div className="relative flex items-center gap-3 px-6 py-6 md:hidden">
           <LogoMark branding={branding} size="sm" />
-          <SchoolBrandName
-            name={name}
-            lineClamp={1}
-            className="text-lg font-semibold tracking-tight"
-          />
+          <h1 className="text-xl font-bold tracking-tight">
+            <BrandTitle name={name} />
+          </h1>
         </div>
       </aside>
 
-      <main className="flex items-center justify-center p-6 md:min-h-screen md:p-10">
-        <div className="w-full max-w-md">{children}</div>
+      {/* ── Form panel ──────────────────────────────────────────────── */}
+      <main className="flex flex-col items-center justify-center gap-6 p-6 md:min-h-screen md:p-10">
+        <div className="w-full max-w-md rounded-2xl border border-black/5 bg-white p-8 shadow-xl shadow-slate-300/40 sm:p-10">
+          {children}
+        </div>
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <ShieldCheck className="size-3.5" aria-hidden="true" />
+          {`© ${year} Nexchool. All rights reserved.`}
+        </p>
       </main>
+
+      {/* Support shortcut */}
+      <a
+        href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Nexchool admin support")}`}
+        aria-label="Contact support"
+        className="fixed bottom-6 right-6 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition hover:brightness-110"
+      >
+        <LifeBuoy className="size-5" aria-hidden="true" />
+      </a>
     </div>
   );
 }
