@@ -1,6 +1,7 @@
 import { GraduationCap, ShieldCheck, LifeBuoy } from "lucide-react";
 import type { TenantBranding } from "@/services/authService";
 import { SUPPORT_EMAIL } from "@/lib/externalLinks";
+import { SchoolIllustration } from "./SchoolIllustration";
 
 export interface LoginLayoutProps {
   branding: TenantBranding | null;
@@ -8,6 +9,7 @@ export interface LoginLayoutProps {
   children: React.ReactNode;
 }
 
+const FORM_BG = "#f4f5fb";
 const DEFAULT_TAGLINE = "Simplify · Manage · Educate";
 const DEFAULT_DESCRIPTION =
   "A complete platform to manage your school efficiently and empower education.";
@@ -26,7 +28,7 @@ function BrandTitle({ name }: { name: string }) {
 }
 
 function LogoMark({ branding, size }: { branding: TenantBranding | null; size: "sm" | "lg" }) {
-  const box = size === "lg" ? "size-14 rounded-2xl" : "size-10 rounded-xl";
+  const box = size === "lg" ? "size-14 rounded-2xl" : "size-9 rounded-xl";
   const icon = size === "lg" ? "size-7" : "size-5";
   if (branding?.logo_url) {
     return (
@@ -65,8 +67,8 @@ function PanelDecor() {
 
 /**
  * Default login layout: a split-screen with a rich gradient brand panel beside a
- * floating sign-in card. On desktop the brand panel fills the left column; on
- * mobile it collapses to a compact gradient header above the card.
+ * floating sign-in card, joined by a wavy seam on desktop. On mobile the brand
+ * panel becomes a wavy gradient header above the card.
  */
 export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
   const name = branding?.name?.trim() || "School";
@@ -77,7 +79,10 @@ export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
     "bg-[linear-gradient(150deg,#12163a_0%,#1e2a6e_50%,#3730a3_100%)] text-white";
 
   return (
-    <div className="min-h-screen w-full bg-[#f4f5fb] md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+    <div
+      className="min-h-screen w-full overflow-hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]"
+      style={{ backgroundColor: FORM_BG }}
+    >
       {/* ── Brand panel ─────────────────────────────────────────────── */}
       <aside className={`relative ${panelGradient}`}>
         <PanelDecor />
@@ -85,7 +90,6 @@ export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
         {/* Desktop */}
         <div className="relative hidden h-full flex-col justify-between p-10 md:flex lg:p-14">
           <LogoMark branding={branding} size="lg" />
-
           <div className="space-y-5">
             <h1 className="text-4xl font-bold leading-tight tracking-tight lg:text-5xl">
               <BrandTitle name={name} />
@@ -98,27 +102,54 @@ export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
               {DEFAULT_DESCRIPTION}
             </p>
           </div>
-
           <div className="flex items-center gap-2 text-sm text-blue-100/80">
             <ShieldCheck className="size-4 text-blue-300" aria-hidden="true" />
             <span>Secure · Reliable · Trusted</span>
           </div>
         </div>
 
-        {/* Mobile compact header */}
-        <div className="relative flex items-center gap-3 px-6 py-6 md:hidden">
+        {/* Mobile: logo + name with a wavy bottom edge */}
+        <div className="relative flex items-center gap-3 px-6 pb-14 pt-7 md:hidden">
           <LogoMark branding={branding} size="sm" />
           <h1 className="text-xl font-bold tracking-tight">
             <BrandTitle name={name} />
           </h1>
         </div>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 375 44"
+          preserveAspectRatio="none"
+          className="absolute bottom-0 left-0 h-11 w-full md:hidden"
+        >
+          <path d="M0 22 C90 48 285 -4 375 22 L375 44 L0 44 Z" fill={FORM_BG} />
+        </svg>
       </aside>
 
       {/* ── Form panel ──────────────────────────────────────────────── */}
-      <main className="flex flex-col items-center justify-center gap-6 p-6 md:min-h-screen md:p-10">
+      <main className="relative flex flex-col items-center justify-center gap-6 px-6 pb-10 pt-2 md:min-h-screen md:p-10">
+        {/* Wavy seam over the brand panel (desktop only) */}
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 60 300"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-y-0 left-0 hidden h-full w-14 -translate-x-full md:block"
+        >
+          <path
+            d="M60 0 H34 C12 38 52 62 32 100 C12 138 52 162 32 200 C12 238 52 262 34 300 H60 Z"
+            fill={FORM_BG}
+          />
+        </svg>
+
         <div className="w-full max-w-md rounded-2xl border border-black/5 bg-white p-8 shadow-xl shadow-slate-300/40 sm:p-10">
+          <SchoolIllustration className="mx-auto mb-5 h-20 w-20 sm:h-24 sm:w-24" />
           {children}
         </div>
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground md:hidden">
+          <ShieldCheck className="size-3.5 text-primary" aria-hidden="true" />
+          <span>Secure · Reliable · Trusted</span>
+        </div>
+
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <ShieldCheck className="size-3.5" aria-hidden="true" />
           {`© ${year} Nexchool. All rights reserved.`}
