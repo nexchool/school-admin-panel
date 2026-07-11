@@ -109,7 +109,7 @@ export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
         </div>
 
         {/* Mobile: logo + name with a wavy bottom edge */}
-        <div className="relative flex items-center gap-3 px-6 pb-14 pt-7 md:hidden">
+        <div className="relative flex items-center gap-3 px-6 pb-20 pt-7 md:hidden">
           <LogoMark branding={branding} size="sm" />
           <h1 className="text-xl font-bold tracking-tight">
             <BrandTitle name={name} />
@@ -117,11 +117,20 @@ export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
         </div>
         <svg
           aria-hidden="true"
-          viewBox="0 0 375 44"
+          viewBox="0 0 375 70"
           preserveAspectRatio="none"
-          className="absolute bottom-0 left-0 h-11 w-full md:hidden"
+          className="absolute -bottom-px left-0 h-[70px] w-full md:hidden"
         >
-          <path d="M0 22 C90 48 285 -4 375 22 L375 44 L0 44 Z" fill={FORM_BG} />
+          <path
+            d="M0 28 C70 2 140 2 210 26 C275 48 320 48 375 24"
+            fill="none"
+            stroke="rgba(255,255,255,0.18)"
+            strokeWidth="2.5"
+          />
+          <path
+            d="M0 40 C70 14 140 14 210 38 C275 60 320 60 375 36 L375 70 L0 70 Z"
+            fill={FORM_BG}
+          />
         </svg>
       </aside>
 
@@ -130,12 +139,18 @@ export function DefaultLoginLayout({ branding, children }: LoginLayoutProps) {
         {/* Wavy seam over the brand panel (desktop only) */}
         <svg
           aria-hidden="true"
-          viewBox="0 0 60 300"
+          viewBox="0 0 90 600"
           preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-y-0 left-0 hidden h-full w-14 -translate-x-full md:block"
+          className="pointer-events-none absolute inset-y-0 left-0 hidden h-full w-[90px] -translate-x-full md:block"
         >
           <path
-            d="M60 0 H34 C12 38 52 62 32 100 C12 138 52 162 32 200 C12 238 52 262 34 300 H60 Z"
+            d="M40 0 C4 100 76 200 40 300 C4 400 76 500 40 600"
+            fill="none"
+            stroke="rgba(255,255,255,0.16)"
+            strokeWidth="2.5"
+          />
+          <path
+            d="M90 0 H52 C16 100 88 200 52 300 C16 400 88 500 52 600 H90 Z"
             fill={FORM_BG}
           />
         </svg>
