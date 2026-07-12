@@ -43,7 +43,7 @@ export function LoginForm() {
     try {
       const result = await login(data.email, data.password);
       if (!result.requiresTenantChoice) {
-        router.replace("/dashboard");
+        router.replace(result.forcePasswordReset ? "/set-password" : "/dashboard");
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
@@ -66,7 +66,11 @@ export function LoginForm() {
               key={t.id}
               variant="outline"
               className="w-full justify-start"
-              onClick={() => loginWithTenant(t.id).then(() => router.replace("/dashboard"))}
+              onClick={() =>
+                loginWithTenant(t.id).then((r) =>
+                  router.replace(r.forcePasswordReset ? "/set-password" : "/dashboard")
+                )
+              }
             >
               {t.name} ({t.subdomain})
             </Button>
