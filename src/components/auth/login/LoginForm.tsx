@@ -124,7 +124,7 @@ export function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Link
               href="/forgot-password"
-              className="text-sm font-medium text-primary hover:underline"
+              className="text-xs font-medium text-primary hover:underline"
             >
               Forgot password?
             </Link>
@@ -137,6 +137,7 @@ export function LoginForm() {
             <Input
               id="password"
               type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
               autoComplete="current-password"
               className="pl-10 pr-10"
               {...form.register("password")}
