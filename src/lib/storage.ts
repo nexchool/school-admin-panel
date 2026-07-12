@@ -19,6 +19,8 @@ const KEYS = {
   IS_SUBADMIN: "is_subadmin",
   /** Whether the active tenant's school setup is complete. */
   IS_SETUP_COMPLETE: "is_setup_complete",
+  /** Whether the logged-in user must set a new password before continuing. */
+  FORCE_PASSWORD_RESET: "force_password_reset",
   /**
    * Branch (school-unit) ids the user is restricted to. Absent key = never
    * persisted; stored `"null"` = unrestricted (all branches); JSON array =
@@ -195,6 +197,14 @@ export async function getIsSetupComplete(): Promise<boolean | null> {
 
 export async function setIsSetupComplete(value: boolean): Promise<void> {
   return setBoolFlag(KEYS.IS_SETUP_COMPLETE, value);
+}
+
+export async function getForcePasswordReset(): Promise<boolean | null> {
+  return getBoolFlag(KEYS.FORCE_PASSWORD_RESET);
+}
+
+export async function setForcePasswordReset(value: boolean): Promise<void> {
+  return setBoolFlag(KEYS.FORCE_PASSWORD_RESET, value);
 }
 
 /**
