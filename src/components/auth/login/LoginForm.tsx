@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -32,6 +32,16 @@ export function LoginForm() {
     useAuth();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  // Show a confirmation when the user arrives from a completed password reset.
+  // The reset page sets this sessionStorage flag before redirecting here; using
+  // storage (not a query param) survives any redirect that strips the URL.
+  const [resetJustCompleted, setResetJustCompleted] = useState(false);
+  useEffect(() => {
+    if (sessionStorage.getItem("pw_reset_success") === "1") {
+      setResetJustCompleted(true);
+      sessionStorage.removeItem("pw_reset_success");
+    }
+  }, []);
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -91,6 +101,15 @@ export function LoginForm() {
           Sign in to access your school admin account
         </p>
       </div>
+
+      {resetJustCompleted && (
+        <p
+          className="rounded-lg bg-emerald-500/10 px-3 py-2 text-center text-sm text-emerald-700 dark:text-emerald-400"
+          role="status"
+        >
+          Your password has been reset. Sign in with your new password.
+        </p>
+      )}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         {error && (

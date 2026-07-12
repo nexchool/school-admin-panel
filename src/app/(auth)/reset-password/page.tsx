@@ -66,7 +66,10 @@ function ResetPasswordForm() {
     setError(null);
     try {
       await resetPassword({ email, token, new_password: data.new_password });
-      router.replace("/login?reset=1");
+      // Signal the login screen to show a success banner. sessionStorage survives
+      // the redirect even if the query string is stripped in transit.
+      sessionStorage.setItem("pw_reset_success", "1");
+      router.replace("/login");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Could not reset password";
       setError(String(msg));
