@@ -29,6 +29,8 @@ export interface LoginResponse {
   is_subadmin?: boolean;
   /** The active tenant's school-setup completion state. */
   is_setup_complete?: boolean;
+  /** True when the user must set a new password before continuing. */
+  force_password_reset?: boolean;
   /**
    * Branch (school-unit) ids the user is restricted to. `null` (or absent) =
    * unrestricted (all branches); an array is the explicit allowed set.
@@ -52,7 +54,19 @@ export const login = (data: {
 export const logout = () => apiPost<unknown>(API_ENDPOINTS.LOGOUT);
 
 export const forgotPassword = (data: { email: string }) =>
-  apiPost<MessageResponse>(API_ENDPOINTS.FORGOT_PASSWORD, data);
+  apiPost<MessageResponse>(API_ENDPOINTS.FORGOT_PASSWORD, {
+    email: data.email,
+    platform: "web",
+  });
+
+export const resetPassword = (data: {
+  email: string;
+  token: string;
+  new_password: string;
+}) => apiPost<MessageResponse>(API_ENDPOINTS.RESET_PASSWORD, data);
+
+export const forceResetPassword = (data: { new_password: string }) =>
+  apiPost<MessageResponse>(API_ENDPOINTS.FORCE_RESET_PASSWORD, data);
 
 export interface ProfileUser {
   id: number;
@@ -84,6 +98,8 @@ export interface ProfileResponse {
   is_subadmin?: boolean;
   /** The active tenant's school-setup completion state. */
   is_setup_complete?: boolean;
+  /** True when the user must set a new password before continuing. */
+  force_password_reset?: boolean;
   /**
    * Branch (school-unit) ids the user is restricted to. `null` (or absent) =
    * unrestricted (all branches); an array is the explicit allowed set.

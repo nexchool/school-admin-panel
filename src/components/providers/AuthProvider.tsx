@@ -32,6 +32,8 @@ import {
   setIsSubAdmin,
   getIsSetupComplete,
   setIsSetupComplete,
+  getForcePasswordReset,
+  setForcePasswordReset,
   getAllowedUnitIds,
   setAllowedUnitIds,
   clearAuth,
@@ -64,8 +66,11 @@ interface AuthContextType {
     email: string;
     password: string;
   } | null;
-  login: (email: string, password: string) => Promise<{ requiresTenantChoice: boolean }>;
-  loginWithTenant: (tenantId: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ requiresTenantChoice: boolean; forcePasswordReset: boolean }>;
+  loginWithTenant: (tenantId: string) => Promise<{ forcePasswordReset: boolean }>;
   clearPendingTenantChoice: () => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -87,6 +92,11 @@ interface AuthContextType {
    * never flash a "setup incomplete" banner before login/profile resolves.
    */
   isSetupComplete: boolean;
+  /**
+   * True when the user must set a new password before continuing. Gates the
+   * dashboard (RouteGuard redirects to /set-password) until cleared.
+   */
+  forcePasswordReset: boolean;
   /**
    * Branch (school-unit) ids the user is restricted to. `null` = unrestricted
    * (all branches — full School Admin / platform admin); an array is the
@@ -124,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Default true so first paint (before login/profile resolves) never flashes a
   // false "setup incomplete" banner.
   const [isSetupComplete, setIsSetupCompleteState] = useState(true);
+  const [forcePasswordReset, setForcePasswordResetState] = useState(false);
   // null = unrestricted (default); an array restricts the user to those units.
   const [allowedUnitIds, setAllowedUnitIdsState] = useState<string[] | null>(
     null
@@ -136,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const subAdmin = data.is_subadmin ?? false;
     // Default true: absence of the flag should never trigger a false banner.
     const setupComplete = data.is_setup_complete ?? true;
+    const mustResetPassword = data.force_password_reset ?? false;
     // null/absent → unrestricted (all branches).
     const allowedUnits = data.allowed_unit_ids ?? null;
     const tenantLabel =
@@ -153,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsPlatformAdmin(platformAdmin),
       setIsSubAdmin(subAdmin),
       setIsSetupComplete(setupComplete),
+      setForcePasswordReset(mustResetPassword),
       setAllowedUnitIds(allowedUnits),
     ];
     if (data.tenant_id) tasks.push(setTenantId(data.tenant_id));
@@ -174,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsPlatformAdminState(platformAdmin);
     setIsSubAdminState(subAdmin);
     setIsSetupCompleteState(setupComplete);
+    setForcePasswordResetState(mustResetPassword);
     setAllowedUnitIdsState(allowedUnits);
     if (tenantLabel !== undefined) {
       setTenantNameState(tenantLabel);
@@ -196,10 +210,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const platformAdmin = profile.is_platform_admin ?? false;
       const subAdmin = profile.is_subadmin ?? false;
       const setupComplete = profile.is_setup_complete ?? true;
+      const mustResetPassword = profile.force_password_reset ?? false;
       const allowedUnits = profile.allowed_unit_ids ?? null;
       setIsPlatformAdminState(platformAdmin);
       setIsSubAdminState(subAdmin);
       setIsSetupCompleteState(setupComplete);
+      setForcePasswordResetState(mustResetPassword);
       setAllowedUnitIdsState(allowedUnits);
       await Promise.all([
         setPermissions(profile.permissions ?? []),
@@ -209,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsPlatformAdmin(platformAdmin),
         setIsSubAdmin(subAdmin),
         setIsSetupComplete(setupComplete),
+        setForcePasswordReset(mustResetPassword),
         setAllowedUnitIds(allowedUnits),
       ]);
     } catch (err) {
@@ -245,6 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedIsPlatformAdmin,
           storedIsSubAdmin,
           storedIsSetupComplete,
+          storedForcePasswordReset,
           storedAllowedUnitIds,
         ] = await Promise.all([
           getAccessToken(),
@@ -258,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           getIsPlatformAdmin(),
           getIsSubAdmin(),
           getIsSetupComplete(),
+          getForcePasswordReset(),
           getAllowedUnitIds(),
         ]);
 
@@ -272,6 +291,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsSubAdminState(storedIsSubAdmin ?? false);
           // null (never persisted) → true, so we never flash a false banner.
           setIsSetupCompleteState(storedIsSetupComplete ?? true);
+          // null (never persisted) → not forced.
+          setForcePasswordResetState(storedForcePasswordReset ?? false);
           // null (never persisted) → unrestricted.
           setAllowedUnitIdsState(storedAllowedUnitIds);
         }
@@ -286,7 +307,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string): Promise<{ requiresTenantChoice: boolean }> => {
+    async (
+      email: string,
+      password: string
+    ): Promise<{ requiresTenantChoice: boolean; forcePasswordReset: boolean }> => {
       setPendingTenantChoice(null);
       const subdomain = getCurrentSubdomain();
       const response = await loginService({
@@ -296,19 +320,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (response.requires_tenant_choice && response.tenants?.length) {
         setPendingTenantChoice({ tenants: response.tenants, email, password });
-        return { requiresTenantChoice: true };
+        return { requiresTenantChoice: true, forcePasswordReset: false };
       }
       queryClient.clear();
       await setAuthData(response);
       await refreshUser();
-      return { requiresTenantChoice: false };
+      return {
+        requiresTenantChoice: false,
+        forcePasswordReset: response.force_password_reset ?? false,
+      };
     },
     [setAuthData, refreshUser, queryClient]
   );
 
   const loginWithTenant = useCallback(
-    async (tenantId: string) => {
-      if (!pendingTenantChoice) return;
+    async (tenantId: string): Promise<{ forcePasswordReset: boolean }> => {
+      if (!pendingTenantChoice) return { forcePasswordReset: false };
       const { email, password } = pendingTenantChoice;
       setPendingTenantChoice(null);
       const response = await loginService({
@@ -319,6 +346,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.clear();
       await setAuthData(response);
       await refreshUser();
+      return { forcePasswordReset: response.force_password_reset ?? false };
     },
     [pendingTenantChoice, setAuthData, refreshUser, queryClient]
   );
@@ -344,6 +372,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsPlatformAdminState(false);
     setIsSubAdminState(false);
     setIsSetupCompleteState(true);
+    setForcePasswordResetState(false);
     setAllowedUnitIdsState(null);
   }, [queryClient]);
 
@@ -402,6 +431,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isPlatformAdmin,
         isSubAdmin,
         isSetupComplete,
+        forcePasswordReset,
         allowedUnitIds,
       }}
     >

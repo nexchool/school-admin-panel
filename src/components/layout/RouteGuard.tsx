@@ -17,23 +17,31 @@ import { requiredPermissionsForPath } from "@/lib/navPermissions";
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { hasAnyPermission, isLoading } = useAuth();
+  const { hasAnyPermission, isLoading, forcePasswordReset } = useAuth();
 
   const required = requiredPermissionsForPath(pathname);
   const isAllowed = required === null || hasAnyPermission(required);
+  // /set-password lives outside this group, but guard against a loop anyway.
+  const mustSetPassword = forcePasswordReset && pathname !== "/set-password";
 
   useEffect(() => {
     // Wait until auth resolves; never redirect mid-hydration.
     if (isLoading) return;
+    // Force-reset gate takes precedence: block every dashboard route until the
+    // user sets a new password.
+    if (mustSetPassword) {
+      router.replace("/set-password");
+      return;
+    }
     if (!isAllowed) {
       router.replace("/dashboard");
     }
-  }, [isLoading, isAllowed, router]);
+  }, [isLoading, isAllowed, mustSetPassword, router]);
 
   // While auth is hydrating, defer to the parent shell (ProtectedRoute already
   // renders a spinner). Once resolved, hide forbidden content until the
   // redirect completes.
-  if (!isLoading && !isAllowed) {
+  if (!isLoading && (mustSetPassword || !isAllowed)) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
         Redirecting…
