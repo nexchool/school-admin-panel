@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import {
   DOCUMENT_TYPE_LABELS,
 } from "@/services/studentDocumentsService";
 import { useUploadStudentDocument } from "@/hooks/useStudentDocuments";
-import { Loader2 } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
 
@@ -43,12 +43,32 @@ export function UploadDocumentModal({
 }: UploadDocumentModalProps) {
   const [documentType, setDocumentType] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
+  // Local object URL for an image preview so the user can verify the file
+  // before uploading. Null for non-images (e.g. PDFs).
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadMutation = useUploadStudentDocument(studentId);
 
+  // Belt-and-suspenders: revoke any outstanding object URL on unmount.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const setSelectedFile = (next: File | null) => {
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return next && next.type.startsWith("image/")
+        ? URL.createObjectURL(next)
+        : null;
+    });
+    setFile(next);
+  };
+
   const reset = () => {
     setDocumentType("");
-    setFile(null);
+    setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -103,10 +123,31 @@ export function UploadDocumentModal({
               ref={fileInputRef}
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
             />
             {file && (
-              <p className="text-xs text-muted-foreground">{file.name}</p>
+              // Stack vertically and cap the image to the container width so a
+              // wide image can't push content outside the dialog.
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                {previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- local object URL of the picked file, not a remote asset
+                  <img
+                    src={previewUrl}
+                    alt={`Preview of ${file.name}`}
+                    className="mx-auto max-h-56 w-auto max-w-full rounded-md object-contain"
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <FileText className="size-5 shrink-0" />
+                    <span className="text-xs">
+                      No inline preview for this file type.
+                    </span>
+                  </div>
+                )}
+                <p className="truncate text-center text-xs text-muted-foreground">
+                  {file.name}
+                </p>
+              </div>
             )}
           </div>
         </div>

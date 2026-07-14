@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import {
@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -21,6 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   studentsService,
   type BulkImportPreviewRow,
@@ -35,6 +39,7 @@ import {
   XCircle,
   Loader2,
   Download,
+  CircleHelp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ApiException } from "@/services/api";
@@ -51,6 +56,264 @@ function cellStr(v: unknown): string {
   if (v == null) return "";
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
+}
+
+const REQUIRED_COLUMNS = [
+  "name",
+  "email",
+  "branch",
+  "programme",
+  "class_name",
+  "section",
+] as const;
+
+// Full template: every column the import understands, required first then
+// grouped by section. `branch`/`programme`/`class_name`/`section` together
+// identify the class; other columns map straight to the student record.
+// Unknown columns are ignored, so schools can trim the ones they don't use.
+// All values are fictional.
+const SAMPLE_COLUMNS = [
+  // Required
+  "name",
+  "email",
+  "branch",
+  "programme",
+  "class_name",
+  "section",
+  // Basics
+  "roll_number",
+  "gender",
+  "date_of_birth",
+  "phone",
+  "address",
+  // Father
+  "father_name",
+  "father_phone",
+  "father_email",
+  "father_occupation",
+  "father_annual_income",
+  // Mother
+  "mother_name",
+  "mother_phone",
+  "mother_email",
+  "mother_occupation",
+  "mother_annual_income",
+  // Guardian
+  "guardian_name",
+  "guardian_relationship",
+  "guardian_phone",
+  "guardian_email",
+  "guardian_address",
+  "guardian_occupation",
+  "guardian_aadhar_number",
+  // Identity
+  "aadhar_number",
+  "apaar_id",
+  "emis_number",
+  "udise_student_id",
+  "religion",
+  "category",
+  "caste",
+  "nationality",
+  "mother_tongue",
+  "place_of_birth",
+  // Health
+  "blood_group",
+  "height_cm",
+  "weight_kg",
+  "medical_allergies",
+  "medical_conditions",
+  "disability_details",
+  "identification_marks",
+  // Current address
+  "current_address",
+  "current_city",
+  "current_state",
+  "current_pincode",
+  // Permanent address
+  "permanent_address",
+  "permanent_city",
+  "permanent_state",
+  "permanent_pincode",
+  "is_same_as_permanent_address",
+  // Commute
+  "is_commuting_from_outstation",
+  "commute_location",
+  "commute_notes",
+  // Emergency
+  "emergency_contact_name",
+  "emergency_contact_relationship",
+  "emergency_contact_phone",
+  "emergency_contact_alt_phone",
+  // Academic / school
+  "admission_date",
+  "previous_school_name",
+  "previous_school_class",
+  "last_school_board",
+  "tc_number",
+  "house_name",
+  "student_status",
+  "is_transport_opted",
+];
+
+const SAMPLE_ROW: Record<string, string | number> = {
+  name: "Aarav Sharma",
+  email: "aarav.sharma@example.com",
+  branch: "Main Campus",
+  programme: "CBSE English",
+  class_name: "10",
+  section: "A",
+  roll_number: 12,
+  gender: "Male",
+  date_of_birth: "2010-06-15",
+  phone: "9876543210",
+  address: "12, MG Road, Ahmedabad",
+  father_name: "Rajesh Sharma",
+  father_phone: "9876500001",
+  father_email: "rajesh.sharma@example.com",
+  father_occupation: "Business",
+  father_annual_income: 800000,
+  mother_name: "Priya Sharma",
+  mother_phone: "9876500002",
+  mother_email: "priya.sharma@example.com",
+  mother_occupation: "Teacher",
+  mother_annual_income: 500000,
+  guardian_name: "Rajesh Sharma",
+  guardian_relationship: "Father",
+  guardian_phone: "9876500001",
+  guardian_email: "rajesh.sharma@example.com",
+  guardian_address: "12, MG Road, Ahmedabad",
+  guardian_occupation: "Business",
+  guardian_aadhar_number: "123412341234",
+  aadhar_number: "987698769876",
+  apaar_id: "APAAR123456",
+  emis_number: "EMIS1001",
+  udise_student_id: "UDISE20240001",
+  religion: "Hindu",
+  category: "General",
+  caste: "",
+  nationality: "Indian",
+  mother_tongue: "Gujarati",
+  place_of_birth: "Ahmedabad",
+  blood_group: "O+",
+  height_cm: 150,
+  weight_kg: 42.5,
+  medical_allergies: "None",
+  medical_conditions: "None",
+  disability_details: "",
+  identification_marks: "Mole on left cheek",
+  current_address: "12, MG Road, Ahmedabad",
+  current_city: "Ahmedabad",
+  current_state: "Gujarat",
+  current_pincode: "380001",
+  permanent_address: "12, MG Road, Ahmedabad",
+  permanent_city: "Ahmedabad",
+  permanent_state: "Gujarat",
+  permanent_pincode: "380001",
+  is_same_as_permanent_address: "true",
+  is_commuting_from_outstation: "false",
+  commute_location: "",
+  commute_notes: "",
+  emergency_contact_name: "Suresh Sharma",
+  emergency_contact_relationship: "Uncle",
+  emergency_contact_phone: "9876500003",
+  emergency_contact_alt_phone: "9876500004",
+  admission_date: "2026-06-01",
+  previous_school_name: "Little Flowers School",
+  previous_school_class: "9",
+  last_school_board: "CBSE",
+  tc_number: "TC-2024-091",
+  house_name: "Red",
+  student_status: "active",
+  is_transport_opted: "false",
+};
+
+function downloadSampleXlsx() {
+  const ws = XLSX.utils.json_to_sheet([SAMPLE_ROW], {
+    header: SAMPLE_COLUMNS,
+  });
+  ws["!cols"] = SAMPLE_COLUMNS.map((c) => ({
+    wch: Math.max(c.length + 2, 14),
+  }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Students");
+  XLSX.writeFile(wb, "student-import-sample.xlsx");
+}
+
+function ImportGuidePopover() {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
+          aria-label="Import guide"
+        >
+          <CircleHelp className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[380px] p-4">
+        <div className="space-y-3.5">
+          <div>
+            <h4 className="text-sm font-semibold">Preparing your file</h4>
+            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+              <li>Single sheet .xlsx — row 1 must be the column headers.</li>
+              <li>One student per row. Unknown columns are ignored.</li>
+              <li>
+                The sample lists every supported column — required first, then
+                optional. Delete any optional columns you don&apos;t use.
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold">Required columns</h4>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {REQUIRED_COLUMNS.map((c) => (
+                <code
+                  key={c}
+                  className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs"
+                >
+                  {c}
+                </code>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold">Validations to watch</h4>
+            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+              <li>
+                Email must be unique — within the file and across the school.
+              </li>
+              <li>
+                <code className="font-mono">branch</code>,{" "}
+                <code className="font-mono">programme</code>,{" "}
+                <code className="font-mono">class_name</code> (grade) and{" "}
+                <code className="font-mono">section</code> together must match an
+                existing class in the selected year — e.g. Main Campus / CBSE
+                English / 10 / A. Use the exact branch &amp; programme names from
+                Academics.
+              </li>
+              <li>
+                Admission numbers are assigned automatically — an
+                admission_number column is ignored.
+              </li>
+              <li>Dates use YYYY-MM-DD (DD-MM-YYYY / DD/MM/YYYY also work).</li>
+              <li>
+                Phone numbers need 10–15 digits; invalid ones are skipped with
+                a warning.
+              </li>
+              <li>
+                Yes/No columns (e.g. transport, same-address) accept
+                true/false, yes/no, or 1/0.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function exportFailedRowsXlsx(
@@ -120,13 +383,12 @@ export function BulkImportStudents({
     setSendEmail(true);
   }, []);
 
-  useEffect(() => {
-    if (!academicYearId && academicYears.length > 0) {
-      const active =
-        academicYears.find((y) => y.is_active) ?? academicYears[0];
-      setAcademicYearId(active.id);
-    }
-  }, [academicYears, academicYearId]);
+  // Default to the active academic year once years load. "Adjust state during
+  // render" (guarded) keeps this lint-clean — no effect needed.
+  if (!academicYearId && academicYears.length > 0) {
+    const active = academicYears.find((y) => y.is_active) ?? academicYears[0];
+    setAcademicYearId(active.id);
+  }
 
   const handleClose = useCallback(
     (next: boolean) => {
@@ -230,18 +492,24 @@ export function BulkImportStudents({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="max-h-[90vh] max-w-5xl overflow-y-auto"
+        className={cn(
+          "max-h-[90vh] overflow-y-auto",
+          // Compact while configuring the upload; wide only when the preview /
+          // results table actually needs the room.
+          step === "preview" || step === "results"
+            ? "sm:max-w-5xl"
+            : "sm:max-w-lg"
+        )}
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Bulk import students</DialogTitle>
+          <DialogTitle className="flex items-center gap-1.5">
+            Bulk import students
+            <ImportGuidePopover />
+          </DialogTitle>
           <DialogDescription>
-            Upload a single-sheet .xlsx file. Row 1 must be headers. Required
-            columns: name, email, class_name, section. Admission numbers are assigned
-            automatically from your school&apos;s format (Academic settings). Other
-            columns are mapped when they match known fields. If the same class name
-            exists in more than one medium or board, add a medium (or programme)
-            column so each student lands in the right class.
+            Upload a single-sheet .xlsx file — one student per row. Open the
+            guide for column names and validation rules.
           </DialogDescription>
         </DialogHeader>
 
@@ -268,20 +536,48 @@ export function BulkImportStudents({
             </div>
             <div className="space-y-2">
               <Label>Excel file (.xlsx)</Label>
-              <div className="flex flex-wrap items-center gap-2">
-                <Input
+              <label
+                className={cn(
+                  "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-border px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-muted/40",
+                  file && "border-primary/40 bg-muted/30"
+                )}
+              >
+                <input
                   type="file"
                   accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   onChange={handleFileChange}
-                  className="max-w-md cursor-pointer"
+                  className="sr-only"
                 />
-                {file && (
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <FileSpreadsheet className="size-4" />
-                    {file.name}
-                  </span>
+                {file ? (
+                  <>
+                    <FileSpreadsheet className="size-8 text-primary" />
+                    <span className="max-w-full truncate text-sm font-medium">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Click to choose a different file
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-8 text-muted-foreground" />
+                    <span className="text-sm font-medium">
+                      Click to choose a file
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      .xlsx only · single sheet · headers in row 1
+                    </span>
+                  </>
                 )}
-              </div>
+              </label>
+              <button
+                type="button"
+                onClick={downloadSampleXlsx}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+              >
+                <Download className="size-3.5" />
+                Download sample file
+              </button>
             </div>
             {previewError && (
               <p className="text-sm text-destructive">{previewError}</p>

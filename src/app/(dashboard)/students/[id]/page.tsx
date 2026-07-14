@@ -179,7 +179,11 @@ export default function StudentDetailPage() {
           {activeTab === "address" && <AddressTab student={student} />}
           {activeTab === "academic" && <AcademicTab student={student} />}
           {activeTab === "documents" && (
-            <StudentDocumentsSection studentId={student.id} />
+            <StudentDocumentsSection
+              studentId={student.id}
+              studentName={student.name}
+              admissionNumber={student.admission_number}
+            />
           )}
         </div>
       </div>

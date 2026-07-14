@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -53,14 +54,21 @@ export function StudentFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
+      {/* Fixed header/footer with a scrollable form body — the form itself
+          renders the sticky action bar (see StudentForm). */}
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+        <DialogHeader className="shrink-0 border-b border-border px-6 py-4 text-left">
           <DialogTitle>
             {initialData ? "Edit Student" : "Add Student"}
           </DialogTitle>
+          <DialogDescription>
+            {initialData
+              ? "Update the student's profile details."
+              : "Fill the essentials to add the student — everything else can be completed later."}
+          </DialogDescription>
         </DialogHeader>
         {formError && (
-          <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p className="mx-6 mt-4 shrink-0 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {formError}
           </p>
         )}

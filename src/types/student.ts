@@ -10,6 +10,8 @@ export interface Student {
   roll_number?: number;
   class_id?: string;
   class_name?: string;
+  programme_id?: string | null;
+  programme_name?: string | null;
   date_of_birth?: string;
   gender?: string;
   phone?: string;
@@ -186,7 +188,7 @@ export interface CreateStudentInput {
   student_status?: string;
 }
 
-export interface UpdateStudentInput extends Partial<CreateStudentInput> {}
+export type UpdateStudentInput = Partial<CreateStudentInput>;
 
 export interface CreateStudentResponse {
   student: Student;
