@@ -44,6 +44,7 @@ export type StudentsSortBy =
   | "admission_number"
   | "name"
   | "class"
+  | "programme"
   | "roll_number";
 
 export type StudentsSearchField =
@@ -51,7 +52,8 @@ export type StudentsSearchField =
   | "name"
   | "admission_number"
   | "email"
-  | "guardian_phone";
+  | "guardian_phone"
+  | "programme";
 
 export interface StudentsListParams {
   page?: number;
@@ -63,6 +65,7 @@ export interface StudentsListParams {
   class_id?: string;
   class_ids?: string[];
   academic_year_id?: string;
+  programme_id?: string;
   gender?: string;
   student_status?: string;
   is_transport_opted?: boolean;
@@ -92,6 +95,7 @@ export const studentsService = {
         qp.set("class_id", params.class_id);
       }
       if (params.academic_year_id) qp.set("academic_year_id", params.academic_year_id);
+      if (params.programme_id) qp.set("programme_id", params.programme_id);
       if (params.search) qp.set("search", params.search);
       if (params.search_field) qp.set("search_field", params.search_field);
       if (params.sort_by) qp.set("sort_by", params.sort_by);

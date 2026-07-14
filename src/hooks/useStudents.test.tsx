@@ -20,8 +20,14 @@ vi.mock("@/services/studentsService", async () => {
   };
 });
 
+// The hook gates on tenant context; provide a stable tenant without the full
+// AuthProvider (which would require a live session).
+vi.mock("@/components/providers/AuthProvider", () => ({
+  useAuth: () => ({ tenantId: "tenant-1" }),
+}));
+
 function makeWrapper(academicYearId: string | null = null) {
-  return ({ children }: { children: ReactNode }) => {
+  function Wrapper({ children }: { children: ReactNode }) {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return (
       <QueryClientProvider client={qc}>
@@ -30,7 +36,8 @@ function makeWrapper(academicYearId: string | null = null) {
         </ActiveAcademicYearProvider>
       </QueryClientProvider>
     );
-  };
+  }
+  return Wrapper;
 }
 
 describe("useStudents", () => {
@@ -57,14 +64,13 @@ describe("useStudents", () => {
     );
   });
 
-  it("works when context has no year", async () => {
+  it("does not fetch until an academic year is known", async () => {
     vi.mocked(studentsService.getStudents).mockClear();
     const { result } = renderHook(() => useStudents(), {
       wrapper: makeWrapper(null),
     });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(studentsService.getStudents).toHaveBeenCalledWith(
-      expect.objectContaining({ academic_year_id: undefined }),
-    );
+    // Query is disabled (enabled gates on academic year) — it must stay idle.
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(studentsService.getStudents).not.toHaveBeenCalled();
   });
 });

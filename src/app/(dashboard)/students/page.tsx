@@ -39,6 +39,7 @@ import {
 import { useStudents, useCreateStudent } from "@/hooks/useStudents";
 import { useClasses } from "@/hooks/useClasses";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useProgrammes } from "@/hooks/useProgrammes";
 import { BulkImportStudents } from "@/components/students/BulkImportStudents";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
 import {
@@ -60,6 +61,7 @@ const SEARCH_FIELD_OPTIONS: { value: StudentsSearchField; label: string }[] = [
   { value: "admission_number", label: "Admission #" },
   { value: "email", label: "Email" },
   { value: "guardian_phone", label: "Guardian phone" },
+  { value: "programme", label: "Programme" },
 ];
 const VALID_SEARCH_FIELDS: StudentsSearchField[] = SEARCH_FIELD_OPTIONS.map(
   (o) => o.value
@@ -69,6 +71,7 @@ const VALID_SORT_BYS: StudentsSortBy[] = [
   "admission_number",
   "name",
   "class",
+  "programme",
   "roll_number",
 ];
 
@@ -103,6 +106,7 @@ const PARAM = {
   searchField: "search_field",
   classIds: "class_ids",
   academicYearId: "academic_year_id",
+  programmeId: "programme_id",
   gender: "gender",
   studentStatus: "student_status",
   isTransportOpted: "is_transport_opted",
@@ -121,8 +125,15 @@ function useDebouncedValue<T>(value: T, delayMs = 300): T {
   return debounced;
 }
 
-function formatClassName(c: { name: string; section?: string }): string {
-  return c.section ? `${c.name}-${c.section}` : c.name;
+function formatClassName(c: {
+  name: string;
+  section?: string;
+  grade_name?: string | null;
+}): string {
+  // Class.name is a legacy nullable display label — grade-based classes carry
+  // their label on grade_name (the service coalesces null name to "").
+  const label = c.name || c.grade_name || "";
+  return [label, c.section].filter(Boolean).join("-");
 }
 
 function genderBadge(g?: string) {
@@ -183,6 +194,7 @@ type UrlState = {
   searchField: StudentsSearchField;
   classIds: string[];
   academicYearId: string;
+  programmeId: string;
   gender: string;
   studentStatus: string;
   transportOpted: TransportFilter;
@@ -228,6 +240,7 @@ function readUrlState(sp: URLSearchParams): UrlState {
       ? classIdsRaw.split(",").map((s) => s.trim()).filter(Boolean)
       : [],
     academicYearId: sp.get(PARAM.academicYearId) ?? "",
+    programmeId: sp.get(PARAM.programmeId) ?? "",
     gender: sp.get(PARAM.gender) ?? "",
     studentStatus: sp.get(PARAM.studentStatus) ?? "",
     transportOpted:
@@ -241,6 +254,7 @@ function activeFilterCount(s: UrlState): number {
   return (
     (s.classIds.length > 0 ? 1 : 0) +
     (s.academicYearId ? 1 : 0) +
+    (s.programmeId ? 1 : 0) +
     (s.gender ? 1 : 0) +
     (s.studentStatus ? 1 : 0) +
     (s.transportOpted ? 1 : 0) +
@@ -326,6 +340,7 @@ export default function StudentsPage() {
       search_field: url.searchField,
       class_ids: url.classIds.length ? url.classIds : undefined,
       academic_year_id: url.academicYearId || undefined,
+      programme_id: url.programmeId || undefined,
       gender: url.gender || undefined,
       student_status: url.studentStatus || undefined,
       is_transport_opted:
@@ -343,6 +358,7 @@ export default function StudentsPage() {
   const { data, isLoading, isFetching, isError, refetch } = useStudents(queryParams);
   const { data: classes = [] } = useClasses();
   const { data: academicYears = [] } = useAcademicYears();
+  const { data: programmes = [] } = useProgrammes();
   const createMutation = useCreateStudent();
 
   const items = data?.items ?? [];
@@ -374,6 +390,11 @@ export default function StudentsPage() {
   const academicYearLabel = useMemo(
     () => academicYears.find((ay) => ay.id === url.academicYearId)?.name,
     [academicYears, url.academicYearId]
+  );
+
+  const programmeLabel = useMemo(
+    () => programmes.find((p) => p.id === url.programmeId)?.name,
+    [programmes, url.programmeId]
   );
 
   const sortIsDefault =
@@ -418,6 +439,9 @@ export default function StudentsPage() {
   const setAcademicYearId = (next: string) =>
     setUrlParams({ academicYearId: next || null });
 
+  const setProgrammeId = (next: string) =>
+    setUrlParams({ programmeId: next || null });
+
   const setGender = (next: string) =>
     setUrlParams({ gender: next || null });
 
@@ -440,6 +464,7 @@ export default function StudentsPage() {
     setUrlParams({
       classIds: null,
       academicYearId: null,
+      programmeId: null,
       gender: null,
       studentStatus: null,
       isTransportOpted: null,
@@ -477,6 +502,17 @@ export default function StudentsPage() {
       cell: (row) =>
         row.class_name ? (
           row.class_name
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "programme",
+      header: "Programme",
+      sortable: true,
+      cell: (row) =>
+        row.programme_name ? (
+          row.programme_name
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
@@ -583,7 +619,7 @@ export default function StudentsPage() {
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder={
                     url.searchField === "all"
-                      ? "Search name, admission #, email, phone…"
+                      ? "Search name, admission #, email, phone, programme…"
                       : `Search by ${
                           SEARCH_FIELD_OPTIONS.find((o) => o.value === url.searchField)?.label.toLowerCase() ?? "field"
                         }…`
@@ -671,6 +707,31 @@ export default function StudentsPage() {
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </div>
+
+                  {/* Programme */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Programme
+                    </label>
+                    <Select
+                      value={url.programmeId || "__all__"}
+                      onValueChange={(v) =>
+                        setProgrammeId(v === "__all__" ? "" : v)
+                      }
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Any" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Any</SelectItem>
+                        {programmes.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Academic year */}
@@ -837,6 +898,12 @@ export default function StudentsPage() {
                 <FilterPill
                   label={`Year: ${academicYearLabel ?? url.academicYearId}`}
                   onRemove={() => setAcademicYearId("")}
+                />
+              )}
+              {url.programmeId && (
+                <FilterPill
+                  label={`Programme: ${programmeLabel ?? url.programmeId}`}
+                  onRemove={() => setProgrammeId("")}
                 />
               )}
               {url.gender && (
