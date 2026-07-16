@@ -47,6 +47,8 @@ function setup(overrides: {
   vi.mocked(useAuth).mockReturnValue({
     isAuthenticated,
     user: defaultUnitId ? { default_unit_id: defaultUnitId } : null,
+    isPlatformAdmin: false,
+    allowedUnitIds: null,
   } as ReturnType<typeof useAuth>);
 
   vi.mocked(useSchoolUnits).mockReturnValue({
@@ -86,7 +88,15 @@ describe("ActiveScopeProvider", () => {
   });
 
   it("populates unitId from default_unit_id once data resolves", async () => {
-    setup({ defaultUnitId: "unit-42" });
+    // default_unit_id must be in the visible units list to win (and it beats
+    // the "first active unit" fallback).
+    setup({
+      defaultUnitId: "unit-42",
+      units: [
+        { id: "unit-1", status: "active" },
+        { id: "unit-42", status: "active" },
+      ],
+    });
     const { result } = renderHook(() => useActiveUnit(), { wrapper });
     await waitFor(() => expect(result.current.unitId).toBe("unit-42"));
   });
@@ -110,7 +120,11 @@ describe("ActiveScopeProvider", () => {
   });
 
   it("does not override unitId that the user set via the switcher after mount", async () => {
-    setup({ defaultUnitId: "unit-42" });
+    const units: { id: string; status: string }[] = [
+      { id: "unit-42", status: "active" },
+      { id: "unit-99", status: "active" },
+    ];
+    setup({ defaultUnitId: "unit-42", units });
     const { result } = renderHook(() => useActiveUnit(), { wrapper });
     // Wait for the sync to run once
     await waitFor(() => expect(result.current.unitId).toBe("unit-42"));
@@ -122,7 +136,7 @@ describe("ActiveScopeProvider", () => {
     // Simulate a data refetch (e.g. background re-render) — the guard should
     // prevent the sync effect from clobbering the user's choice.
     // Re-render (re-run effects) with the same resolved data:
-    setup({ defaultUnitId: "unit-42" });
+    setup({ defaultUnitId: "unit-42", units });
     // The unitId should still be what the user set
     expect(result.current.unitId).toBe("unit-99");
   });
