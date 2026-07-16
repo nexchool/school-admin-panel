@@ -26,6 +26,19 @@ export const classSubjectsService = {
     );
   },
 
+  /** Assign subject(s) to class(es) in one shot; already-assigned active
+   *  pairs are skipped server-side. */
+  bulkAssign: async (body: {
+    class_ids: string[];
+    subject_ids: string[];
+    weekly_periods?: number;
+  }): Promise<{ created_count: number; skipped_count: number }> => {
+    return apiPost<{ created_count: number; skipped_count: number }>(
+      "/api/class-subjects/bulk-assign",
+      body
+    );
+  },
+
   update: async (
     classId: string,
     classSubjectId: string,
