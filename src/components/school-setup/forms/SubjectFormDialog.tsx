@@ -27,7 +27,9 @@ import type { Subject } from "@/types/subject";
 const SUBJECT_TYPE_OPTIONS = [
   { value: "core", label: "Core" },
   { value: "elective", label: "Elective" },
+  { value: "language", label: "Language" },
   { value: "activity", label: "Activity" },
+  { value: "co_curricular", label: "Co-curricular" },
   { value: "other", label: "Other" },
 ] as const;
 
@@ -35,7 +37,7 @@ const subjectFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().optional(),
   subject_type: z
-    .enum(["core", "elective", "activity", "other"])
+    .enum(["core", "elective", "language", "activity", "co_curricular", "other"])
     .optional(),
   description: z.string().optional(),
 });

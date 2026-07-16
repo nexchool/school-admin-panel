@@ -5,7 +5,6 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { academicYearsService } from "@/services/academicYearsService";
 import {
   BookOpen,
-  BookMarked,
   ClipboardCheck,
   School,
   CalendarDays,
@@ -33,7 +32,6 @@ const statCard = (label: string, value: number | undefined, loading: boolean) =>
 
 export default function AcademicsPage() {
   const { hasPermission, hasAnyPermission } = useAuth();
-  const canManageSubjects = hasPermission("subject.manage");
   const canManageSettings = hasPermission("class.manage");
   const canManageBells = hasAnyPermission(["academics.manage", "timetable.manage"]);
 
@@ -91,13 +89,6 @@ export default function AcademicsPage() {
       icon: Bell,
       description: "Define daily period timings — create one schedule per school division",
       show: canManageBells,
-    },
-    {
-      href: "/academics/subjects",
-      label: "Subject catalog",
-      icon: BookMarked,
-      description: "Master list of subjects — create and edit before assigning to classes",
-      show: canManageSubjects,
     },
     {
       href: "/academics/settings",

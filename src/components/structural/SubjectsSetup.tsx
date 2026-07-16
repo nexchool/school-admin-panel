@@ -239,7 +239,7 @@ export function SubjectsSetup() {
               <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
                 No subjects in your catalogue. Add them at{" "}
                 <Link
-                  href="/academics/subjects"
+                  href="/subjects"
                   className="text-primary underline-offset-2 hover:underline"
                 >
                   Subjects
