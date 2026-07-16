@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks";
@@ -22,23 +21,14 @@ import {
   CalendarDays,
   HelpCircle,
   Megaphone,
-  Settings2,
-  ChevronDown,
-  ChevronRight,
   ClipboardList,
   BookMarked,
-  CheckCircle2,
-  Circle,
-  CircleDot,
   ShieldCheck,
-  FileUp,
   CreditCard,
 } from "lucide-react";
-import { useSetupStepStatus, type SetupStepKey } from "@/hooks/useSetupStepStatus";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
 import { ROUTE_PERMISSIONS, TRANSPORT_NAV_PERMS } from "@/lib/navPermissions";
-import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 
 type NavItem = {
   href: string;
@@ -83,17 +73,6 @@ const SIDEBAR_NAV_SUB_ADMINS = {
   icon: ShieldCheck,
 } as const;
 
-const SETUP_STEPS: Array<{ key: SetupStepKey; href: string; label: string }> = [
-  { key: "units", href: "/school-setup/units", label: "Branches" },
-  { key: "programmes", href: "/school-setup/programmes", label: "Programmes" },
-  { key: "grades", href: "/school-setup/grades", label: "Grades" },
-  { key: "academic-year", href: "/school-setup/academic-year", label: "Academic Year" },
-  { key: "classes", href: "/school-setup/classes", label: "Classes" },
-  { key: "subjects", href: "/school-setup/subjects", label: "Subjects" },
-  { key: "terms", href: "/school-setup/terms", label: "Terms" },
-  { key: "complete", href: "/school-setup/complete", label: "Review & Complete" },
-];
-
 /**
  * Prefix match for nested routes.
  * "/dashboard" only lights up on exact match (prevents it highlighting for /dashboard/finance etc).
@@ -117,9 +96,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
     logout,
     isFeatureEnabled,
     hasAnyPermission,
-    hasPermission,
     tenantName,
-    isSetupComplete,
   } = useAuth();
 
   const visibleCore = SIDEBAR_NAV_CORE.filter(
@@ -131,24 +108,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
     isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
   const showSubAdmins = hasAnyPermission(ROUTE_PERMISSIONS["/sub-admins"]);
 
-  // School Setup is visible ONLY to whoever can run it. The super-admin holds
-  // school_setup.manage (via system.manage) and is the sole persona who can
-  // reach /school-setup (RouteGuard gates the route on school_setup.manage).
-  // School admins/sub-admins lost that permission, so showing them the link
-  // would be a dead-end (RouteGuard bounces them) and the per-step badges would
-  // 403 on the super-admin-only /status endpoint. They rely on SetupGate's
-  // banner (driven by auth-context isSetupComplete) instead.
-  const canManageSetup = hasPermission("school_setup.manage");
-  // Wizard hidden by default during white-glove onboarding (seed script handles
-  // setup). Set NEXT_PUBLIC_ENABLE_SCHOOL_SETUP=true to bring it back (e.g. dev).
-  const showSchoolSetup = canManageSetup && isSchoolSetupEnabled();
-
-  const [setupExpanded, setSetupExpanded] = useState(
-    pathname.startsWith("/school-setup")
-  );
-
-  // Dashboard is always first; the setup group is injected between it and the
-  // rest when school setup is visible.
+  // Dashboard is always first; the rest follow.
   const coreItemsBeforeSetup = visibleCore.slice(0, 1); // Dashboard
   const coreItemsAfterSetup = visibleCore.slice(1);     // everything else
 
@@ -211,65 +171,6 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                 </Link>
               );
             })}
-
-          {/* School Setup group — super-admin only. They get the collapsible
-              per-step wizard; the per-step badges read the super-admin-only
-              /status endpoint, which is safe here because no other persona ever
-              renders this branch. */}
-          {showSchoolSetup && (
-            <div>
-              <button
-                type="button"
-                onClick={() => setSetupExpanded((v) => !v)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  pathname.startsWith("/school-setup")
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Settings2 className="h-5 w-5 shrink-0" />
-                <span className="flex-1 text-left">
-                  School Setup{!isSetupComplete && " ⚠"}
-                </span>
-                {setupExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </button>
-              {setupExpanded && (
-                <div className="ml-7 mt-1 space-y-0.5 border-l border-border pl-3">
-                  {SETUP_STEPS.map((step) => (
-                    <SetupSubItem
-                      key={step.key}
-                      step={step}
-                      pathname={pathname}
-                      onNavClick={handleNavClick}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Onboarding (YAML/JSON upload) — super-admin only, shown regardless
-              of the wizard flag since it's the scripted-onboarding entry point. */}
-          {canManageSetup && (
-            <Link
-              href="/onboarding"
-              onClick={handleNavClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isSidebarNavActive(pathname, "/onboarding")
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <FileUp className="h-5 w-5 shrink-0" />
-              Onboarding
-            </Link>
-          )}
 
           {/* Remaining core nav items */}
           {allNavItems.map(({ href, label, icon: Icon }) => {
@@ -409,55 +310,3 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   );
 }
 
-// ── SetupSubItem ──────────────────────────────────────────────────────────────
-
-function SetupSubItem({
-  step,
-  pathname,
-  onNavClick,
-}: {
-  step: { key: SetupStepKey; href: string; label: string };
-  pathname: string;
-  onNavClick: () => void;
-}) {
-  const status = useSetupStepStatus(step.key);
-  const isActive = pathname === step.href;
-  const Icon =
-    status === "done" ? CheckCircle2 : status === "now" ? CircleDot : Circle;
-  const colorClass =
-    status === "done"
-      ? "text-emerald-600"
-      : status === "now"
-        ? "text-blue-600"
-        : "text-muted-foreground/60";
-  return (
-    <Link
-      href={step.href}
-      onClick={onNavClick}
-      className={cn(
-        "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-      )}
-    >
-      <Icon className={cn("h-3.5 w-3.5 shrink-0", colorClass)} />
-      <span className="flex-1">{step.label}</span>
-      {status === "done" && (
-        <span className="text-[9px] uppercase tracking-wide text-emerald-600">
-          done
-        </span>
-      )}
-      {status === "now" && (
-        <span className="text-[9px] uppercase tracking-wide text-blue-600">
-          now
-        </span>
-      )}
-      {status === "optional" && (
-        <span className="text-[9px] uppercase tracking-wide text-muted-foreground">
-          opt
-        </span>
-      )}
-    </Link>
-  );
-}

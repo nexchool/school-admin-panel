@@ -30,7 +30,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/hooks/useDashboard";
 import type { DashboardAlerts, DashboardData } from "@/services/dashboardService";
-import { SetupStatusPill } from "@/components/school-setup/SetupStatusPill";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -254,7 +253,6 @@ function DashboardContent({ data }: { data: DashboardData }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <SetupStatusPill />
           <HealthBadge score={health_score} />
           {alerts.total_issues > 0 ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">

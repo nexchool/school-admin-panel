@@ -26,7 +26,6 @@ import {
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { SubjectFormModal } from "@/components/subjects/SubjectFormModal";
 import { AssignClassesModal } from "@/components/subjects/AssignClassesModal";
-import { SubjectsSetup } from "@/components/structural/SubjectsSetup";
 import {
   useSubjectsList,
   useCreateSubject,
@@ -74,9 +73,6 @@ export default function SubjectsPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission("subject.manage");
   const canAssign = hasPermission("class_subject.manage");
-
-  // School-setup dashboard entry point (kept from the previous /subjects shim).
-  const isSetupMode = searchParams?.get("mode") === "setup";
 
   // URL-backed list state.
   const urlState = useMemo(
@@ -279,8 +275,6 @@ export default function SubjectsPage() {
         ]
       : []),
   ];
-
-  if (isSetupMode) return <SubjectsSetup />;
 
   return (
     <div className="space-y-6">

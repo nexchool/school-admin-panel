@@ -44,6 +44,7 @@ import { registerForbiddenHandler } from "@/lib/forbiddenHandler";
 import {
   login as loginService,
   logout as logoutService,
+  redeemLoginLink as redeemLoginLinkService,
   getProfile,
   type LoginResponse,
   type ProfileRole,
@@ -71,6 +72,8 @@ interface AuthContextType {
     password: string
   ) => Promise<{ requiresTenantChoice: boolean; forcePasswordReset: boolean }>;
   loginWithTenant: (tenantId: string) => Promise<{ forcePasswordReset: boolean }>;
+  /** Establish a session from a one-time platform-admin login link (god-login). */
+  loginWithCode: (code: string) => Promise<void>;
   clearPendingTenantChoice: () => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -351,6 +354,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [pendingTenantChoice, setAuthData, refreshUser, queryClient]
   );
 
+  const loginWithCode = useCallback(
+    async (code: string): Promise<void> => {
+      const response = await redeemLoginLinkService(code);
+      queryClient.clear();
+      await setAuthData(response);
+      await refreshUser();
+    },
+    [setAuthData, refreshUser, queryClient]
+  );
+
   const clearPendingTenantChoice = useCallback(() => setPendingTenantChoice(null), []);
 
   const logout = useCallback(async () => {
@@ -418,6 +431,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingTenantChoice,
         login,
         loginWithTenant,
+        loginWithCode,
         clearPendingTenantChoice,
         logout,
         refreshUser,
