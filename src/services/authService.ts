@@ -53,6 +53,13 @@ export const login = (data: {
 
 export const logout = () => apiPost<unknown>(API_ENDPOINTS.LOGOUT);
 
+/**
+ * Redeem a one-time platform-admin login link. The backend returns the same
+ * shape as a normal login, scoped to the target tenant (god-login session).
+ */
+export const redeemLoginLink = (code: string) =>
+  apiPost<LoginResponse>(API_ENDPOINTS.REDEEM_LOGIN_LINK, { code });
+
 export const forgotPassword = (data: { email: string }) =>
   apiPost<MessageResponse>(API_ENDPOINTS.FORGOT_PASSWORD, {
     email: data.email,
