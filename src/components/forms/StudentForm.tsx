@@ -562,8 +562,13 @@ export function StudentForm({
       }
 
       if (!values.class_id) {
-        // Backend requires class_id or academic_year_id - pick first class if none selected
-        if (classes.length > 0) payload.class_id = classes[0].id;
+        // A class is required — never silently drop the student into an
+        // arbitrary class. Force the admin to pick one.
+        form.setError("class_id", {
+          type: "manual",
+          message: "Please select a class for this student.",
+        });
+        return;
       }
       await onSubmit(payload);
     }
@@ -652,8 +657,12 @@ export function StudentForm({
               <StructuredClassPicker
                 classes={classes}
                 value={form.watch("class_id") || ""}
-                onChange={(v) => form.setValue("class_id", v)}
+                onChange={(v) => {
+                  form.setValue("class_id", v);
+                  if (v) form.clearErrors("class_id");
+                }}
               />
+              <FieldError message={form.formState.errors.class_id?.message} />
             </div>
 
             <div className="space-y-2">

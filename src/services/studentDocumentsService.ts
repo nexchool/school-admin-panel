@@ -7,7 +7,7 @@ export interface StudentDocument {
   document_type_label?: string;
   original_filename: string;
   /** @deprecated Direct URLs are no longer returned — use authenticated viewUrl. */
-  cloudinary_url?: string | null;
+  file_url?: string | null;
   /** Path relative to API origin; open via apiGetBlob with auth headers. */
   view_url?: string;
   mime_type?: string;

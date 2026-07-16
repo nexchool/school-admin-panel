@@ -1,14 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useStudent, useUpdateStudent, useDeleteStudent } from "@/hooks/useStudents";
 import { useClasses } from "@/hooks/useClasses";
+import { useStudentFees } from "@/hooks/useStudentFees";
+import { useStudentAttendance } from "@/hooks/useStudentAttendance";
+import { useStudentAllocation } from "@/hooks/useHostel";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
 import { StudentDocumentsSection } from "@/components/students/StudentDocumentsSection";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { STUDENT_STATUS_OPTIONS } from "@/constants/studentStatus";
 import {
   ProfileHeader,
   QuickStats,
@@ -37,6 +51,14 @@ import {
   Home,
   IdCard,
   Heart,
+  ClipboardList,
+  Wallet,
+  CalendarCheck,
+  Bus,
+  Building2,
+  ChevronDown,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Student, UpdateStudentInput } from "@/types/student";
@@ -48,9 +70,10 @@ type TabId =
   | "family"
   | "address"
   | "academic"
-  | "documents";
+  | "documents"
+  | "records";
 
-const TABS: TabNavItem<TabId>[] = [
+const BASE_TABS: TabNavItem<TabId>[] = [
   { id: "overview", label: "Overview", icon: User },
   { id: "personal", label: "Personal", icon: IdCard },
   { id: "family", label: "Family & Guardian", icon: Users },
@@ -59,22 +82,55 @@ const TABS: TabNavItem<TabId>[] = [
   { id: "documents", label: "Documents", icon: FileText },
 ];
 
+const RECORDS_TAB: TabNavItem<TabId> = {
+  id: "records",
+  label: "Records",
+  icon: ClipboardList,
+};
+
+// Permissions that unlock the linked-records tab (fees / attendance / transport /
+// hostel). `hasPermission` is wildcard-aware, so `.manage` / `system.manage` pass.
+const RECORD_PERMS = [
+  "finance.read",
+  "attendance.read.all",
+  "attendance.read.class",
+  "transport.enrollment.read",
+  "hostel.read",
+] as const;
+
 export default function StudentDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string | undefined;
   const { data: student, isLoading, isError } = useStudent(id ?? null);
   const { data: classes = [] } = useClasses();
+  const { hasAnyPermission } = useAuth();
   const updateMutation = useUpdateStudent();
   const deleteMutation = useDeleteStudent();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
+  const canSeeRecords = hasAnyPermission(RECORD_PERMS);
+  const tabs = useMemo<TabNavItem<TabId>[]>(
+    () => (canSeeRecords ? [...BASE_TABS, RECORDS_TAB] : BASE_TABS),
+    [canSeeRecords]
+  );
+
   const handleUpdate = async (data: UpdateStudentInput) => {
     if (!id) return;
     await updateMutation.mutateAsync({ id, input: data });
     setEditOpen(false);
+  };
+
+  const handleStatusChange = async (status: string) => {
+    if (!id || status === student?.student_status) return;
+    try {
+      await updateMutation.mutateAsync({ id, input: { student_status: status } });
+      toast.success(`Status set to ${status}`);
+    } catch (e: unknown) {
+      toastError(e, "Failed to update status");
+    }
   };
 
   const performDelete = async () => {
@@ -165,12 +221,48 @@ export default function StudentDetailPage() {
         onEdit={() => setEditOpen(true)}
         onDelete={() => setDeleteConfirmOpen(true)}
         isDeleting={deleteMutation.isPending}
+        extraActions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="gap-2"
+                disabled={updateMutation.isPending}
+              >
+                Status:{" "}
+                <span className="capitalize">
+                  {student.student_status ?? "—"}
+                </span>
+                <ChevronDown className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Change status</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {STUDENT_STATUS_OPTIONS.map((o) => (
+                <DropdownMenuItem
+                  key={o.value}
+                  onClick={() => handleStatusChange(o.value)}
+                  disabled={o.value === student.student_status}
+                  className="gap-2"
+                >
+                  {o.value === student.student_status ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <span className="size-4" />
+                  )}
+                  {o.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       />
 
       <QuickStats items={statsItems} />
 
       <div className="space-y-5 pt-2">
-        <TabNav tabs={TABS} active={activeTab} onChange={setActiveTab} />
+        <TabNav tabs={tabs} active={activeTab} onChange={setActiveTab} />
 
         <div className="min-h-[300px]">
           {activeTab === "overview" && <OverviewTab student={student} />}
@@ -178,6 +270,9 @@ export default function StudentDetailPage() {
           {activeTab === "family" && <FamilyTab student={student} />}
           {activeTab === "address" && <AddressTab student={student} />}
           {activeTab === "academic" && <AcademicTab student={student} />}
+          {activeTab === "records" && canSeeRecords && (
+            <RecordsTab student={student} />
+          )}
           {activeTab === "documents" && (
             <StudentDocumentsSection
               studentId={student.id}
@@ -199,9 +294,9 @@ export default function StudentDetailPage() {
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Delete this student?"
-        description="This action cannot be undone."
-        confirmLabel="Delete"
+        title={`Delete ${student.name}?`}
+        description="This permanently removes the student along with their login, uploaded documents, and fee records. This cannot be undone — to keep the record but mark them as gone, change their status to Transferred, Leaving, or Graduated instead."
+        confirmLabel="Delete permanently"
         variant="destructive"
         loading={deleteMutation.isPending}
         onConfirm={performDelete}
@@ -467,4 +562,205 @@ function AcademicTab({ student }: { student: Student }) {
       </SectionCard>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Records tab — linked module summaries (fees / attendance / transport / hostel).
+// Each panel is a separate component so its data query only runs when the
+// parent renders it (permission-gated in RecordsTab).
+// ---------------------------------------------------------------------------
+
+function CrossLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href}>
+      <Button variant="ghost" size="sm" className="gap-1.5 text-xs">
+        {label}
+        <ExternalLink className="size-3.5" />
+      </Button>
+    </Link>
+  );
+}
+
+function readStr(obj: Record<string, unknown> | null | undefined, key: string) {
+  const v = obj?.[key];
+  return typeof v === "string" || typeof v === "number" ? String(v) : undefined;
+}
+
+function RecordsTab({ student }: { student: Student }) {
+  const { hasPermission, hasAnyPermission } = useAuth();
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      {hasPermission("finance.read") && <FeesPanel student={student} />}
+      {hasAnyPermission(["attendance.read.all", "attendance.read.class"]) && (
+        <AttendancePanel student={student} />
+      )}
+      {hasPermission("transport.enrollment.read") && (
+        <TransportPanel student={student} />
+      )}
+      {hasPermission("hostel.read") && <HostelPanel student={student} />}
+    </div>
+  );
+}
+
+function FeesPanel({ student }: { student: Student }) {
+  const { data: fees, isLoading } = useStudentFees({ student_id: student.id });
+  const totals = useMemo(() => {
+    const rows = fees ?? [];
+    return rows.reduce(
+      (acc, f) => ({
+        billed: acc.billed + (f.total_amount ?? 0),
+        paid: acc.paid + (f.paid_amount ?? 0),
+        outstanding: acc.outstanding + (f.outstanding_amount ?? 0),
+      }),
+      { billed: 0, paid: 0, outstanding: 0 }
+    );
+  }, [fees]);
+
+  return (
+    <SectionCard
+      title="Fees"
+      description="Fee assignment summary"
+      icon={Wallet}
+      actions={<CrossLink href="/finance/student-fees" label="Open fees" />}
+    >
+      {isLoading ? (
+        <PanelLoading />
+      ) : !fees || fees.length === 0 ? (
+        <PanelEmpty message="No fees assigned for the active academic year." />
+      ) : (
+        <DetailTable
+          rows={[
+            ["Fee Records", String(fees.length)],
+            ["Total Billed", formatCurrency(totals.billed)],
+            ["Paid", formatCurrency(totals.paid)],
+            [
+              "Outstanding",
+              <span
+                key="out"
+                className={totals.outstanding > 0 ? "font-semibold text-destructive" : undefined}
+              >
+                {formatCurrency(totals.outstanding)}
+              </span>,
+            ],
+          ]}
+        />
+      )}
+    </SectionCard>
+  );
+}
+
+function AttendancePanel({ student }: { student: Student }) {
+  const month = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  const { data, isLoading } = useStudentAttendance(student.id, month);
+
+  return (
+    <SectionCard
+      title="Attendance"
+      description="This month"
+      icon={CalendarCheck}
+      actions={<CrossLink href="/attendance" label="Open attendance" />}
+    >
+      {isLoading ? (
+        <PanelLoading />
+      ) : !data || data.total_days === 0 ? (
+        <PanelEmpty message="No attendance recorded this month." />
+      ) : (
+        <DetailTable
+          rows={[
+            ["Days Recorded", String(data.total_days)],
+            ["Present", String(data.present)],
+            ["Absent", String(data.absent)],
+            ["Late", String(data.late)],
+            [
+              "Attendance",
+              <Badge key="pct" variant={data.percentage >= 75 ? "default" : "destructive"}>
+                {data.percentage}%
+              </Badge>,
+            ],
+          ]}
+        />
+      )}
+    </SectionCard>
+  );
+}
+
+function TransportPanel({ student }: { student: Student }) {
+  const t = student.transport;
+  const opted = student.is_transport_opted;
+
+  return (
+    <SectionCard
+      title="Transport"
+      description="Route assignment"
+      icon={Bus}
+      actions={
+        <CrossLink href="/dashboard/transport/students" label="Open transport" />
+      }
+    >
+      {!opted && !t ? (
+        <PanelEmpty message="Not opted for transport." />
+      ) : (
+        <DetailTable
+          rows={[
+            ["Opted", formatBool(opted)],
+            ["Route", readStr(t?.route, "name")],
+            ["Bus", readStr(t?.bus, "bus_number") ?? readStr(t?.bus, "registration_number")],
+            ["Pickup Point", t?.pickup_point ?? undefined],
+            ["Drop Point", t?.drop_point ?? undefined],
+            [
+              "Monthly Fee",
+              t?.monthly_fee != null ? formatCurrency(t.monthly_fee) : undefined,
+            ],
+          ]}
+        />
+      )}
+    </SectionCard>
+  );
+}
+
+function HostelPanel({ student }: { student: Student }) {
+  const { data: allocation, isLoading } = useStudentAllocation(student.id);
+
+  return (
+    <SectionCard
+      title="Hostel"
+      description="Accommodation"
+      icon={Building2}
+      actions={
+        <CrossLink href={`/hostel/students/${student.id}`} label="Open hostel" />
+      }
+    >
+      {isLoading ? (
+        <PanelLoading />
+      ) : !allocation ? (
+        <PanelEmpty message="No active hostel allocation." />
+      ) : (
+        <DetailTable
+          rows={[
+            [
+              "Status",
+              <Badge key="st" variant={getStatusVariant(allocation.status)}>
+                {allocation.status}
+              </Badge>,
+            ],
+            ["Checked In", formatDate(allocation.check_in_at)],
+            ["Checked Out", formatDate(allocation.check_out_at)],
+          ]}
+        />
+      )}
+    </SectionCard>
+  );
+}
+
+function PanelLoading() {
+  return (
+    <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+      <Loader2 className="size-4 animate-spin" />
+      Loading…
+    </div>
+  );
+}
+
+function PanelEmpty({ message }: { message: string }) {
+  return <p className="py-4 text-sm text-muted-foreground">{message}</p>;
 }

@@ -65,9 +65,35 @@ export interface CalendarHolidaysRange {
   occurrences: HolidayOccurrence[];
 }
 
+export interface StudentAttendanceRecord {
+  id: string;
+  date: string;
+  status: string | null;
+  remarks?: string | null;
+  class_id?: string | null;
+}
+
+export interface StudentAttendanceSummary {
+  student_id: string;
+  student_name: string | null;
+  total_days: number;
+  present: number;
+  absent: number;
+  late: number;
+  percentage: number;
+  records: StudentAttendanceRecord[];
+  attendance_source?: "sessions_v2" | "legacy_table";
+}
+
 export const attendanceService = {
   getClassAttendance: async (classId: string, date: string) =>
     apiGet<ClassAttendanceData>(`/api/attendance/class/${classId}?date=${date}`),
+
+  /** Attendance summary + records for one student. `month` is YYYY-MM (optional; omit for all-time). */
+  getStudentAttendance: async (studentId: string, month?: string) =>
+    apiGet<StudentAttendanceSummary>(
+      `/api/attendance/student/${studentId}${month ? `?month=${encodeURIComponent(month)}` : ""}`
+    ),
 
   /** School holidays / weekly offs in range — same rules as attendance marking. */
   getCalendarHolidaysInRange: async (startDate: string, endDate: string) =>
