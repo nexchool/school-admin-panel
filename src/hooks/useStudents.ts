@@ -115,3 +115,19 @@ export function useDeleteStudent() {
     },
   });
 }
+
+export function useBulkUpdateStudentStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      studentIds,
+      studentStatus,
+    }: {
+      studentIds: string[];
+      studentStatus: string;
+    }) => studentsService.bulkUpdateStatus(studentIds, studentStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+    },
+  });
+}

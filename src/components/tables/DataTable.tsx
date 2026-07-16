@@ -34,6 +34,15 @@ export interface DataTablePagination {
   onPageSizeChange?: (pageSize: number) => void;
 }
 
+export interface DataTableSelection {
+  /** Ids currently selected (may include rows on other pages). */
+  selectedIds: Set<string>;
+  /** Toggle a single row's selection. */
+  onToggle: (id: string) => void;
+  /** Select or deselect every currently visible row. */
+  onToggleAll: (visibleIds: string[], select: boolean) => void;
+}
+
 export interface DataTableProps<T> {
   columns: DataTableColumn<T>[];
   data: T[];
@@ -52,7 +61,37 @@ export interface DataTableProps<T> {
   /** Called with the next direction, or null to clear the sort. */
   onSortChange?: (column: string, direction: SortDirection | null) => void;
   onRowClick?: (row: T) => void;
+  /** When provided, renders a leading checkbox column for row selection. */
+  selection?: DataTableSelection;
   className?: string;
+}
+
+function SelectCheckbox({
+  checked,
+  indeterminate,
+  onChange,
+  ariaLabel,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+  ariaLabel: string;
+}) {
+  const ref = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => {
+    if (ref.current) ref.current.indeterminate = !!indeterminate && !checked;
+  }, [indeterminate, checked]);
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      aria-label={ariaLabel}
+      checked={checked}
+      onChange={onChange}
+      onClick={(e) => e.stopPropagation()}
+      className="size-4 cursor-pointer rounded border-border accent-primary"
+    />
+  );
 }
 
 function SortIcon({ state }: { state: "asc" | "desc" | "none" }) {
@@ -74,6 +113,7 @@ export function DataTable<T extends object>({
   sort,
   onSortChange,
   onRowClick,
+  selection,
   className,
 }: DataTableProps<T>) {
   const totalPages = pagination
@@ -81,6 +121,15 @@ export function DataTable<T extends object>({
     : 1;
   const canPrevious = pagination && pagination.page > 1;
   const canNext = pagination && pagination.page < totalPages;
+
+  const visibleIds = data.map((row) => getRowId(row));
+  const selectedVisibleCount = visibleIds.filter((id) =>
+    selection?.selectedIds.has(id)
+  ).length;
+  const allVisibleSelected =
+    visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
+  const colCount = columns.length + (selection ? 1 : 0);
 
   const handleHeaderClick = (col: DataTableColumn<T>) => {
     if (!col.sortable || !onSortChange) return;
@@ -98,6 +147,18 @@ export function DataTable<T extends object>({
         <table className="w-full min-w-[600px] text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">
+              {selection && (
+                <th className="w-10 px-4 py-3">
+                  <SelectCheckbox
+                    ariaLabel="Select all rows on this page"
+                    checked={allVisibleSelected}
+                    indeterminate={someVisibleSelected}
+                    onChange={() =>
+                      selection.onToggleAll(visibleIds, !allVisibleSelected)
+                    }
+                  />
+                </th>
+              )}
               {columns.map((col) => {
                 const sortKey = col.sortKey ?? col.key;
                 const active = col.sortable && sort?.column === sortKey;
@@ -137,7 +198,7 @@ export function DataTable<T extends object>({
             {isLoading ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={colCount}
                   className="px-4 py-12 text-center text-muted-foreground"
                 >
                   Loading...
@@ -145,7 +206,7 @@ export function DataTable<T extends object>({
               </tr>
             ) : isError ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                <td colSpan={colCount} className="px-4 py-12 text-center">
                   <p className="text-muted-foreground">{errorMessage}</p>
                   {onRetry && (
                     <Button
@@ -162,22 +223,35 @@ export function DataTable<T extends object>({
             ) : data.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={colCount}
                   className="px-4 py-12 text-center text-muted-foreground"
                 >
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              data.map((row) => (
+              data.map((row) => {
+                const rowId = getRowId(row);
+                const isSelected = selection?.selectedIds.has(rowId) ?? false;
+                return (
                 <tr
-                  key={getRowId(row)}
+                  key={rowId}
                   onClick={() => onRowClick?.(row)}
                   className={cn(
                     "border-b border-border transition-colors last:border-0",
-                    onRowClick && "cursor-pointer hover:bg-muted/50"
+                    onRowClick && "cursor-pointer hover:bg-muted/50",
+                    isSelected && "bg-primary/5"
                   )}
                 >
+                  {selection && (
+                    <td className="w-10 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <SelectCheckbox
+                        ariaLabel="Select row"
+                        checked={isSelected}
+                        onChange={() => selection.onToggle(rowId)}
+                      />
+                    </td>
+                  )}
                   {columns.map((col) => (
                     <td
                       key={col.key}
@@ -189,7 +263,8 @@ export function DataTable<T extends object>({
                     </td>
                   ))}
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

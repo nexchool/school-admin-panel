@@ -33,26 +33,51 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { useStudents, useCreateStudent } from "@/hooks/useStudents";
+import Link from "next/link";
+import {
+  useStudents,
+  useCreateStudent,
+  useDeleteStudent,
+  useBulkUpdateStudentStatus,
+} from "@/hooks/useStudents";
 import { useClasses } from "@/hooks/useClasses";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useProgrammes } from "@/hooks/useProgrammes";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { BulkImportStudents } from "@/components/students/BulkImportStudents";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   DataTable,
   type DataTableColumn,
   type SortDirection,
 } from "@/components/tables/DataTable";
+import { studentsService } from "@/services/studentsService";
 import type {
   StudentsSearchField,
   StudentsSortBy,
 } from "@/services/studentsService";
 import type { Student } from "@/types/student";
-import { Upload, Plus, Search, SlidersHorizontal, X, RotateCcw } from "lucide-react";
+import { STUDENT_STATUS_OPTIONS } from "@/constants/studentStatus";
+import {
+  Upload,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  X,
+  RotateCcw,
+  Download,
+  Trash2,
+  GraduationCap,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 import { cn } from "@/lib/utils";
 
 const SEARCH_FIELD_OPTIONS: { value: StudentsSearchField; label: string }[] = [
@@ -360,10 +385,91 @@ export default function StudentsPage() {
   const { data: academicYears = [] } = useAcademicYears();
   const { data: programmes = [] } = useProgrammes();
   const createMutation = useCreateStudent();
+  const deleteMutation = useDeleteStudent();
+  const bulkStatusMutation = useBulkUpdateStudentStatus();
+  const { hasPermission } = useAuth();
+  const canUpdate = hasPermission("student.update");
+  const canDelete = hasPermission("student.delete");
+
+  // Row selection (persists across pages; ids may span pages).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const toggleRow = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAllVisible = useCallback((visibleIds: string[], select: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of visibleIds) {
+        if (select) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleBulkStatus = async (status: string) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      const res = await bulkStatusMutation.mutateAsync({
+        studentIds: ids,
+        studentStatus: status,
+      });
+      toast.success(`Updated ${res.updated} student${res.updated === 1 ? "" : "s"}`);
+      clearSelection();
+    } catch (e: unknown) {
+      toastError(e, "Failed to update status");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    const results = await Promise.allSettled(
+      ids.map((id) => deleteMutation.mutateAsync(id))
+    );
+    const ok = results.filter((r) => r.status === "fulfilled").length;
+    const failed = ids.length - ok;
+    if (ok) toast.success(`Deleted ${ok} student${ok === 1 ? "" : "s"}`);
+    if (failed) toast.error(`${failed} could not be deleted`);
+    clearSelection();
+    refetch();
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const blob = await studentsService.exportStudents(queryParams);
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = `students_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    } catch (e: unknown) {
+      toastError(e, "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.total_pages ?? 1;
+  const selectedCount = selectedIds.size;
 
   // Clamp to the last page whenever the filtered result has fewer pages than
   // the current page (e.g. after tightening filters while on page 5).
@@ -565,7 +671,7 @@ export default function StudentsPage() {
             Manage student records and enrollment.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={() => setCreateOpen(true)} className="gap-2">
             <Plus className="size-4" />
             Add Student
@@ -578,6 +684,27 @@ export default function StudentsPage() {
             <Upload className="size-4" />
             Bulk Import
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting || total === 0}
+            className="gap-2"
+          >
+            {exporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+            Export
+          </Button>
+          {canUpdate && (
+            <Link href="/dashboard/academics/year-transition">
+              <Button variant="outline" className="gap-2">
+                <GraduationCap className="size-4" />
+                Promote
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -945,6 +1072,57 @@ export default function StudentsPage() {
         </CardHeader>
 
         <CardContent>
+          {selectedCount > 0 && (canUpdate || canDelete) && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+              <span className="text-sm font-medium">
+                {selectedCount} selected
+              </span>
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                {canUpdate && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        disabled={bulkStatusMutation.isPending}
+                      >
+                        Change status
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Set status to</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {STUDENT_STATUS_OPTIONS.map((o) => (
+                        <DropdownMenuItem
+                          key={o.value}
+                          onClick={() => handleBulkStatus(o.value)}
+                        >
+                          {o.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setBulkDeleteOpen(true)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" onClick={clearSelection}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
           <DataTable
             columns={columns}
             data={items}
@@ -974,11 +1152,31 @@ export default function StudentsPage() {
               pageSizeOptions: PAGE_SIZE_OPTIONS,
               onPageSizeChange: handlePageSizeChange,
             }}
+            selection={
+              canUpdate || canDelete
+                ? {
+                    selectedIds,
+                    onToggle: toggleRow,
+                    onToggleAll: toggleAllVisible,
+                  }
+                : undefined
+            }
             onRowClick={(row) => router.push(`/students/${row.id}`)}
             className={cn(isFetching && !isLoading && "opacity-80")}
           />
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={`Delete ${selectedCount} student${selectedCount === 1 ? "" : "s"}?`}
+        description="This permanently removes the selected students along with their logins, uploaded documents, and fee records. This cannot be undone."
+        confirmLabel="Delete permanently"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={handleBulkDelete}
+      />
 
       <BulkImportStudents open={importOpen} onOpenChange={setImportOpen} />
 

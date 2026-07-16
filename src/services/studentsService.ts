@@ -1,5 +1,6 @@
 import {
   apiGet,
+  apiGetBlob,
   apiPost,
   apiPostForm,
   apiPut,
@@ -82,6 +83,28 @@ export interface StudentsListResult {
   total_pages: number;
 }
 
+/** Shared filter/search/sort params (everything except pagination). */
+function appendStudentFilters(qp: URLSearchParams, params: StudentsListParams) {
+  if (params.class_ids?.length) {
+    qp.set("class_ids", params.class_ids.join(","));
+  } else if (params.class_id) {
+    qp.set("class_id", params.class_id);
+  }
+  if (params.academic_year_id) qp.set("academic_year_id", params.academic_year_id);
+  if (params.programme_id) qp.set("programme_id", params.programme_id);
+  if (params.search) qp.set("search", params.search);
+  if (params.search_field) qp.set("search_field", params.search_field);
+  if (params.sort_by) qp.set("sort_by", params.sort_by);
+  if (params.sort_dir) qp.set("sort_dir", params.sort_dir);
+  if (params.gender) qp.set("gender", params.gender);
+  if (params.student_status) qp.set("student_status", params.student_status);
+  if (params.is_transport_opted !== undefined) {
+    qp.set("is_transport_opted", params.is_transport_opted ? "true" : "false");
+  }
+  if (params.admission_date_from) qp.set("admission_date_from", params.admission_date_from);
+  if (params.admission_date_to) qp.set("admission_date_to", params.admission_date_to);
+}
+
 export const studentsService = {
   getStudents: async (
     params?: StudentsListParams
@@ -89,26 +112,9 @@ export const studentsService = {
     let url = "/api/students/";
     if (params) {
       const qp = new URLSearchParams();
-      if (params.class_ids?.length) {
-        qp.set("class_ids", params.class_ids.join(","));
-      } else if (params.class_id) {
-        qp.set("class_id", params.class_id);
-      }
-      if (params.academic_year_id) qp.set("academic_year_id", params.academic_year_id);
-      if (params.programme_id) qp.set("programme_id", params.programme_id);
-      if (params.search) qp.set("search", params.search);
-      if (params.search_field) qp.set("search_field", params.search_field);
-      if (params.sort_by) qp.set("sort_by", params.sort_by);
-      if (params.sort_dir) qp.set("sort_dir", params.sort_dir);
+      appendStudentFilters(qp, params);
       if (params.page !== undefined) qp.set("page", String(params.page));
       if (params.per_page !== undefined) qp.set("per_page", String(params.per_page));
-      if (params.gender) qp.set("gender", params.gender);
-      if (params.student_status) qp.set("student_status", params.student_status);
-      if (params.is_transport_opted !== undefined) {
-        qp.set("is_transport_opted", params.is_transport_opted ? "true" : "false");
-      }
-      if (params.admission_date_from) qp.set("admission_date_from", params.admission_date_from);
-      if (params.admission_date_to) qp.set("admission_date_to", params.admission_date_to);
       if (params.include_transport_summary) qp.set("include_transport_summary", "true");
       const qs = qp.toString();
       if (qs) url += `?${qs}`;
@@ -167,5 +173,28 @@ export const studentsService = {
 
   bulkImport: async (formData: FormData): Promise<BulkImportResult> => {
     return apiPostForm<BulkImportResult>("/api/students/bulk-import", formData);
+  },
+
+  /** Set student_status for many students at once. */
+  bulkUpdateStatus: async (
+    studentIds: string[],
+    studentStatus: string
+  ): Promise<{ updated: number; missing: string[] }> => {
+    return apiPost<{ updated: number; missing: string[] }>(
+      "/api/students/bulk-status",
+      { student_ids: studentIds, student_status: studentStatus }
+    );
+  },
+
+  /** Download the filtered student list as a CSV blob (pagination ignored). */
+  exportStudents: async (params?: StudentsListParams): Promise<Blob> => {
+    let url = "/api/students/export";
+    if (params) {
+      const qp = new URLSearchParams();
+      appendStudentFilters(qp, params);
+      const qs = qp.toString();
+      if (qs) url += `?${qs}`;
+    }
+    return apiGetBlob(url);
   },
 };
