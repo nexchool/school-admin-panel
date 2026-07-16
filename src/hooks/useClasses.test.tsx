@@ -13,6 +13,12 @@ vi.mock("@/services/classesService", () => ({
   },
 }));
 
+// The hook gates on tenant context; provide a stable tenant without the full
+// AuthProvider (which would require a live session).
+vi.mock("@/components/providers/AuthProvider", () => ({
+  useAuth: () => ({ tenantId: "tenant-1" }),
+}));
+
 function makeWrapper({
   unitId = null,
   academicYearId = null,

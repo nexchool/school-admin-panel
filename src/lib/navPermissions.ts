@@ -76,13 +76,6 @@ export const ROUTE_PERMISSIONS = {
   "/hostel": ["hostel.read", "hostel.manage"],
   "/sub-admins": ["subadmin.manage"],
   "/audit-log": ["audit_log.view"],
-  // Gated to school-setup managers. A platform super-admin passes via the
-  // `system.manage` superuser shortcut in `hasPermission`. The longest-prefix
-  // matcher covers nested routes like /school-setup/units.
-  "/school-setup": ["school_setup.manage"],
-  // Onboarding (YAML/JSON upload → preview → apply) — super-admin only,
-  // gated like school-setup but independent of the wizard feature flag.
-  "/onboarding": ["school_setup.manage"],
 } as const satisfies Record<string, readonly string[]>;
 
 /**

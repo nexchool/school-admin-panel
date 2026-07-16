@@ -18,6 +18,12 @@ vi.mock("@/services/financeService", async () => {
   };
 });
 
+// The hooks gate on tenant context; provide a stable tenant without the full
+// AuthProvider (which would require a live session).
+vi.mock("@/components/providers/AuthProvider", () => ({
+  useAuth: () => ({ tenantId: "tenant-1" }),
+}));
+
 function makeWrapper(academicYearId: string | null = null) {
   return ({ children }: { children: ReactNode }) => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -57,15 +63,14 @@ describe("useFinanceSummary", () => {
     );
   });
 
-  it("works when context has no year", async () => {
+  it("does not fetch until an academic year is known", async () => {
     vi.mocked(financeService.getSummary).mockClear();
     const { result } = renderHook(() => useFinanceSummary(), {
       wrapper: makeWrapper(null),
     });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(financeService.getSummary).toHaveBeenCalledWith(
-      expect.objectContaining({ academic_year_id: undefined }),
-    );
+    // Query is disabled (enabled gates on academic year) — it must stay idle.
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(financeService.getSummary).not.toHaveBeenCalled();
   });
 });
 
@@ -95,15 +100,14 @@ describe("useStudentFees", () => {
     );
   });
 
-  it("works when context has no year", async () => {
+  it("does not fetch until an academic year is known", async () => {
     vi.mocked(financeService.getStudentFees).mockClear();
     const { result } = renderHook(() => useStudentFees(), {
       wrapper: makeWrapper(null),
     });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(financeService.getStudentFees).toHaveBeenCalledWith(
-      expect.objectContaining({ academic_year_id: undefined }),
-    );
+    // Query is disabled (enabled gates on academic year) — it must stay idle.
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(financeService.getStudentFees).not.toHaveBeenCalled();
   });
 });
 
@@ -133,14 +137,13 @@ describe("useFeeStructures", () => {
     );
   });
 
-  it("works when context has no year", async () => {
+  it("does not fetch until an academic year is known", async () => {
     vi.mocked(financeService.getStructures).mockClear();
     const { result } = renderHook(() => useFeeStructures(), {
       wrapper: makeWrapper(null),
     });
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(financeService.getStructures).toHaveBeenCalledWith(
-      expect.objectContaining({ academic_year_id: undefined }),
-    );
+    // Query is disabled (enabled gates on academic year) — it must stay idle.
+    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    expect(financeService.getStructures).not.toHaveBeenCalled();
   });
 });
