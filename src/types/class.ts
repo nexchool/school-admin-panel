@@ -1,5 +1,54 @@
 import type { Student } from "./student";
 
+export type ClassStatus = "active" | "archived";
+
+/** Fields the classes list may be sorted by. Mirrors `SORTABLE_COLUMNS` in
+ *  `server/modules/classes/services.py` — keep the two in step. */
+export type ClassesSortBy =
+  | "name"
+  | "grade"
+  | "programme"
+  | "branch"
+  | "student_count"
+  | "teacher_count";
+
+/** Fields `search` may target. Mirrors `SEARCH_FIELDS` server-side. */
+export type ClassesSearchField =
+  | "all"
+  | "name"
+  | "section"
+  | "grade"
+  | "programme"
+  | "branch";
+
+export interface ClassesListFilters {
+  academic_year_id?: string | null;
+  school_unit_id?: string | null;
+  programme_id?: string | null;
+  grade_id?: string | null;
+  search?: string | null;
+  search_field?: ClassesSearchField;
+  sort_by?: ClassesSortBy;
+  sort_dir?: "asc" | "desc";
+  page?: number;
+  per_page?: number;
+}
+
+export interface ClassesListResponse {
+  items: ClassItem[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface ClassesStats {
+  total_classes: number;
+  total_students: number;
+  total_teachers: number;
+  average_class_size: number;
+}
+
 export interface ClassItem {
   id: string;
   /** Display label. Backend may store NULL post multi-school migration; the
@@ -11,6 +60,13 @@ export interface ClassItem {
   teacher_id?: string;
   teacher_name?: string;
   student_count?: number;
+  teacher_count?: number;
+  medium_id?: string | null;
+  medium_name?: string | null;
+  stream?: string | null;
+  /** Derived server-side from the academic year's `is_active` — `classes` has
+   *  no status column of its own. Absent on endpoints other than the list. */
+  status?: ClassStatus;
   grade_level?: number | null;
   // Multi-school structural fields. Optional during the soft-migration
   // window — older rows may not yet have them populated.
