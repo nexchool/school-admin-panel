@@ -69,6 +69,11 @@ export function useClasses(overrides?: ListFilters) {
  * structured pickers. Filters are passed through verbatim; the caller owns
  * them (the classes page keeps them in the URL).
  *
+ * Gated on `academic_year_id` as well as tenant: the active year resolves
+ * asynchronously (ActiveScopeProvider starts it at null) and the backend reads
+ * a missing year as "every year", so firing early would flash totals and rows
+ * pooled across archived years before snapping to the right ones.
+ *
  * `placeholderData` keeps the previous page on screen while the next one
  * loads, so paging doesn't flash an empty table.
  */
@@ -76,6 +81,7 @@ export function useClassesList(filters: ClassesListFilters) {
   return useTenantQuery({
     queryKey: classesKeys.paginated(filters),
     queryFn: () => classesService.listClasses(filters),
+    enabled: !!filters.academic_year_id,
     placeholderData: keepPreviousData,
   });
 }
@@ -85,6 +91,7 @@ export function useClassesStats(filters: ClassesListFilters) {
   return useTenantQuery({
     queryKey: classesKeys.stats(filters),
     queryFn: () => classesService.getClassesStats(filters),
+    enabled: !!filters.academic_year_id,
     placeholderData: keepPreviousData,
   });
 }
