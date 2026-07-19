@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -67,8 +67,14 @@ export default function ClassesPage() {
   const { unitId } = useActiveUnit();
 
   // Branch defaults to the header's active unit so the page agrees with the
-  // global switcher on load, but the in-page filter takes over once touched.
-  const branchId = searchParams.get("branch") ?? unitId ?? "";
+  // global switcher on load, but the in-page filter overrides it once touched.
+  //
+  // "All branches" needs its own marker rather than an absent param: dropping
+  // the param would fall straight back through `?? unitId` and silently
+  // re-apply the active unit, making the option a no-op.
+  const branchParam = searchParams.get("branch");
+  const branchId =
+    branchParam === null ? unitId ?? "" : branchParam === ANY ? "" : branchParam;
   const programmeId = searchParams.get("programme") ?? "";
   const gradeId = searchParams.get("grade") ?? "";
   const sortBy = (searchParams.get("sort") as ClassesSortBy | null) ?? DEFAULT_SORT;
@@ -96,19 +102,38 @@ export default function ClassesPage() {
 
   // Any filter change resets to page 1 — otherwise you can land on a page that
   // no longer exists in the narrowed result set.
+  //
+  // Branch keeps the ANY marker in the URL (see above); the other two inherit
+  // nothing, so for them "any" is just an absent param.
   const setFilter = useCallback(
-    (key: string, value: string) =>
-      setParams({ [key]: value === ANY ? null : value, page: null }),
+    (key: string, value: string) => {
+      const cleared = key === "branch" ? ANY : null;
+      setParams({ [key]: value === ANY ? cleared : value, page: null });
+    },
     [setParams]
   );
 
-  // Push the settled search term into the URL. In an effect, not in render —
-  // router.replace during render would re-enter this component forever.
+  // The search box and the URL have to stay in step in both directions, so
+  // track the last value this component wrote to tell the two apart.
+  const lastSyncedSearch = useRef(search);
+
+  // Typing -> URL. In an effect, not in render: router.replace during render
+  // would re-enter this component forever.
   useEffect(() => {
-    if (debouncedSearch !== search) {
-      setParams({ q: debouncedSearch || null, page: null });
+    if (debouncedSearch === lastSyncedSearch.current) return;
+    lastSyncedSearch.current = debouncedSearch;
+    setParams({ q: debouncedSearch || null, page: null });
+  }, [debouncedSearch, setParams]);
+
+  // URL -> search box, for changes this component didn't make (a deep link, or
+  // hitting the sidebar's Classes link while a search is active). Without this
+  // the stale input would just push its old term straight back.
+  useEffect(() => {
+    if (search !== lastSyncedSearch.current) {
+      lastSyncedSearch.current = search;
+      setSearchInput(search);
     }
-  }, [debouncedSearch, search, setParams]);
+  }, [search]);
 
   const filters: ClassesListFilters = useMemo(
     () => ({
@@ -164,7 +189,12 @@ export default function ClassesPage() {
     }
   };
 
-  const hasFilters = Boolean(branchId || programmeId || gradeId || search);
+  // Only counts filters the user actually set. A branch inherited from the
+  // header switcher isn't one, so it must not light up "Clear" or turn the
+  // empty state into "no matches".
+  const hasFilters = Boolean(
+    branchParam !== null || programmeId || gradeId || search
+  );
 
   const columns: DataTableColumn<ClassItem>[] = useMemo(
     () => [
