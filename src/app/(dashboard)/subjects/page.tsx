@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
-import { toast } from "sonner";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +32,6 @@ import {
   useDeleteSubject,
 } from "@/hooks/useSubjects";
 import { useAuth } from "@/hooks";
-import { toastError } from "@/lib/errorToast";
 import type {
   CreateSubjectInput,
   SubjectListItem,
@@ -139,34 +137,24 @@ export default function SubjectsPage() {
   const [deleteSubject, setDeleteSubject] = useState<SubjectListItem | null>(null);
 
   const handleFormSubmit = async (data: CreateSubjectInput) => {
-    try {
-      if (editSubject) {
-        await updateMutation.mutateAsync({ id: editSubject.id, input: data });
-        toast.success("Subject updated");
-      } else {
-        await createMutation.mutateAsync(data);
-        toast.success(
-          data.class_ids?.length
-            ? `Subject created and assigned to ${data.class_ids.length} class${data.class_ids.length === 1 ? "" : "es"}`
-            : "Subject created"
-        );
-      }
-      setFormOpen(false);
-      setEditSubject(null);
-    } catch (e) {
-      toastError(e, "Failed to save subject");
-      throw e;
+    // Toasts owned by useCreateSubject / useUpdateSubject. On error the
+    // rejection propagates to SubjectFormModal, which keeps the modal open.
+    if (editSubject) {
+      await updateMutation.mutateAsync({ id: editSubject.id, input: data });
+    } else {
+      await createMutation.mutateAsync(data);
     }
+    setFormOpen(false);
+    setEditSubject(null);
   };
 
   const handleDelete = async () => {
     if (!deleteSubject) return;
     try {
       await deleteMutation.mutateAsync(deleteSubject.id);
-      toast.success("Subject deleted");
       setDeleteSubject(null);
-    } catch (e) {
-      toastError(e, "Failed to delete subject");
+    } catch {
+      // Error toast owned by useDeleteSubject; keep the dialog for a retry.
     }
   };
 

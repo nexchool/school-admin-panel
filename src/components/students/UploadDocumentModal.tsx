@@ -26,7 +26,6 @@ import {
 import { useUploadStudentDocument } from "@/hooks/useStudentDocuments";
 import { FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { toastError } from "@/lib/errorToast";
 
 interface UploadDocumentModalProps {
   open: boolean;
@@ -84,11 +83,11 @@ export function UploadDocumentModal({
     }
     try {
       await uploadMutation.mutateAsync({ documentType, file });
-      toast.success("Document uploaded");
+      // Success + error toasts owned by useUploadStudentDocument.
       onSuccess?.();
       handleClose(false);
-    } catch (err) {
-      toastError(err, "Upload failed");
+    } catch {
+      // Keep the modal open so the user can retry.
     }
   };
 

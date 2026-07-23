@@ -34,7 +34,6 @@ import {
 } from "@/hooks/useClassSubjects";
 import { subjectsService } from "@/services/subjectsService";
 import { classSubjectsService } from "@/services/classSubjectsService";
-import { ApiException } from "@/services/api";
 import type { ClassSubjectTableRow } from "@/types/classSubject";
 import type { Subject } from "@/types/subject";
 import { ClassSubjectsTable } from "./ClassSubjectsTable";
@@ -261,9 +260,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
       toast.success("Teacher assigned");
       invalidateAll();
     } catch (e) {
-      const msg =
-        e instanceof ApiException ? e.message : "Could not assign teacher";
-      toast.error(msg);
+      toastError(e, "Could not assign teacher");
     } finally {
       setAssigningFor(null);
     }
@@ -283,9 +280,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
       toast.success("Teacher assigned");
       invalidateAll();
     } catch (e) {
-      const msg =
-        e instanceof ApiException ? e.message : "Could not assign teacher";
-      toast.error(msg);
+      toastError(e, "Could not assign teacher");
       throw e;
     }
   };

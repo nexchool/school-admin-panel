@@ -422,14 +422,14 @@ export default function StudentsPage() {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
     try {
-      const res = await bulkStatusMutation.mutateAsync({
+      await bulkStatusMutation.mutateAsync({
         studentIds: ids,
         studentStatus: status,
       });
-      toast.success(`Updated ${res.updated} student${res.updated === 1 ? "" : "s"}`);
+      // Success + error toasts owned by useBulkUpdateStudentStatus.
       clearSelection();
-    } catch (e: unknown) {
-      toastError(e, "Failed to update status");
+    } catch {
+      // Keep the selection so the user can retry.
     }
   };
 

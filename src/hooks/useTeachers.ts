@@ -3,19 +3,17 @@
 import {
   keepPreviousData,
   useQuery,
-  useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useAppMutation } from "@/hooks/useAppMutation";
 import {
   teachersService,
   type TeachersListParams,
   type TeachersListResult,
 } from "@/services/teachersService";
 import type {
-  Teacher,
   CreateTeacherInput,
   UpdateTeacherInput,
-  CreateTeacherResponse,
 } from "@/types/teacher";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -48,33 +46,42 @@ export function useTeacher(id: string | null) {
 
 export function useCreateTeacher() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CreateTeacherInput) =>
-      teachersService.createTeacher(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+  return useAppMutation(
+    {
+      mutationFn: (input: CreateTeacherInput) =>
+        teachersService.createTeacher(input),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+      },
     },
-  });
+    { success: "Teacher created", error: "Couldn't create the teacher", retry: true },
+  );
 }
 
 export function useUpdateTeacher() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateTeacherInput }) =>
-      teachersService.updateTeacher(id, input),
-    onSuccess: () => {
-      // Prefix invalidation — covers list + every tenant-scoped detail key.
-      queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+  return useAppMutation(
+    {
+      mutationFn: ({ id, input }: { id: string; input: UpdateTeacherInput }) =>
+        teachersService.updateTeacher(id, input),
+      onSuccess: () => {
+        // Prefix invalidation — covers list + every tenant-scoped detail key.
+        queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+      },
     },
-  });
+    { success: "Teacher updated", error: "Couldn't update the teacher", retry: true },
+  );
 }
 
 export function useDeleteTeacher() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => teachersService.deleteTeacher(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+  return useAppMutation(
+    {
+      mutationFn: (id: string) => teachersService.deleteTeacher(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+      },
     },
-  });
+    { success: "Teacher deleted", error: "Couldn't delete the teacher", retry: true },
+  );
 }
