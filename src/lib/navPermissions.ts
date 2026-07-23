@@ -92,7 +92,7 @@ export const ROUTE_PERMISSIONS = {
  * decides what the client hides/redirects.
  */
 export function requiredPermissionsForPath(
-  pathname: string
+  pathname: string,
 ): readonly string[] | null {
   // Longest known route prefix wins (handles nested /dashboard/* routes).
   let bestMatch: { prefix: string; perms: readonly string[] } | null = null;

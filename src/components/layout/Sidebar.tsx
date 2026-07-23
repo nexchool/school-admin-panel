@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { SchoolBrandName } from "@/components/layout/SchoolBrandName";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
-import { ROUTE_PERMISSIONS, TRANSPORT_NAV_PERMS } from "@/lib/navPermissions";
+import { ROUTE_PERMISSIONS } from "@/lib/navPermissions";
 
 type NavItem = {
   href: string;
@@ -40,9 +40,9 @@ type NavItem = {
   permissions?: readonly string[];
 };
 
-/** Everything above Profile. Items with `feature` are filtered by the
- * tenant's enabled features — disabling a feature hides its sidebar link.
- * Transport keeps its position (before Profile) for visual continuity. */
+/** The full sidebar nav, in display order. Items with `feature` are filtered
+ * by the tenant's enabled features and items with `permissions` by the user's
+ * grants — either one missing hides the link. */
 const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/academics", label: "Academics", icon: School, permissions: ROUTE_PERMISSIONS["/academics"] },
@@ -56,22 +56,12 @@ const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/holidays", label: "Holidays", icon: Calendar, feature: "holiday_management", permissions: ROUTE_PERMISSIONS["/holidays"] },
   { href: "/announcements", label: "Announcements", icon: Megaphone, permissions: ROUTE_PERMISSIONS["/announcements"] },
   { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel", permissions: ROUTE_PERMISSIONS["/hostel"] },
+  { href: "/dashboard/transport", label: "Transport", icon: Bus, feature: "transport", permissions: ROUTE_PERMISSIONS["/dashboard/transport"] },
+  { href: "/sub-admins", label: "Sub-Admins", icon: ShieldCheck, permissions: ROUTE_PERMISSIONS["/sub-admins"] },
   { href: "/subscription", label: "Subscription", icon: CreditCard },
+  { href: "/profile", label: "Profile", icon: User },
+  { href: "/audit-log", label: "Audit Log", icon: ClipboardList, permissions: ROUTE_PERMISSIONS["/audit-log"] },
 ];
-
-const SIDEBAR_NAV_PROFILE = { href: "/profile", label: "Profile", icon: User } as const;
-
-const SIDEBAR_NAV_TRANSPORT = {
-  href: "/dashboard/transport",
-  label: "Transport",
-  icon: Bus,
-} as const;
-
-const SIDEBAR_NAV_SUB_ADMINS = {
-  href: "/sub-admins",
-  label: "Sub-Admins",
-  icon: ShieldCheck,
-} as const;
 
 /**
  * Prefix match for nested routes.
@@ -104,17 +94,6 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
       (!item.feature || isFeatureEnabled(item.feature)) &&
       (!item.permissions || hasAnyPermission(item.permissions))
   );
-  const showTransport =
-    isFeatureEnabled("transport") && hasAnyPermission(TRANSPORT_NAV_PERMS);
-  const showSubAdmins = hasAnyPermission(ROUTE_PERMISSIONS["/sub-admins"]);
-
-  // Dashboard is always first; the rest follow.
-  const coreItemsBeforeSetup = visibleCore.slice(0, 1); // Dashboard
-  const coreItemsAfterSetup = visibleCore.slice(1);     // everything else
-
-  const allNavItems = showTransport
-    ? [...coreItemsAfterSetup, SIDEBAR_NAV_TRANSPORT, SIDEBAR_NAV_PROFILE]
-    : [...coreItemsAfterSetup, SIDEBAR_NAV_PROFILE];
 
   const handleLogout = () => {
     logout();
@@ -151,8 +130,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
       <nav className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
           <div className="space-y-1 pr-1">
-            {/* Dashboard — always first */}
-            {coreItemsBeforeSetup.map(({ href, label, icon: Icon }) => {
+            {visibleCore.map(({ href, label, icon: Icon }) => {
               const isActive = isSidebarNavActive(pathname, href);
               return (
                 <Link
@@ -171,61 +149,6 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
                 </Link>
               );
             })}
-
-          {/* Remaining core nav items */}
-          {allNavItems.map(({ href, label, icon: Icon }) => {
-            const isActive = isSidebarNavActive(pathname, href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={handleNavClick}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                {label}
-              </Link>
-            );
-          })}
-
-          {/* Sub-Admins — visible only to subadmin.manage holders (Admin role) */}
-          {showSubAdmins && (
-            <Link
-              href={SIDEBAR_NAV_SUB_ADMINS.href}
-              onClick={handleNavClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isSidebarNavActive(pathname, SIDEBAR_NAV_SUB_ADMINS.href)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <SIDEBAR_NAV_SUB_ADMINS.icon className="h-5 w-5 shrink-0" />
-              {SIDEBAR_NAV_SUB_ADMINS.label}
-            </Link>
-          )}
-
-          {/* Audit Log — visible only to users with audit_log.view permission */}
-          {hasAnyPermission(ROUTE_PERMISSIONS["/audit-log"]) && (
-            <Link
-              href="/audit-log"
-              onClick={handleNavClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                pathname === "/audit-log" || pathname.startsWith("/audit-log/")
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <ClipboardList className="h-5 w-5 shrink-0" />
-              Audit Log
-            </Link>
-          )}
           </div>
         </div>
 

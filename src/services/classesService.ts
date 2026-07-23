@@ -1,5 +1,6 @@
 import {
   apiGet,
+  apiGetBlob,
   apiPost,
   apiPut,
   apiDelete,
@@ -7,6 +8,9 @@ import {
 import type {
   ClassItem,
   ClassDetail,
+  ClassesListFilters,
+  ClassesListResponse,
+  ClassesStats,
   CreateClassInput,
   SubjectLoad,
   CreateSubjectLoadInput,
@@ -14,7 +18,16 @@ import type {
 import type { Student } from "@/types/student";
 import type { Teacher } from "@/types/teacher";
 
-export type { ClassItem, ClassDetail, CreateClassInput, SubjectLoad, CreateSubjectLoadInput };
+export type {
+  ClassItem,
+  ClassDetail,
+  ClassesListFilters,
+  ClassesListResponse,
+  ClassesStats,
+  CreateClassInput,
+  SubjectLoad,
+  CreateSubjectLoadInput,
+};
 
 /** Backend now stores Class.name nullable (display label only — identity
  *  lives on the structural FKs). The UI types still treat it as a plain
@@ -24,18 +37,79 @@ function normalizeClass<T extends { name?: string | null }>(c: T): T {
   return { ...c, name: c.name ?? "" } as T;
 }
 
+/** Serialize list filters, skipping empty values so the URL stays clean. */
+function listQueryString(params?: ClassesListFilters): string {
+  const sp = new URLSearchParams();
+  if (!params) return "";
+  const entries: [string, unknown][] = [
+    ["academic_year_id", params.academic_year_id],
+    ["school_unit_id", params.school_unit_id],
+    ["programme_id", params.programme_id],
+    ["grade_id", params.grade_id],
+    ["search", params.search],
+    ["search_field", params.search_field],
+    ["sort_by", params.sort_by],
+    ["sort_dir", params.sort_dir],
+    ["page", params.page],
+    ["per_page", params.per_page],
+  ];
+  for (const [key, value] of entries) {
+    if (value !== undefined && value !== null && value !== "") {
+      sp.set(key, String(value));
+    }
+  }
+  return sp.toString();
+}
+
 export const classesService = {
+  /**
+   * Full (unpaginated) class list.
+   *
+   * The endpoint returns an envelope; this unwraps to a plain array because
+   * the structured class pickers build their Branch → Programme → Grade
+   * dropdowns off the whole list. Deliberately sends no `page`, which is what
+   * makes the backend return every row.
+   */
   getClasses: async (params?: {
     academic_year_id?: string | null;
     school_unit_id?: string | null;
   }): Promise<ClassItem[]> => {
-    const sp = new URLSearchParams();
-    if (params?.academic_year_id) sp.set("academic_year_id", params.academic_year_id);
-    if (params?.school_unit_id) sp.set("school_unit_id", params.school_unit_id);
-    const qs = sp.toString();
+    const qs = listQueryString(params);
     const url = `/api/classes/${qs ? `?${qs}` : ""}`;
-    const data = await apiGet<ClassItem[]>(url);
-    return Array.isArray(data) ? data.map(normalizeClass) : [];
+    const data = await apiGet<ClassesListResponse>(url);
+    const items = data?.items;
+    return Array.isArray(items) ? items.map(normalizeClass) : [];
+  },
+
+  /** Paginated list for the classes table — returns the envelope intact. */
+  listClasses: async (
+    params?: ClassesListFilters
+  ): Promise<ClassesListResponse> => {
+    const qs = listQueryString(params);
+    const data = await apiGet<ClassesListResponse>(
+      `/api/classes/${qs ? `?${qs}` : ""}`
+    );
+    return {
+      items: Array.isArray(data?.items) ? data.items.map(normalizeClass) : [],
+      total: data?.total ?? 0,
+      page: data?.page ?? 1,
+      per_page: data?.per_page ?? 0,
+      total_pages: data?.total_pages ?? 1,
+    };
+  },
+
+  /** Aggregate totals for the overview header, over the same filters. */
+  getClassesStats: async (
+    params?: ClassesListFilters
+  ): Promise<ClassesStats> => {
+    const qs = listQueryString(params);
+    return apiGet<ClassesStats>(`/api/classes/stats${qs ? `?${qs}` : ""}`);
+  },
+
+  /** CSV of the filtered list. Pagination params are ignored server-side. */
+  exportClasses: async (params?: ClassesListFilters): Promise<Blob> => {
+    const qs = listQueryString({ ...params, page: undefined, per_page: undefined });
+    return apiGetBlob(`/api/classes/export${qs ? `?${qs}` : ""}`);
   },
 
   getClass: async (id: string): Promise<ClassDetail> => {

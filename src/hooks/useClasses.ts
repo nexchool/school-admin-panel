@@ -1,13 +1,14 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppMutation } from "@/hooks/useAppMutation";
 import { classesService } from "@/services/classesService";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
-import type { CreateClassInput } from "@/types/class";
+import type { ClassesListFilters, CreateClassInput } from "@/types/class";
 
 type ListFilters = {
   academic_year_id?: string | null;
@@ -17,6 +18,10 @@ type ListFilters = {
 export const classesKeys = {
   all: ["classes"] as const,
   list: (params?: ListFilters) => [...classesKeys.all, "list", params] as const,
+  paginated: (params?: ClassesListFilters) =>
+    [...classesKeys.all, "paginated", params] as const,
+  stats: (params?: ClassesListFilters) =>
+    [...classesKeys.all, "stats", params] as const,
   detail: (id: string) => [...classesKeys.all, "detail", id] as const,
 };
 
@@ -50,6 +55,40 @@ export function useClasses(overrides?: ListFilters) {
         school_unit_id: school_unit_id ?? undefined,
       }),
     enabled: !!tenantId && !!academic_year_id,
+  });
+}
+
+/**
+ * Paginated/filterable class list for the classes table.
+ *
+ * Distinct from {@link useClasses}, which fetches the *whole* list for the
+ * structured pickers. Filters are passed through verbatim; the caller owns
+ * them (the classes page keeps them in the URL).
+ *
+ * Gated on `academic_year_id` as well as tenant: the active year resolves
+ * asynchronously (ActiveScopeProvider starts it at null) and the backend reads
+ * a missing year as "every year", so firing early would flash totals and rows
+ * pooled across archived years before snapping to the right ones.
+ *
+ * `placeholderData` keeps the previous page on screen while the next one
+ * loads, so paging doesn't flash an empty table.
+ */
+export function useClassesList(filters: ClassesListFilters) {
+  return useTenantQuery({
+    queryKey: classesKeys.paginated(filters),
+    queryFn: () => classesService.listClasses(filters),
+    enabled: !!filters.academic_year_id,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Aggregate header totals over the same filters as {@link useClassesList}. */
+export function useClassesStats(filters: ClassesListFilters) {
+  return useTenantQuery({
+    queryKey: classesKeys.stats(filters),
+    queryFn: () => classesService.getClassesStats(filters),
+    enabled: !!filters.academic_year_id,
+    placeholderData: keepPreviousData,
   });
 }
 
