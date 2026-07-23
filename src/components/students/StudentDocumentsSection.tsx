@@ -112,12 +112,9 @@ export function StudentDocumentsSection({
   const performDeleteDoc = async () => {
     const doc = deleteDoc;
     if (!doc) return;
-    try {
-      await deleteMutation.mutateAsync(doc.id);
-    } catch (e: unknown) {
-      toastError(e, "Could not delete document");
-      throw e;
-    }
+    // Toasts owned by useDeleteStudentDocument; rejection propagates to the
+    // confirm dialog.
+    await deleteMutation.mutateAsync(doc.id);
   };
 
   const handleOpen = async (doc: StudentDocument) => {

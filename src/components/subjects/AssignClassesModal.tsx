@@ -20,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toastError } from "@/lib/errorToast";
 import { useClasses } from "@/hooks/useClasses";
 import { useProgrammes } from "@/hooks/useProgrammes";
 import { useAssignSubjectClasses } from "@/hooks/useSubjects";
@@ -95,21 +94,14 @@ export function AssignClassesModal({
       return;
     }
     try {
-      const result = await assignMutation.mutateAsync({
+      await assignMutation.mutateAsync({
         subjectId: subject.id,
         classIds: Array.from(selectedClassIds),
         weeklyPeriods: periods,
       });
-      const created = result?.created_count ?? 0;
-      const skipped = result?.skipped_count ?? 0;
-      toast.success(
-        skipped > 0
-          ? `Assigned to ${created} class${created === 1 ? "" : "es"} (${skipped} already assigned)`
-          : `Assigned to ${created} class${created === 1 ? "" : "es"}`
-      );
       onOpenChange(false);
-    } catch (err) {
-      toastError(err, "Failed to assign subject to classes");
+    } catch {
+      // Success + error toasts owned by useAssignSubjectClasses.
     }
   };
 
