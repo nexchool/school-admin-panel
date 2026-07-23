@@ -49,3 +49,81 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+
+/* ---------------------------------------------------------------------------
+   Toast (sonner) — modern light pill (matches the app's white theme).
+   Paired with <AppToaster> in providers/AppToaster.tsx, which supplies the
+   tinted status dots and the .toast-modern* class hooks below. Colors are tied
+   to the app theme tokens (--card / --foreground / --muted-foreground /
+   --border) so the toast always matches the surrounding UI. !important is used
+   deliberately: sonner injects its own scoped styles at runtime, and the inject
+   order isn't guaranteed to lose to our stylesheet.
+--------------------------------------------------------------------------- */
+.toast-modern {
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  /* Layered soft shadow lifts the white card off the white page (premium). */
+  box-shadow:
+    0 12px 32px -12px rgba(16, 24, 40, 0.18),
+    0 4px 10px -4px rgba(16, 24, 40, 0.10) !important;
+  padding: 13px 14px !important;
+  gap: 11px !important;
+  align-items: flex-start !important;
+  width: 100%;
+}
+
+.toast-modern [data-icon] {
+  margin: 1px 0 0 0 !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.toast-modern .toast-modern-title,
+.toast-modern [data-title] {
+  color: var(--foreground) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1.35 !important;
+}
+
+.toast-modern .toast-modern-desc,
+.toast-modern [data-description] {
+  color: var(--muted-foreground) !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  margin-top: 2px !important;
+}
+
+/* Trailing action ("Retry", "View", …). */
+.toast-modern .toast-modern-action,
+.toast-modern [data-button] {
+  background: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  flex: none;
+}
+.toast-modern .toast-modern-action:hover,
+.toast-modern [data-button]:hover {
+  background: var(--muted) !important;
+  border-color: var(--input) !important;
+}
+
+/* Close button (top-left corner chip). */
+.toast-modern .toast-modern-close,
+.toast-modern [data-close-button] {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--muted-foreground) !important;
+}
+.toast-modern .toast-modern-close:hover,
+.toast-modern [data-close-button]:hover {
+  background: var(--muted) !important;
+  color: var(--foreground) !important;
+}

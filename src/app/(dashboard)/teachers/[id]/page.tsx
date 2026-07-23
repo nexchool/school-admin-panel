@@ -45,9 +45,7 @@ import {
   Hash,
   Building2,
 } from "lucide-react";
-import { toast } from "sonner";
 import type { Teacher, UpdateTeacherInput } from "@/types/teacher";
-import { toastError } from "@/lib/errorToast";
 
 type TabKey = "info" | "subjects" | "availability" | "leaves" | "workload";
 
@@ -84,26 +82,17 @@ export default function TeacherDetailPage() {
 
   const handleUpdate = async (data: UpdateTeacherInput) => {
     if (!id) return;
-    try {
-      await updateMutation.mutateAsync({ id, input: data });
-      toast.success("Teacher updated");
-      setEditOpen(false);
-    } catch (e: unknown) {
-      toastError(e, "Failed to update teacher");
-      throw e;
-    }
+    // Success + error toasts are owned by useUpdateTeacher. On error the
+    // rejection propagates to TeacherFormModal, which keeps the modal open.
+    await updateMutation.mutateAsync({ id, input: data });
+    setEditOpen(false);
   };
 
   const performDelete = async () => {
     if (!id) return;
-    try {
-      await deleteMutation.mutateAsync(id);
-      toast.success("Teacher deleted");
-      router.push("/teachers");
-    } catch (e: unknown) {
-      toastError(e, "Failed to delete teacher");
-      throw e;
-    }
+    // Toasts owned by useDeleteTeacher; rejection propagates to the confirm dialog.
+    await deleteMutation.mutateAsync(id);
+    router.push("/teachers");
   };
 
   if (isLoading || !id) {

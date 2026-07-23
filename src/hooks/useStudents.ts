@@ -6,6 +6,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useAppMutation } from "@/hooks/useAppMutation";
 import {
   studentsService,
   type StudentsListParams,
@@ -83,29 +84,40 @@ export function useStudent(id: string | null) {
   });
 }
 
+// Create/update surface their errors inline in StudentFormModal (which keeps
+// the modal open and shows a field-level message), so the hook only owns the
+// success toast — adding an error toast here would double it.
 export function useCreateStudent() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (input: CreateStudentInput) =>
-      studentsService.createStudent(input),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+  return useAppMutation(
+    {
+      mutationFn: (input: CreateStudentInput) =>
+        studentsService.createStudent(input),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+      },
     },
-  });
+    { success: "Student added" },
+  );
 }
 
 export function useUpdateStudent() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateStudentInput }) =>
-      studentsService.updateStudent(id, input),
-    onSuccess: () => {
-      // Prefix invalidation — covers list + every tenant-scoped detail key.
-      queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+  return useAppMutation(
+    {
+      mutationFn: ({ id, input }: { id: string; input: UpdateStudentInput }) =>
+        studentsService.updateStudent(id, input),
+      onSuccess: () => {
+        // Prefix invalidation — covers list + every tenant-scoped detail key.
+        queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+      },
     },
-  });
+    { success: "Student updated" },
+  );
 }
 
+// No centralized toast: this mutation is fired per-row inside a bulk-delete
+// loop on the list page, so the call site shows one aggregated toast instead.
 export function useDeleteStudent() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -118,16 +130,26 @@ export function useDeleteStudent() {
 
 export function useBulkUpdateStudentStatus() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      studentIds,
-      studentStatus,
-    }: {
-      studentIds: string[];
-      studentStatus: string;
-    }) => studentsService.bulkUpdateStatus(studentIds, studentStatus),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+  return useAppMutation(
+    {
+      mutationFn: ({
+        studentIds,
+        studentStatus,
+      }: {
+        studentIds: string[];
+        studentStatus: string;
+      }) => studentsService.bulkUpdateStatus(studentIds, studentStatus),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+      },
     },
-  });
+    {
+      success: (result) => {
+        const n = result.updated;
+        return `Updated ${n} student${n === 1 ? "" : "s"}`;
+      },
+      error: "Couldn't update the students",
+      retry: true,
+    },
+  );
 }

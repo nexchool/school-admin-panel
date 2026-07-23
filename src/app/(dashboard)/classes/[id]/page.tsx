@@ -108,26 +108,17 @@ export default function ClassDetailPage() {
     teacher_id?: string;
   }) => {
     if (!id) return;
-    try {
-      await updateMutation.mutateAsync({ id, data });
-      toast.success("Class updated");
-      setEditOpen(false);
-    } catch (e: unknown) {
-      toastError(e, "Failed to update class");
-      throw e;
-    }
+    // Toasts owned by useUpdateClass. On error the rejection propagates to the
+    // edit modal, which keeps it open.
+    await updateMutation.mutateAsync({ id, data });
+    setEditOpen(false);
   };
 
   const performDeleteClass = async () => {
     if (!id) return;
-    try {
-      await deleteMutation.mutateAsync(id);
-      toast.success("Class deleted");
-      router.push("/classes");
-    } catch (e: unknown) {
-      toastError(e, "Failed to delete class");
-      throw e;
-    }
+    // Toasts owned by useDeleteClass; rejection propagates to the confirm dialog.
+    await deleteMutation.mutateAsync(id);
+    router.push("/classes");
   };
 
   const performRemoveStudent = async () => {

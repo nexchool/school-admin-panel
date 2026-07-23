@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAppMutation } from "@/hooks/useAppMutation";
 import { studentDocumentsService } from "@/services/studentDocumentsService";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -23,32 +20,38 @@ export function useStudentDocuments(studentId: string | null) {
 
 export function useUploadStudentDocument(studentId: string) {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      documentType,
-      file,
-    }: {
-      documentType: string;
-      file: File;
-    }) =>
-      studentDocumentsService.uploadDocument(studentId, documentType, file),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: studentDocumentsKeys.all(studentId),
-      });
+  return useAppMutation(
+    {
+      mutationFn: ({
+        documentType,
+        file,
+      }: {
+        documentType: string;
+        file: File;
+      }) =>
+        studentDocumentsService.uploadDocument(studentId, documentType, file),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: studentDocumentsKeys.all(studentId),
+        });
+      },
     },
-  });
+    { success: "Document uploaded", error: "Couldn't upload the document", retry: true },
+  );
 }
 
 export function useDeleteStudentDocument(studentId: string) {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (documentId: string) =>
-      studentDocumentsService.deleteDocument(studentId, documentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: studentDocumentsKeys.all(studentId),
-      });
+  return useAppMutation(
+    {
+      mutationFn: (documentId: string) =>
+        studentDocumentsService.deleteDocument(studentId, documentId),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: studentDocumentsKeys.all(studentId),
+        });
+      },
     },
-  });
+    { success: "Document deleted", error: "Couldn't delete the document", retry: true },
+  );
 }

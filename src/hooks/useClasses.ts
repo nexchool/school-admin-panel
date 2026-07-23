@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAppMutation } from "@/hooks/useAppMutation";
 import { classesService } from "@/services/classesService";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
@@ -67,41 +64,50 @@ export function useClass(id: string | null) {
 
 export function useCreateClass() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateClassInput) => classesService.createClass(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: classesKeys.all });
-      // Keep the wizard's completion status fresh (matches the other masters).
-      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
+  return useAppMutation(
+    {
+      mutationFn: (data: CreateClassInput) => classesService.createClass(data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: classesKeys.all });
+        // Keep the wizard's completion status fresh (matches the other masters).
+        queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
+      },
     },
-  });
+    { success: "Class created", error: "Couldn't create the class", retry: true },
+  );
 }
 
 export function useUpdateClass() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: { id: string; data: Partial<CreateClassInput> }) =>
-      classesService.updateClass(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: classesKeys.all });
-      queryClient.invalidateQueries({
-        queryKey: classesKeys.detail(variables.id),
-      });
-      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
+  return useAppMutation(
+    {
+      mutationFn: ({
+        id,
+        data,
+      }: { id: string; data: Partial<CreateClassInput> }) =>
+        classesService.updateClass(id, data),
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({ queryKey: classesKeys.all });
+        queryClient.invalidateQueries({
+          queryKey: classesKeys.detail(variables.id),
+        });
+        queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
+      },
     },
-  });
+    { success: "Class updated", error: "Couldn't update the class", retry: true },
+  );
 }
 
 export function useDeleteClass() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => classesService.deleteClass(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: classesKeys.all });
-      queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
+  return useAppMutation(
+    {
+      mutationFn: (id: string) => classesService.deleteClass(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: classesKeys.all });
+        queryClient.invalidateQueries({ queryKey: schoolSetupKeys.status });
+      },
     },
-  });
+    { success: "Class deleted", error: "Couldn't delete the class", retry: true },
+  );
 }

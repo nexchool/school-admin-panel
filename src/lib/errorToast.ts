@@ -24,7 +24,7 @@
  *   });
  */
 
-import { toast } from "sonner";
+import { notify, type NotifyOptions } from "@/lib/notify";
 import { ApiException } from "@/services/api";
 
 /**
@@ -175,17 +175,47 @@ function rawMessage(err: unknown): string | null {
   return null;
 }
 
-/** Show a user-friendly error toast. */
-export function toastError(err: unknown, fallback?: string): void {
-  toast.error(friendlyErrorMessage(err, fallback));
+export type ToastErrorOptions = {
+  /** Adds a "Retry" button to the toast that re-runs this callback. */
+  onRetry?: () => void;
+  /** Force a specific second line. Defaults to the friendly reason (see below). */
+  description?: string;
+};
+
+/**
+ * Show a user-friendly error toast.
+ *
+ * When a `fallback` title is given and the mapped friendly reason differs from
+ * it, the reason is shown as a second (description) line — e.g.
+ *   title:       "Couldn't delete class"
+ *   description: "This item is linked to other records. Remove them first."
+ * When there's no distinct reason, only the title shows (single line).
+ */
+export function toastError(
+  err: unknown,
+  fallback?: string,
+  opts?: ToastErrorOptions,
+): void {
+  const friendly = friendlyErrorMessage(err, fallback);
+  const title = fallback ?? friendly;
+  const description =
+    opts?.description ??
+    (fallback && friendly !== fallback ? friendly : undefined);
+
+  notify.error(title, {
+    description,
+    action: opts?.onRetry
+      ? { label: "Retry", onClick: opts.onRetry }
+      : undefined,
+  });
 }
 
 /** Convenience wrapper so callers don't need to import sonner directly. */
-export function toastSuccess(message: string): void {
-  toast.success(message);
+export function toastSuccess(message: string, opts?: NotifyOptions): void {
+  notify.success(message, opts);
 }
 
 /** Convenience wrapper for informational toasts. */
-export function toastInfo(message: string): void {
-  toast.info(message);
+export function toastInfo(message: string, opts?: NotifyOptions): void {
+  notify.info(message, opts);
 }

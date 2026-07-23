@@ -1,9 +1,9 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Toaster } from "sonner";
 import { AuthProvider } from "./AuthProvider";
 import { QueryProvider } from "./QueryProvider";
+import { AppToaster } from "./AppToaster";
 import { ActiveScopeProvider } from "@/contexts/ActiveScopeProvider";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -12,7 +12,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <AuthProvider>
         <ActiveScopeProvider>
           {children}
-          <Toaster richColors closeButton position="top-right" />
+          <AppToaster />
         </ActiveScopeProvider>
       </AuthProvider>
     </QueryProvider>

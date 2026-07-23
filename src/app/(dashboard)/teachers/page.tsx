@@ -519,14 +519,10 @@ export default function TeachersPage() {
   const handleCreate = async (
     input: Parameters<typeof createMutation.mutateAsync>[0]
   ) => {
-    try {
-      await createMutation.mutateAsync(input);
-      toast.success("Teacher created");
-      setCreateOpen(false);
-    } catch (e: unknown) {
-      toastError(e, "Failed to create teacher");
-      throw e;
-    }
+    // Toasts owned by useCreateTeacher. On error the rejection propagates to
+    // TeacherFormModal, which keeps the modal open.
+    await createMutation.mutateAsync(input);
+    setCreateOpen(false);
   };
 
   const columns: DataTableColumn<Teacher>[] = [

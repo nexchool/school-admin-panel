@@ -127,7 +127,7 @@ export default function StudentDetailPage() {
     if (!id || status === student?.student_status) return;
     try {
       await updateMutation.mutateAsync({ id, input: { student_status: status } });
-      toast.success(`Status set to ${status}`);
+      // Success toast ("Student updated") owned by useUpdateStudent.
     } catch (e: unknown) {
       toastError(e, "Failed to update status");
     }
