@@ -1,5 +1,6 @@
 import type { AcademicTerm } from "@/services/academicTermsService";
 import type {
+  EventStatus,
   ExamWindow,
   SchoolEvent,
   SchoolEventType,
@@ -8,6 +9,7 @@ import type { Holiday } from "@/services/holidayService";
 
 import {
   APPLIES_TO_OPTIONS,
+  EVENT_STATUS_OPTIONS,
   EVENT_TYPE_OPTIONS,
   EXAM_TYPE_OPTIONS,
   labelFor,
@@ -36,10 +38,27 @@ export interface CalendarEntry {
   createdAt?: string | null;
   updatedByName?: string | null;
   updatedAt?: string | null;
+  /** Raw lifecycle status (holidays/vacations are always "active"). */
+  statusValue: EventStatus;
+  /** Display label for `statusValue`. */
   status: string;
+  /** Only live (active) entries appear on the month/week/upcoming views. */
+  isLive: boolean;
   /** For event entries: the raw event_type (drives per-type colors). */
   eventType?: SchoolEventType;
   raw: Holiday | ExamWindow | SchoolEvent | AcademicTerm;
+}
+
+function statusFields(status: EventStatus): {
+  statusValue: EventStatus;
+  status: string;
+  isLive: boolean;
+} {
+  return {
+    statusValue: status,
+    status: labelFor(EVENT_STATUS_OPTIONS, status),
+    isLive: status === "active",
+  };
 }
 
 export const ENTRY_KIND_OPTIONS: { value: CalendarEntryKind; label: string }[] = [
@@ -118,7 +137,8 @@ export function buildCalendarEntries({
       createdAt: h.created_at,
       updatedByName: h.updated_by_name,
       updatedAt: h.updated_at,
-      status: "Active",
+      // Holidays/vacations have no lifecycle status — they are always live.
+      ...statusFields("active"),
       raw: h,
     });
   }
@@ -140,7 +160,7 @@ export function buildCalendarEntries({
       createdAt: w.created_at,
       updatedByName: w.updated_by_name,
       updatedAt: w.updated_at,
-      status: "Active",
+      ...statusFields(w.status),
       raw: w,
     });
   }
@@ -160,7 +180,7 @@ export function buildCalendarEntries({
       createdAt: e.created_at,
       updatedByName: e.updated_by_name,
       updatedAt: e.updated_at,
-      status: "Active",
+      ...statusFields(e.status),
       eventType: e.event_type,
       raw: e,
     });
@@ -176,7 +196,7 @@ export function buildCalendarEntries({
       endDate: t.end_date,
       typeLabel: "Semester",
       appliesTo: "Entire School",
-      status: t.is_active ? "Active" : "Inactive",
+      ...statusFields(t.is_active ? "active" : "archived"),
       raw: t,
     });
   }
@@ -187,15 +207,17 @@ export function buildCalendarEntries({
 export interface EntryFilters {
   search: string;
   kinds: CalendarEntryKind[]; // empty = all
+  statuses: EventStatus[]; // empty = all
 }
 
 export function filterEntries(
   entries: CalendarEntry[],
-  { search, kinds }: EntryFilters,
+  { search, kinds, statuses }: EntryFilters,
 ): CalendarEntry[] {
   const query = search.trim().toLowerCase();
   return entries.filter((entry) => {
     if (kinds.length && !kinds.includes(entry.kind)) return false;
+    if (statuses.length && !statuses.includes(entry.statusValue)) return false;
     if (query && !entry.name.toLowerCase().includes(query)) return false;
     return true;
   });

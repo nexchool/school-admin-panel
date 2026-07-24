@@ -52,6 +52,7 @@ import {
   type CalendarEntry,
   type CalendarEntryKind,
 } from "@/components/academics/calendar/calendarEntries";
+import type { EventStatus } from "@/services/academicCalendarService";
 import {
   formatDisplayDate,
   todayIso,
@@ -84,6 +85,7 @@ export default function AcademicCalendarPage() {
   const [view, setView] = useState<CalendarViewMode>("month");
   const [search, setSearch] = useState("");
   const [kinds, setKinds] = useState<CalendarEntryKind[]>([]);
+  const [statuses, setStatuses] = useState<EventStatus[]>([]);
   const [monthOverride, setMonthOverride] = useState<string | null>(null);
   const [weekOverride, setWeekOverride] = useState<string | null>(null);
 
@@ -98,9 +100,12 @@ export default function AcademicCalendarPage() {
     () => buildCalendarEntries({ holidays, examWindows, events, terms }),
     [holidays, examWindows, events, terms],
   );
+  // Live (active) entries drive the month/week/upcoming views; the List view
+  // shows everything with its status so drafts/cancelled stay manageable.
+  const liveEntries = useMemo(() => entries.filter((e) => e.isLive), [entries]);
   const filteredEntries = useMemo(
-    () => filterEntries(entries, { search, kinds }),
-    [entries, search, kinds],
+    () => filterEntries(entries, { search, kinds, statuses }),
+    [entries, search, kinds, statuses],
   );
 
   const yearStart = year?.start_date ?? todayIso();
@@ -285,7 +290,7 @@ export default function AcademicCalendarPage() {
               </CardContent>
             </Card>
             <UpcomingEventsPanel
-              entries={entries}
+              entries={liveEntries}
               onEntryClick={openDetails}
               onViewAll={() => setView("list")}
             />
@@ -297,7 +302,7 @@ export default function AcademicCalendarPage() {
             <CardContent className="p-4">
               <CalendarWeekView
                 days={days}
-                entries={entries}
+                entries={liveEntries}
                 yearStart={yearStart}
                 yearEnd={yearEnd}
                 weekStart={weekStart}
@@ -321,6 +326,8 @@ export default function AcademicCalendarPage() {
                 onSearchChange={setSearch}
                 kinds={kinds}
                 onKindsChange={setKinds}
+                statuses={statuses}
+                onStatusesChange={setStatuses}
               />
               <CalendarListView entries={filteredEntries} onEntryClick={openDetails} />
             </CardContent>
@@ -383,7 +390,7 @@ export default function AcademicCalendarPage() {
 
       <DayEventsDialog
         day={dayDialog}
-        entries={dayDialog ? entriesOnDate(entries, dayDialog.date) : []}
+        entries={dayDialog ? entriesOnDate(liveEntries, dayDialog.date) : []}
         open={dayDialog !== null}
         onOpenChange={(open) => !open && setDayDialog(null)}
         onEntryClick={openDetails}

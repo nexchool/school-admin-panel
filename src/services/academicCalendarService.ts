@@ -62,6 +62,10 @@ export type ExamType =
   | "board"
   | "other";
 
+/** Lifecycle status shared by exam windows and school events. Only `active`
+ * entries appear on the live calendar; the rest are managed in the list. */
+export type EventStatus = "draft" | "active" | "archived" | "cancelled";
+
 export interface AuditFields {
   created_by?: string | null;
   created_by_name?: string | null;
@@ -76,6 +80,7 @@ export interface ExamWindow extends AuditFields {
   academic_year_id: string;
   name: string;
   exam_type: ExamType;
+  status: EventStatus;
   start_date: string;
   end_date: string;
   duration_days: number;
@@ -98,6 +103,7 @@ export interface SchoolEvent extends AuditFields {
   academic_year_id: string;
   name: string;
   event_type: SchoolEventType;
+  status: EventStatus;
   event_date: string;
   description: string | null;
   applies_to: AppliesTo;

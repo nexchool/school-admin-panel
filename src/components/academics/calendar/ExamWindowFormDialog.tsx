@@ -28,15 +28,29 @@ import { useClasses } from "@/hooks/useClasses";
 import { classAssignmentLabel } from "@/components/subjects/SubjectFormModal";
 import type { ExamType, ExamWindow } from "@/services/academicCalendarService";
 
-import { EXAM_TYPE_OPTIONS } from "./calendarOptions";
+import {
+  EVENT_DESCRIPTION_MAX,
+  EVENT_NAME_MAX,
+  EVENT_STATUS_OPTIONS,
+  EXAM_TYPE_OPTIONS,
+} from "./calendarOptions";
 
 const examWindowSchema = z
   .object({
-    name: z.string().trim().min(1, "Exam name is required"),
+    name: z
+      .string()
+      .trim()
+      .min(1, "Exam name is required")
+      .max(EVENT_NAME_MAX, `Name must be ${EVENT_NAME_MAX} characters or fewer`),
     exam_type: z.enum(["unit_test", "mid_term", "final", "pre_board", "board", "other"]),
+    status: z.enum(["draft", "active", "archived", "cancelled"]),
     start_date: z.string().min(1, "Start date is required"),
     end_date: z.string().min(1, "End date is required"),
-    description: z.string().trim().optional(),
+    description: z
+      .string()
+      .trim()
+      .max(EVENT_DESCRIPTION_MAX, `Description must be ${EVENT_DESCRIPTION_MAX} characters or fewer`)
+      .optional(),
   })
   .refine((v) => !v.start_date || !v.end_date || v.end_date >= v.start_date, {
     message: "End date cannot be before start date",
@@ -68,6 +82,7 @@ export function ExamWindowFormDialog({
   const toDefaults = (): ExamWindowFormValues => ({
     name: initialData?.name ?? "",
     exam_type: initialData?.exam_type ?? "mid_term",
+    status: initialData?.status ?? "active",
     start_date: initialData?.start_date ?? "",
     end_date: initialData?.end_date ?? "",
     description: initialData?.description ?? "",
@@ -101,6 +116,7 @@ export function ExamWindowFormDialog({
         academic_year_id: academicYearId,
         name: values.name.trim(),
         exam_type: values.exam_type as ExamType,
+        status: values.status,
         start_date: values.start_date,
         end_date: values.end_date,
         applicable_class_ids: Array.from(selectedClassIds),
@@ -155,7 +171,7 @@ export function ExamWindowFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor="exam_start">Start Date *</Label>
               <Input id="exam_start" type="date" {...form.register("start_date")} />
@@ -165,6 +181,28 @@ export function ExamWindowFormDialog({
               <Label htmlFor="exam_end">End Date *</Label>
               <Input id="exam_end" type="date" {...form.register("end_date")} />
               <FieldError message={errors.end_date?.message} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="exam_status">Status</Label>
+              <Select
+                value={form.watch("status")}
+                onValueChange={(v) =>
+                  form.setValue("status", v as ExamWindowFormValues["status"], {
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <SelectTrigger id="exam_status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EVENT_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

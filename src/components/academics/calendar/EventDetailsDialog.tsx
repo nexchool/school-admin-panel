@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 import { type CalendarEntry } from "./calendarEntries";
-import { formatDisplayDate } from "./calendarOptions";
+import { formatDisplayDate, statusBadgeClass } from "./calendarOptions";
 
 const IMPACT: Record<CalendarEntry["kind"], { attendance: string; timetable: string }> = {
   holiday: {
@@ -97,7 +97,19 @@ export function EventDetailsDialog({
     },
     { label: "Type", value: entry.typeLabel },
     { label: "Applies To", value: entry.appliesTo },
-    { label: "Status", value: entry.status },
+    {
+      label: "Status",
+      value: (
+        <span
+          className={cn(
+            "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+            statusBadgeClass(entry.statusValue),
+          )}
+        >
+          {entry.status}
+        </span>
+      ),
+    },
     { label: "Created By", value: entry.createdByName ?? "—" },
     { label: "Created On", value: formatTimestamp(entry.createdAt) },
   ];

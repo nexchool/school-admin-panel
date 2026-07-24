@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 
 import { entryColorClass, type CalendarEntry } from "./calendarEntries";
-import { formatDisplayDate } from "./calendarOptions";
+import { formatDisplayDate, statusBadgeClass } from "./calendarOptions";
 
 interface CalendarListViewProps {
   entries: CalendarEntry[];
@@ -58,7 +58,16 @@ export function CalendarListView({ entries, onEntryClick }: CalendarListViewProp
               <td className="px-3 py-2">{entry.typeLabel}</td>
               <td className="px-3 py-2">{entry.appliesTo}</td>
               <td className="px-3 py-2">{entry.createdByName ?? "—"}</td>
-              <td className="px-3 py-2">{entry.status}</td>
+              <td className="px-3 py-2">
+                <span
+                  className={cn(
+                    "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+                    statusBadgeClass(entry.statusValue),
+                  )}
+                >
+                  {entry.status}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

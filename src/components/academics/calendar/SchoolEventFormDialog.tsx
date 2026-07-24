@@ -26,14 +26,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
 import type { SchoolEvent } from "@/services/academicCalendarService";
 
-import { APPLIES_TO_OPTIONS, EVENT_TYPE_OPTIONS } from "./calendarOptions";
+import {
+  APPLIES_TO_OPTIONS,
+  EVENT_DESCRIPTION_MAX,
+  EVENT_NAME_MAX,
+  EVENT_STATUS_OPTIONS,
+  EVENT_TYPE_OPTIONS,
+} from "./calendarOptions";
 
 const eventSchema = z.object({
-  name: z.string().trim().min(1, "Event name is required"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Event name is required")
+    .max(EVENT_NAME_MAX, `Name must be ${EVENT_NAME_MAX} characters or fewer`),
   event_type: z.enum(["activity", "event", "meeting", "celebration", "training", "other"]),
+  status: z.enum(["draft", "active", "archived", "cancelled"]),
   event_date: z.string().min(1, "Date is required"),
   applies_to: z.enum(["entire_school", "students", "teachers", "staff"]),
-  description: z.string().trim().optional(),
+  description: z
+    .string()
+    .trim()
+    .max(EVENT_DESCRIPTION_MAX, `Description must be ${EVENT_DESCRIPTION_MAX} characters or fewer`)
+    .optional(),
 });
 
 type EventFormValues = z.infer<typeof eventSchema>;
@@ -62,6 +77,7 @@ export function SchoolEventFormDialog({
   const toDefaults = (): EventFormValues => ({
     name: initialData?.name ?? "",
     event_type: initialData?.event_type ?? initialType ?? "event",
+    status: initialData?.status ?? "active",
     event_date: initialData?.event_date ?? "",
     applies_to: initialData?.applies_to ?? "entire_school",
     description: initialData?.description ?? "",
@@ -83,6 +99,7 @@ export function SchoolEventFormDialog({
         academic_year_id: academicYearId,
         name: values.name.trim(),
         event_type: values.event_type,
+        status: values.status,
         event_date: values.event_date,
         applies_to: values.applies_to,
         description: values.description?.trim() || null,
@@ -142,27 +159,51 @@ export function SchoolEventFormDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="event_applies_to">Applies To</Label>
-            <Select
-              value={form.watch("applies_to")}
-              onValueChange={(v) =>
-                form.setValue("applies_to", v as EventFormValues["applies_to"], {
-                  shouldValidate: true,
-                })
-              }
-            >
-              <SelectTrigger id="event_applies_to">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {APPLIES_TO_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="event_applies_to">Applies To</Label>
+              <Select
+                value={form.watch("applies_to")}
+                onValueChange={(v) =>
+                  form.setValue("applies_to", v as EventFormValues["applies_to"], {
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <SelectTrigger id="event_applies_to">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {APPLIES_TO_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="event_status">Status</Label>
+              <Select
+                value={form.watch("status")}
+                onValueChange={(v) =>
+                  form.setValue("status", v as EventFormValues["status"], {
+                    shouldValidate: true,
+                  })
+                }
+              >
+                <SelectTrigger id="event_status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {EVENT_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

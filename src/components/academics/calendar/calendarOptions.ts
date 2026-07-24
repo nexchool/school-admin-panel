@@ -1,8 +1,36 @@
 import type {
   AppliesTo,
+  EventStatus,
   ExamType,
   SchoolEventType,
 } from "@/services/academicCalendarService";
+
+// Backend-enforced field limits (mirror server EVENT_NAME_MAX / _DESCRIPTION_MAX).
+export const EVENT_NAME_MAX = 120;
+export const EVENT_DESCRIPTION_MAX = 1000;
+
+export const EVENT_STATUS_OPTIONS: { value: EventStatus; label: string }[] = [
+  { value: "active", label: "Active" },
+  { value: "draft", label: "Draft" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "archived", label: "Archived" },
+];
+
+/** Badge tint per status for list/detail chips. */
+export function statusBadgeClass(status: EventStatus | string): string {
+  switch (status) {
+    case "active":
+      return "bg-green-100 text-green-700";
+    case "draft":
+      return "bg-amber-100 text-amber-700";
+    case "cancelled":
+      return "bg-red-100 text-red-700";
+    case "archived":
+      return "bg-muted text-muted-foreground";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
 
 export const APPLIES_TO_OPTIONS: { value: AppliesTo; label: string }[] = [
   { value: "entire_school", label: "Entire School" },
