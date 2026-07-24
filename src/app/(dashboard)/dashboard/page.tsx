@@ -519,7 +519,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
                   Upcoming Holidays
                 </p>
                 {actions.upcoming_holidays.map((h) => (
-                  <Link key={`${h.name}-${h.date}`} href="/holidays" className="block">
+                  <Link key={`${h.name}-${h.date}`} href="/academics/calendar" className="block">
                     <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3.5 py-2.5 cursor-pointer hover:bg-muted transition-colors">
                       <span className="text-sm font-medium">{h.name}</span>
                       <span className="text-xs text-muted-foreground tabular-nums">

@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
         destination: "/school-setup",
         permanent: false,
       },
+      // Academics hub removed → its features live in the sidebar group.
+      { source: "/academics", destination: "/academics/academic-years", permanent: false },
+      // Academic settings promoted to a dedicated top-level module.
+      { source: "/academics/settings", destination: "/settings", permanent: false },
+      // Holidays are managed inside the Academic Calendar now.
+      { source: "/holidays", destination: "/academics/calendar", permanent: false },
       { source: "/dashboard/transport/buses", destination: "/dashboard/transport/fleet", permanent: false },
       { source: "/dashboard/transport/drivers", destination: "/dashboard/transport/staff", permanent: false },
       {

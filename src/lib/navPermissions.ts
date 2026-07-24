@@ -31,6 +31,7 @@ export const TRANSPORT_NAV_PERMS = [
 export const ROUTE_PERMISSIONS = {
   "/academics": ["academics.read", "academics.manage"],
   "/academics/calendar": ["academic_calendar.read", "academic_calendar.manage"],
+  "/settings": ["academics.read", "academics.manage"],
   "/students": [
     "student.read.all",
     "student.read.class",

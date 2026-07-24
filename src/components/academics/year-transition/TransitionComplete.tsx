@@ -218,7 +218,7 @@ export function TransitionComplete({
             </li>
             <li>
               <Link
-                href="/holidays"
+                href="/academics/calendar"
                 className="text-primary underline-offset-4 hover:underline"
               >
                 Verify holidays
