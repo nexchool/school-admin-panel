@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { CalendarDay, CalendarDayType } from "@/services/academicCalendarService";
+
+import { todayIso } from "./calendarOptions";
 
 const DAY_HEADERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -16,26 +18,24 @@ const DAY_TYPE_STYLES: Record<CalendarDayType, string> = {
   vacation: "bg-violet-50 text-violet-700",
 };
 
-const LEGEND = [
+export const CALENDAR_LEGEND = [
   { label: "Working Day", className: "bg-green-500" },
   { label: "Weekly Holiday", className: "bg-muted-foreground/50" },
   { label: "Public Holiday", className: "bg-red-500" },
-  { label: "Exam", className: "bg-blue-500" },
-  { label: "Event", className: "bg-amber-500" },
   { label: "Vacation", className: "bg-violet-500" },
+  { label: "Examination", className: "bg-blue-500" },
+  { label: "School Event", className: "bg-amber-500" },
+  { label: "Teacher Training", className: "bg-yellow-500" },
+  { label: "Parent Meeting", className: "bg-pink-500" },
+  { label: "Semester Start", className: "bg-blue-900" },
+  { label: "Semester End", className: "bg-green-900" },
 ];
 
-interface CalendarMonthGridProps {
-  days: CalendarDay[];
-  yearStart: string;
-  yearEnd: string;
-}
-
-function monthKey(iso: string): string {
+export function monthKey(iso: string): string {
   return iso.slice(0, 7); // YYYY-MM
 }
 
-function monthLabel(key: string): string {
+export function monthLabel(key: string): string {
   const [y, m] = key.split("-").map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString("en-IN", {
     month: "long",
@@ -43,9 +43,28 @@ function monthLabel(key: string): string {
   });
 }
 
+interface CalendarMonthGridProps {
+  days: CalendarDay[];
+  yearStart: string;
+  yearEnd: string;
+  /** Controlled month (YYYY-MM) — must be one of the year's months. */
+  month: string;
+  onMonthChange: (month: string) => void;
+  onDayClick?: (day: CalendarDay) => void;
+  showLegend?: boolean;
+}
+
 /** Month calendar rendering the per-day classification feed with exam/event
- * markers and a legend, navigable across the academic year. */
-export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGridProps) {
+ * dots, semester boundary markers and a legend. Fully controlled month. */
+export function CalendarMonthGrid({
+  days,
+  yearStart,
+  yearEnd,
+  month,
+  onMonthChange,
+  onDayClick,
+  showLegend = true,
+}: CalendarMonthGridProps) {
   const months = useMemo(() => {
     const keys: string[] = [];
     for (const d of days) {
@@ -55,14 +74,10 @@ export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGri
     return keys;
   }, [days]);
 
-  const todayKey = monthKey(new Date().toISOString().slice(0, 10));
-  const [monthIndex, setMonthIndex] = useState(() => {
-    const idx = months.indexOf(todayKey);
-    return idx >= 0 ? idx : 0;
-  });
-
-  const currentMonth = months[Math.min(monthIndex, months.length - 1)];
+  const monthIndex = Math.max(0, months.indexOf(month));
+  const currentMonth = months[monthIndex] ?? months[0];
   const byDate = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);
+  const today = todayIso();
 
   const cells = useMemo(() => {
     if (!currentMonth) return [];
@@ -80,6 +95,8 @@ export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGri
           day_type: "working",
           has_exam: false,
           has_event: false,
+          semester_start: null,
+          semester_end: null,
           holidays: [],
         },
       );
@@ -89,6 +106,17 @@ export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGri
 
   if (!currentMonth) return null;
 
+  const describeDay = (cell: CalendarDay): string | undefined => {
+    const parts = [
+      ...cell.holidays.map((h) => h.name),
+      ...(cell.semester_start ? [`${cell.semester_start} starts`] : []),
+      ...(cell.semester_end ? [`${cell.semester_end} ends`] : []),
+      ...(cell.has_exam ? ["Examination"] : []),
+      ...(cell.has_event ? ["Event"] : []),
+    ];
+    return parts.length ? parts.join(", ") : undefined;
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -97,7 +125,7 @@ export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGri
           size="icon"
           aria-label="Previous month"
           disabled={monthIndex <= 0}
-          onClick={() => setMonthIndex((i) => Math.max(0, i - 1))}
+          onClick={() => onMonthChange(months[monthIndex - 1])}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -107,7 +135,7 @@ export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGri
           size="icon"
           aria-label="Next month"
           disabled={monthIndex >= months.length - 1}
-          onClick={() => setMonthIndex((i) => Math.min(months.length - 1, i + 1))}
+          onClick={() => onMonthChange(months[monthIndex + 1])}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -125,17 +153,33 @@ export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGri
           cell === null ? (
             <div key={`pad-${i}`} />
           ) : (
-            <div
+            <button
+              type="button"
               key={cell.date}
-              title={cell.holidays.map((h) => h.name).join(", ") || undefined}
+              title={describeDay(cell)}
+              onClick={() => onDayClick?.(cell)}
               className={cn(
-                "relative flex h-12 flex-col items-center justify-center rounded-md border border-transparent text-sm",
+                "relative flex h-12 flex-col items-center justify-center rounded-md border border-transparent text-sm transition-colors",
                 DAY_TYPE_STYLES[cell.day_type],
-                cell.date < yearStart || cell.date > yearEnd
-                  ? "text-muted-foreground/40"
-                  : undefined,
+                onDayClick && "cursor-pointer hover:border-primary/40",
+                cell.date === today && "ring-2 ring-primary ring-offset-1",
+                (cell.date < yearStart || cell.date > yearEnd) &&
+                  "text-muted-foreground/40",
               )}
             >
+              {/* Semester boundary markers: left bar = start, right bar = end. */}
+              {cell.semester_start && (
+                <span
+                  className="absolute inset-y-1 left-0.5 w-1 rounded-full bg-blue-900"
+                  title={`${cell.semester_start} starts`}
+                />
+              )}
+              {cell.semester_end && (
+                <span
+                  className="absolute inset-y-1 right-0.5 w-1 rounded-full bg-green-900"
+                  title={`${cell.semester_end} ends`}
+                />
+              )}
               {Number(cell.date.slice(8, 10))}
               {(cell.has_exam || cell.has_event) && (
                 <span className="absolute bottom-1 flex gap-0.5">
@@ -143,19 +187,21 @@ export function CalendarMonthGrid({ days, yearStart, yearEnd }: CalendarMonthGri
                   {cell.has_event && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
                 </span>
               )}
-            </div>
+            </button>
           ),
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3 text-xs text-muted-foreground">
-        {LEGEND.map((item) => (
-          <span key={item.label} className="flex items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-full", item.className)} />
-            {item.label}
-          </span>
-        ))}
-      </div>
+      {showLegend && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
+          {CALENDAR_LEGEND.map((item) => (
+            <span key={item.label} className="flex items-center gap-1.5">
+              <span className={cn("h-2 w-2 rounded-full", item.className)} />
+              {item.label}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

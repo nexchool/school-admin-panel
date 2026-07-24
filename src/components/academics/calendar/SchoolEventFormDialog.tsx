@@ -42,6 +42,8 @@ interface SchoolEventFormDialogProps {
   onOpenChange: (open: boolean) => void;
   academicYearId: string;
   initialData?: SchoolEvent | null;
+  /** Preselected type when creating (e.g. "training" from the Add Event chooser). */
+  initialType?: EventFormValues["event_type"];
   onSubmit: (payload: Partial<SchoolEvent>) => Promise<void>;
 }
 
@@ -51,13 +53,14 @@ export function SchoolEventFormDialog({
   onOpenChange,
   academicYearId,
   initialData,
+  initialType,
   onSubmit,
 }: SchoolEventFormDialogProps) {
   const isEdit = !!initialData;
 
   const toDefaults = (): EventFormValues => ({
     name: initialData?.name ?? "",
-    event_type: initialData?.event_type ?? "event",
+    event_type: initialData?.event_type ?? initialType ?? "event",
     event_date: initialData?.event_date ?? "",
     applies_to: initialData?.applies_to ?? "entire_school",
     description: initialData?.description ?? "",
@@ -71,7 +74,7 @@ export function SchoolEventFormDialog({
   useEffect(() => {
     if (open) form.reset(toDefaults());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialData]);
+  }, [open, initialData, initialType]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     try {

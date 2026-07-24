@@ -34,6 +34,7 @@ export interface CalendarSummary {
   semester_count: number;
   exam_window_count: number;
   event_count: number;
+  events_by_type: Partial<Record<SchoolEventType, number>>;
   weekly_holidays_config: WeeklyHolidaysConfig;
 }
 
@@ -48,6 +49,8 @@ export interface CalendarDay {
   day_type: CalendarDayType;
   has_exam: boolean;
   has_event: boolean;
+  semester_start: string | null;
+  semester_end: string | null;
   holidays: { id: string; name: string; holiday_type: string }[];
 }
 
@@ -59,7 +62,16 @@ export type ExamType =
   | "board"
   | "other";
 
-export interface ExamWindow {
+export interface AuditFields {
+  created_by?: string | null;
+  created_by_name?: string | null;
+  updated_by?: string | null;
+  updated_by_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ExamWindow extends AuditFields {
   id: string;
   academic_year_id: string;
   name: string;
@@ -81,7 +93,7 @@ export type SchoolEventType =
 
 export type AppliesTo = "entire_school" | "students" | "teachers" | "staff";
 
-export interface SchoolEvent {
+export interface SchoolEvent extends AuditFields {
   id: string;
   academic_year_id: string;
   name: string;

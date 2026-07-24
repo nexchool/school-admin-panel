@@ -14,6 +14,12 @@ export interface Holiday {
   academic_year_name?: string | null;
   applies_to?: string;
   duration_days?: number;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  updated_by?: string | null;
+  updated_by_name?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface CreateHolidayPayload {

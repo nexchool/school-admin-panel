@@ -2,12 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarPlus, Plus, Settings2 } from "lucide-react";
+import { CalendarCheck, CalendarPlus, Download, Plus, Printer, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
@@ -15,19 +22,45 @@ import {
   useAcademicCalendarState,
   useCalendarDays,
   useCalendarSummary,
+  useExamWindows,
   useSchoolEvents,
 } from "@/hooks/useAcademicCalendar";
 import { useHolidays } from "@/hooks/useHolidays";
+import { useTerms } from "@/hooks/useTerms";
+import type { CalendarDay } from "@/services/academicCalendarService";
 
 import { AddEventDialog } from "@/components/academics/calendar/AddEventDialog";
-import { CalendarMonthGrid } from "@/components/academics/calendar/CalendarMonthGrid";
-import { formatDisplayDate } from "@/components/academics/calendar/calendarOptions";
+import {
+  CalendarMonthGrid,
+  monthKey,
+  monthLabel,
+} from "@/components/academics/calendar/CalendarMonthGrid";
+import { CalendarWeekView } from "@/components/academics/calendar/CalendarWeekView";
+import { CalendarListView } from "@/components/academics/calendar/CalendarListView";
+import {
+  CalendarToolbar,
+  type CalendarViewMode,
+} from "@/components/academics/calendar/CalendarToolbar";
+import { DayEventsDialog } from "@/components/academics/calendar/DayEventsDialog";
+import { EntryEditController } from "@/components/academics/calendar/EntryEditController";
+import { EventDetailsDialog } from "@/components/academics/calendar/EventDetailsDialog";
+import { UpcomingEventsPanel } from "@/components/academics/calendar/UpcomingEventsPanel";
+import {
+  buildCalendarEntries,
+  entriesOnDate,
+  entriesToCsv,
+  filterEntries,
+  type CalendarEntry,
+  type CalendarEntryKind,
+} from "@/components/academics/calendar/calendarEntries";
+import {
+  formatDisplayDate,
+  todayIso,
+  weekStartOf,
+} from "@/components/academics/calendar/calendarOptions";
 
-interface UpcomingItem {
-  id: string;
-  date: string;
-  name: string;
-  kind: "holiday" | "event";
+function clampIso(iso: string, min: string, max: string): string {
+  return iso < min ? min : iso > max ? max : iso;
 }
 
 export default function AcademicCalendarPage() {
@@ -44,32 +77,73 @@ export default function AcademicCalendarPage() {
   const { data: summary } = useCalendarSummary(calendar?.id);
   const { data: days = [] } = useCalendarDays(calendar?.id);
   const { data: events = [] } = useSchoolEvents(academicYearId);
+  const { data: examWindows = [] } = useExamWindows(academicYearId);
   const { data: holidays = [] } = useHolidays({ academic_year_id: academicYearId });
+  const { data: terms = [] } = useTerms(academicYearId);
 
+  // View state — all client-side, no reloads.
+  const [view, setView] = useState<CalendarViewMode>("month");
+  const [search, setSearch] = useState("");
+  const [kinds, setKinds] = useState<CalendarEntryKind[]>([]);
+  const [monthOverride, setMonthOverride] = useState<string | null>(null);
+  const [weekOverride, setWeekOverride] = useState<string | null>(null);
+
+  // Dialog state.
   const [addEventOpen, setAddEventOpen] = useState(false);
+  const [detailsEntry, setDetailsEntry] = useState<CalendarEntry | null>(null);
+  const [actionEntry, setActionEntry] = useState<CalendarEntry | null>(null);
+  const [actionMode, setActionMode] = useState<"edit" | "delete" | null>(null);
+  const [dayDialog, setDayDialog] = useState<CalendarDay | null>(null);
 
-  const upcoming = useMemo<UpcomingItem[]>(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const items: UpcomingItem[] = [
-      ...holidays
-        .filter((h) => !h.is_recurring && (h.start_date ?? "") >= today)
-        .map((h) => ({
-          id: h.id,
-          date: h.start_date!,
-          name: h.name,
-          kind: "holiday" as const,
-        })),
-      ...events
-        .filter((e) => e.event_date >= today)
-        .map((e) => ({
-          id: e.id,
-          date: e.event_date,
-          name: e.name,
-          kind: "event" as const,
-        })),
-    ];
-    return items.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 6);
-  }, [holidays, events]);
+  const entries = useMemo(
+    () => buildCalendarEntries({ holidays, examWindows, events, terms }),
+    [holidays, examWindows, events, terms],
+  );
+  const filteredEntries = useMemo(
+    () => filterEntries(entries, { search, kinds }),
+    [entries, search, kinds],
+  );
+
+  const yearStart = year?.start_date ?? todayIso();
+  const yearEnd = year?.end_date ?? todayIso();
+  const clampedToday = clampIso(todayIso(), yearStart, yearEnd);
+  const month = monthOverride ?? monthKey(clampedToday);
+  const weekStart = weekOverride ?? weekStartOf(clampedToday);
+  const yearMonths = useMemo(() => {
+    const keys: string[] = [];
+    for (const d of days) {
+      const key = monthKey(d.date);
+      if (!keys.includes(key)) keys.push(key);
+    }
+    return keys;
+  }, [days]);
+
+  const goToToday = () => {
+    setMonthOverride(monthKey(clampedToday));
+    setWeekOverride(weekStartOf(clampedToday));
+  };
+
+  const openDetails = (entry: CalendarEntry) => {
+    setDayDialog(null);
+    setDetailsEntry(entry);
+  };
+
+  const startAction = (entry: CalendarEntry, mode: "edit" | "delete") => {
+    setDetailsEntry(null);
+    setActionEntry(entry);
+    setActionMode(mode);
+  };
+
+  const exportCsv = () => {
+    const csv = entriesToCsv(filteredEntries);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `academic-calendar-${year?.name ?? "export"}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (yearsLoading || (academicYearId && calendarLoading)) {
     return (
@@ -122,14 +196,16 @@ export default function AcademicCalendarPage() {
     { label: "Working Days", value: summary?.working_days, tone: "text-green-600" },
     { label: "Public Holidays", value: summary?.public_holiday_days, tone: "text-red-600" },
     { label: "Weekly Holidays", value: summary?.weekly_holiday_days, tone: "text-muted-foreground" },
-    { label: "Exam Days", value: summary?.exam_days, tone: "text-blue-600" },
-    { label: "Events", value: summary?.event_count, tone: "text-amber-600" },
     { label: "Vacation Days", value: summary?.vacation_days, tone: "text-violet-600" },
+    { label: "Exam Days", value: summary?.exam_days, tone: "text-blue-600" },
+    { label: "School Events", value: summary?.event_count, tone: "text-amber-600" },
+    { label: "Teacher Training", value: summary?.events_by_type?.training ?? 0, tone: "text-yellow-600" },
+    { label: "Parent Meetings", value: summary?.events_by_type?.meeting ?? 0, tone: "text-pink-600" },
   ];
 
   return (
     <div className="space-y-4 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold">Academic Calendar</h1>
@@ -141,29 +217,52 @@ export default function AcademicCalendarPage() {
             {year?.name} · Academics › Academic Calendar
           </p>
         </div>
-        {canManage && (
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href={`/academics/calendar/setup?year=${academicYearId}`}>
-                <Settings2 className="mr-1 h-4 w-4" />
-                {calendar.status === "published" ? "Edit Setup" : "Resume Setup"}
-              </Link>
-            </Button>
-            <Button onClick={() => setAddEventOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" /> Add Event
-            </Button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={goToToday}>
+            <CalendarCheck className="mr-1 h-4 w-4" /> Today
+          </Button>
+          <Select value={month} onValueChange={(m) => setMonthOverride(m)}>
+            <SelectTrigger className="w-40" aria-label="Jump to month">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {yearMonths.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {monthLabel(m)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" onClick={exportCsv}>
+            <Download className="mr-1 h-4 w-4" /> Export
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="mr-1 h-4 w-4" /> Print
+          </Button>
+          {canManage && (
+            <>
+              <Button variant="outline" asChild>
+                <Link href={`/academics/calendar/setup?year=${academicYearId}`}>
+                  <Settings2 className="mr-1 h-4 w-4" />
+                  {calendar.status === "published" ? "Edit Setup" : "Resume Setup"}
+                </Link>
+              </Button>
+              <Button onClick={() => setAddEventOpen(true)}>
+                <Plus className="mr-1 h-4 w-4" /> Add Event
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {calendar.status === "draft" && (
-        <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+        <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 print:hidden">
           This calendar is still a draft — finish the setup wizard and generate
           it so other modules can use it.
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8 print:hidden">
         {stats.map((s) => (
           <Card key={s.label}>
             <CardContent className="p-4">
@@ -174,48 +273,95 @@ export default function AcademicCalendarPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardContent className="p-4">
-            {days.length > 0 && year ? (
-              <CalendarMonthGrid
-                days={days}
-                yearStart={year.start_date}
-                yearEnd={year.end_date}
-              />
-            ) : (
-              <Skeleton className="h-80" />
-            )}
-          </CardContent>
-        </Card>
+      <div className="print:hidden">
+        <CalendarToolbar
+          view={view}
+          onViewChange={setView}
+          search={search}
+          onSearchChange={setSearch}
+          kinds={kinds}
+          onKindsChange={setKinds}
+        />
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Upcoming Events</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No upcoming events.</p>
-            ) : (
-              upcoming.map((item) => (
-                <div key={`${item.kind}-${item.id}`} className="flex items-start gap-2">
-                  <span
-                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                      item.kind === "holiday" ? "bg-red-500" : "bg-amber-500"
-                    }`}
+      <div className="print:hidden">
+        {view === "month" && (
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardContent className="p-4">
+                {days.length > 0 && year ? (
+                  <CalendarMonthGrid
+                    days={days}
+                    yearStart={yearStart}
+                    yearEnd={yearEnd}
+                    month={month}
+                    onMonthChange={setMonthOverride}
+                    onDayClick={setDayDialog}
                   />
-                  <div>
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDisplayDate(item.date)} ·{" "}
-                      {item.kind === "holiday" ? "Holiday" : "Event"}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                ) : (
+                  <Skeleton className="h-80" />
+                )}
+              </CardContent>
+            </Card>
+            <UpcomingEventsPanel entries={filteredEntries} onEntryClick={openDetails} />
+          </div>
+        )}
+
+        {view === "week" && year && (
+          <Card>
+            <CardContent className="p-4">
+              <CalendarWeekView
+                days={days}
+                entries={filteredEntries}
+                yearStart={yearStart}
+                yearEnd={yearEnd}
+                weekStart={weekStart}
+                onWeekChange={setWeekOverride}
+                onEntryClick={openDetails}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {view === "list" && (
+          <CalendarListView entries={filteredEntries} onEntryClick={openDetails} />
+        )}
+      </div>
+
+      {/* Print-friendly rendering: summary + full entry list. */}
+      <div className="hidden print:block">
+        <h2 className="text-lg font-semibold">
+          Academic Calendar — {year?.name}
+        </h2>
+        <p className="mb-3 text-sm">
+          Working days: {summary?.working_days} of {summary?.total_days} · Public
+          holidays: {summary?.public_holiday_days} · Vacation days:{" "}
+          {summary?.vacation_days} · Exam days: {summary?.exam_days}
+        </p>
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th className="border border-border p-1 text-left">Date</th>
+              <th className="border border-border p-1 text-left">Name</th>
+              <th className="border border-border p-1 text-left">Type</th>
+              <th className="border border-border p-1 text-left">Applies To</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredEntries.map((entry) => (
+              <tr key={entry.key}>
+                <td className="border border-border p-1">
+                  {formatDisplayDate(entry.startDate)}
+                  {entry.endDate !== entry.startDate &&
+                    ` – ${formatDisplayDate(entry.endDate)}`}
+                </td>
+                <td className="border border-border p-1">{entry.name}</td>
+                <td className="border border-border p-1">{entry.typeLabel}</td>
+                <td className="border border-border p-1">{entry.appliesTo}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {academicYearId && (
@@ -223,6 +369,35 @@ export default function AcademicCalendarPage() {
           open={addEventOpen}
           onOpenChange={setAddEventOpen}
           academicYearId={academicYearId}
+        />
+      )}
+
+      <EventDetailsDialog
+        entry={detailsEntry}
+        open={detailsEntry !== null}
+        onOpenChange={(open) => !open && setDetailsEntry(null)}
+        canManage={canManage}
+        onEdit={(entry) => startAction(entry, "edit")}
+        onDelete={(entry) => startAction(entry, "delete")}
+      />
+
+      <DayEventsDialog
+        day={dayDialog}
+        entries={dayDialog ? entriesOnDate(filteredEntries, dayDialog.date) : []}
+        open={dayDialog !== null}
+        onOpenChange={(open) => !open && setDayDialog(null)}
+        onEntryClick={openDetails}
+      />
+
+      {academicYearId && (
+        <EntryEditController
+          academicYearId={academicYearId}
+          entry={actionEntry}
+          mode={actionMode}
+          onClose={() => {
+            setActionEntry(null);
+            setActionMode(null);
+          }}
         />
       )}
     </div>

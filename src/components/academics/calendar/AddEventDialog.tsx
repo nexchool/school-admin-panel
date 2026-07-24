@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpenCheck, CalendarHeart, Flag, PartyPopper } from "lucide-react";
+import {
+  BookOpen,
+  BookOpenCheck,
+  CalendarHeart,
+  Flag,
+  MoreHorizontal,
+  PartyPopper,
+  Presentation,
+  UsersRound,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -16,23 +25,50 @@ import {
   useCreateExamWindow,
   useCreateSchoolEvent,
 } from "@/hooks/useAcademicCalendar";
+import { useCreateTerm, useTerms } from "@/hooks/useTerms";
 import { toastError } from "@/lib/errorToast";
 import type { CreateHolidayPayload } from "@/services/holidayService";
-import type { ExamWindow, SchoolEvent } from "@/services/academicCalendarService";
+import type {
+  ExamWindow,
+  SchoolEvent,
+  SchoolEventType,
+} from "@/services/academicCalendarService";
+import type { AcademicTerm } from "@/services/academicTermsService";
 
 import { HolidayFormDialog } from "./HolidayFormDialog";
 import { VacationFormDialog } from "./VacationFormDialog";
 import { ExamWindowFormDialog } from "./ExamWindowFormDialog";
 import { SchoolEventFormDialog } from "./SchoolEventFormDialog";
+import { SemesterFormDialog } from "./SemesterFormDialog";
 
-type EventKind = "holiday" | "exam" | "event" | "vacation";
+type EventKind =
+  | "holiday"
+  | "exam"
+  | "event"
+  | "vacation"
+  | "semester"
+  | "training"
+  | "meeting"
+  | "other";
 
 const EVENT_KINDS: { kind: EventKind; label: string; icon: typeof Flag }[] = [
   { kind: "holiday", label: "Public Holiday", icon: Flag },
   { kind: "exam", label: "Examination", icon: BookOpenCheck },
   { kind: "event", label: "School Event", icon: PartyPopper },
   { kind: "vacation", label: "Vacation", icon: CalendarHeart },
+  { kind: "semester", label: "Semester", icon: BookOpen },
+  { kind: "training", label: "Teacher Training", icon: Presentation },
+  { kind: "meeting", label: "Parent Meeting", icon: UsersRound },
+  { kind: "other", label: "Other", icon: MoreHorizontal },
 ];
+
+/** Event kinds that reuse the school-event form with a preselected type. */
+const EVENT_TYPE_BY_KIND: Partial<Record<EventKind, SchoolEventType>> = {
+  event: "event",
+  training: "training",
+  meeting: "meeting",
+  other: "other",
+};
 
 interface AddEventDialogProps {
   open: boolean;
@@ -41,13 +77,15 @@ interface AddEventDialogProps {
 }
 
 /** "Add Event" flow on the calendar dashboard — pick a type, then fill the
- * matching form. Reuses the wizard step dialogs. */
+ * matching form. Reuses the wizard dialogs. */
 export function AddEventDialog({ open, onOpenChange, academicYearId }: AddEventDialogProps) {
   const [kind, setKind] = useState<EventKind | null>(null);
 
   const createHoliday = useCreateHoliday();
   const createExamWindow = useCreateExamWindow();
   const createEvent = useCreateSchoolEvent();
+  const createTerm = useCreateTerm();
+  const { data: terms = [] } = useTerms(academicYearId);
 
   const closeAll = (o: boolean) => {
     if (!o) setKind(null);
@@ -87,6 +125,19 @@ export function AddEventDialog({ open, onOpenChange, academicYearId }: AddEventD
     }
   };
 
+  const submitSemester = async (payload: Partial<AcademicTerm>) => {
+    try {
+      await createTerm.mutateAsync(payload);
+      toast.success("Semester added");
+      closeAll(false);
+    } catch (err) {
+      toastError(err, "Could not save");
+      throw err;
+    }
+  };
+
+  const eventFormKind = kind && kind in EVENT_TYPE_BY_KIND ? kind : null;
+
   return (
     <>
       <Dialog open={open && kind === null} onOpenChange={closeAll}>
@@ -101,7 +152,7 @@ export function AddEventDialog({ open, onOpenChange, academicYearId }: AddEventD
                 key={k.kind}
                 type="button"
                 onClick={() => setKind(k.kind)}
-                className="flex flex-col items-center gap-2 rounded-md border border-border p-4 text-sm transition-colors hover:border-primary hover:bg-primary/5"
+                className="flex flex-col items-center gap-2 rounded-md border border-border p-4 text-center text-sm transition-colors hover:border-primary hover:bg-primary/5"
               >
                 <k.icon className="h-6 w-6 text-primary" />
                 {k.label}
@@ -130,10 +181,18 @@ export function AddEventDialog({ open, onOpenChange, academicYearId }: AddEventD
         onSubmit={submitExam}
       />
       <SchoolEventFormDialog
-        open={open && kind === "event"}
+        open={open && eventFormKind !== null}
         onOpenChange={closeAll}
         academicYearId={academicYearId}
+        initialType={eventFormKind ? EVENT_TYPE_BY_KIND[eventFormKind] : undefined}
         onSubmit={submitEvent}
+      />
+      <SemesterFormDialog
+        open={open && kind === "semester"}
+        onOpenChange={closeAll}
+        academicYearId={academicYearId}
+        nextSequence={terms.length + 1}
+        onSubmit={submitSemester}
       />
     </>
   );

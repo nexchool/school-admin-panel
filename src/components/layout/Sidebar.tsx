@@ -228,7 +228,7 @@ export function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   }
 
   return (
-    <aside className="hidden h-full min-h-0 w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
+    <aside className="hidden h-full min-h-0 w-64 shrink-0 flex-col border-r border-border bg-card md:flex print:!hidden">
       {sidebar}
     </aside>
   );

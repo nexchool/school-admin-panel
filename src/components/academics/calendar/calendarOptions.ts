@@ -40,6 +40,29 @@ export const WEEKDAY_OPTIONS = [
   { value: 5, label: "Saturday" },
 ] as const;
 
+/** Today's date in the user's local timezone as YYYY-MM-DD. */
+export function todayIso(): string {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+/** Date arithmetic on ISO dates, timezone-safe (computed in UTC). */
+export function addDaysIso(iso: string, delta: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Monday of the week containing the given ISO date. */
+export function weekStartOf(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return addDaysIso(iso, -((d.getUTCDay() + 6) % 7));
+}
+
 export function formatDisplayDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(`${iso}T00:00:00`);
