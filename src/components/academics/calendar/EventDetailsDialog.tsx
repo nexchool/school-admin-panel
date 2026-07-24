@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import { type CalendarEntry } from "./calendarEntries";
+import { entryColorClass, type CalendarEntry } from "./calendarEntries";
 import { formatDisplayDate, statusBadgeClass } from "./calendarOptions";
+import { MiniMonthCalendar } from "./MiniMonthCalendar";
 
 const IMPACT: Record<CalendarEntry["kind"], { attendance: string; timetable: string }> = {
   holiday: {
@@ -49,9 +50,9 @@ const ICON_TILE: Record<CalendarEntry["kind"], string> = {
   semester: "bg-emerald-50 text-emerald-600",
 };
 
+// Holidays/vacations are managed inside this calendar, so they need no external
+// link; semesters still have a dedicated Terms surface.
 const RELATED_LINK: Partial<Record<CalendarEntry["kind"], { href: string; label: string }>> = {
-  holiday: { href: "/holidays", label: "Open Holidays module" },
-  vacation: { href: "/holidays", label: "Open Holidays module" },
   semester: { href: "/academics/terms", label: "Open Semesters / Terms" },
 };
 
@@ -122,7 +123,7 @@ export function EventDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span
@@ -140,40 +141,49 @@ export function EventDetailsDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          {rows.map((row) => (
-            <div key={row.label}>
-              <p className="text-xs text-muted-foreground">{row.label}</p>
-              <p className="font-medium">{row.value}</p>
-            </div>
-          ))}
-        </div>
-
-        {entry.description && (
-          <div className="text-sm">
-            <p className="text-xs text-muted-foreground">Description</p>
-            <p>{entry.description}</p>
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* Left: details + description */}
+          <div className="space-y-3 text-sm">
+            {rows.map((row) => (
+              <div key={row.label} className="grid grid-cols-[7rem_1fr] items-start gap-2">
+                <dt className="text-muted-foreground">{row.label}</dt>
+                <dd className="font-medium">{row.value}</dd>
+              </div>
+            ))}
+            {entry.description && (
+              <div className="grid grid-cols-[7rem_1fr] items-start gap-2">
+                <dt className="text-muted-foreground">Description</dt>
+                <dd>{entry.description}</dd>
+              </div>
+            )}
           </div>
-        )}
 
-        <div className="rounded-md border border-border p-3 text-sm">
-          <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Impact
-          </p>
-          <p>
-            <span className="text-muted-foreground">Attendance:</span> {impact.attendance}
-          </p>
-          <p>
-            <span className="text-muted-foreground">Timetable:</span> {impact.timetable}
-          </p>
-          {related && (
-            <p className="mt-1">
-              <span className="text-muted-foreground">Related:</span>{" "}
-              <Link href={related.href} className="text-primary hover:underline">
-                {related.label} →
-              </Link>
-            </p>
-          )}
+          {/* Right: mini calendar + impact */}
+          <div className="space-y-3">
+            <MiniMonthCalendar
+              startDate={entry.startDate}
+              endDate={entry.endDate}
+              highlightClass={entryColorClass(entry)}
+            />
+            <div className="rounded-lg border border-border p-3 text-sm">
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Impact
+              </p>
+              <p>
+                <span className="text-muted-foreground">Attendance:</span> {impact.attendance}
+              </p>
+              <p>
+                <span className="text-muted-foreground">Timetable:</span> {impact.timetable}
+              </p>
+              {related && (
+                <p className="mt-1.5">
+                  <Link href={related.href} className="text-primary hover:underline">
+                    {related.label} →
+                  </Link>
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:justify-between">
