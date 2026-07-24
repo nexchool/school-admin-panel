@@ -2,19 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarPlus, Download, Plus, Printer, Settings2 } from "lucide-react";
+import { CalendarPlus, Download, MoreHorizontal, Plus, Printer, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
@@ -33,7 +32,6 @@ import { AddEventDialog } from "@/components/academics/calendar/AddEventDialog";
 import {
   CalendarMonthGrid,
   monthKey,
-  monthLabel,
 } from "@/components/academics/calendar/CalendarMonthGrid";
 import { CalendarWeekView } from "@/components/academics/calendar/CalendarWeekView";
 import { CalendarListView } from "@/components/academics/calendar/CalendarListView";
@@ -110,14 +108,6 @@ export default function AcademicCalendarPage() {
   const clampedToday = clampIso(todayIso(), yearStart, yearEnd);
   const month = monthOverride ?? monthKey(clampedToday);
   const weekStart = weekOverride ?? weekStartOf(clampedToday);
-  const yearMonths = useMemo(() => {
-    const keys: string[] = [];
-    for (const d of days) {
-      const key = monthKey(d.date);
-      if (!keys.includes(key)) keys.push(key);
-    }
-    return keys;
-  }, [days]);
 
   const goToToday = () => {
     setMonthOverride(monthKey(clampedToday));
@@ -136,7 +126,7 @@ export default function AcademicCalendarPage() {
   };
 
   const exportCsv = () => {
-    const csv = entriesToCsv(filteredEntries);
+    const csv = entriesToCsv(entries);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -148,7 +138,7 @@ export default function AcademicCalendarPage() {
 
   if (yearsLoading || (academicYearId && calendarLoading)) {
     return (
-      <div className="space-y-4 p-6">
+      <div className="space-y-4">
         <Skeleton className="h-10 w-72" />
         <Skeleton className="h-96" />
       </div>
@@ -158,7 +148,7 @@ export default function AcademicCalendarPage() {
   // Empty state — no year yet, or no calendar started for the active year.
   if (!academicYearId || !calendar) {
     return (
-      <div className="p-6">
+      <div>
         <h1 className="text-2xl font-semibold">Academic Calendar</h1>
         <Card className="mx-auto mt-10 max-w-lg">
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
@@ -197,11 +187,9 @@ export default function AcademicCalendarPage() {
     { label: "Working Days", value: summary?.working_days, tone: "text-green-600" },
     { label: "Public Holidays", value: summary?.public_holiday_days, tone: "text-red-600" },
     { label: "Weekly Holidays", value: summary?.weekly_holiday_days, tone: "text-muted-foreground" },
-    { label: "Vacation Days", value: summary?.vacation_days, tone: "text-violet-600" },
     { label: "Exam Days", value: summary?.exam_days, tone: "text-blue-600" },
-    { label: "School Events", value: summary?.event_count, tone: "text-amber-600" },
-    { label: "Teacher Training", value: summary?.events_by_type?.training ?? 0, tone: "text-yellow-600" },
-    { label: "Parent Meetings", value: summary?.events_by_type?.meeting ?? 0, tone: "text-pink-600" },
+    { label: "Events", value: summary?.event_count, tone: "text-amber-600" },
+    { label: "Vacation Days", value: summary?.vacation_days, tone: "text-violet-600" },
   ];
 
   // View pills + Today live in the calendar card header (per the reference).
@@ -215,50 +203,45 @@ export default function AcademicCalendarPage() {
   );
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold">Academic Calendar</h1>
-            <Badge variant={calendar.status === "published" ? "default" : "secondary"}>
-              {calendar.status === "published" ? "Published" : "Draft"}
-            </Badge>
+            {calendar.status === "draft" && <Badge variant="secondary">Draft</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">
             {year?.name} · Academics › Academic Calendar
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Select value={month} onValueChange={(m) => setMonthOverride(m)}>
-            <SelectTrigger className="w-40" aria-label="Jump to month">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {yearMonths.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {monthLabel(m)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={exportCsv}>
-            <Download className="mr-1 h-4 w-4" /> Export
-          </Button>
-          <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="mr-1 h-4 w-4" /> Print
-          </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="More actions">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportCsv}>
+                <Download className="mr-2 h-4 w-4" /> Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.print()}>
+                <Printer className="mr-2 h-4 w-4" /> Print
+              </DropdownMenuItem>
+              {canManage && (
+                <DropdownMenuItem asChild>
+                  <Link href={`/academics/calendar/setup?year=${academicYearId}`}>
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    {calendar.status === "published" ? "Edit Setup" : "Resume Setup"}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           {canManage && (
-            <>
-              <Button variant="outline" asChild>
-                <Link href={`/academics/calendar/setup?year=${academicYearId}`}>
-                  <Settings2 className="mr-1 h-4 w-4" />
-                  {calendar.status === "published" ? "Edit Setup" : "Resume Setup"}
-                </Link>
-              </Button>
-              <Button onClick={() => setAddEventOpen(true)}>
-                <Plus className="mr-1 h-4 w-4" /> Add Event
-              </Button>
-            </>
+            <Button onClick={() => setAddEventOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" /> Add Event
+            </Button>
           )}
         </div>
       </div>
@@ -270,7 +253,7 @@ export default function AcademicCalendarPage() {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8 print:hidden">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 print:hidden">
         {stats.map((s) => (
           <Card key={s.label}>
             <CardContent className="p-4">
@@ -279,15 +262,6 @@ export default function AcademicCalendarPage() {
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      <div className="print:hidden">
-        <CalendarToolbar
-          search={search}
-          onSearchChange={setSearch}
-          kinds={kinds}
-          onKindsChange={setKinds}
-        />
       </div>
 
       <div className="print:hidden">
@@ -311,7 +285,7 @@ export default function AcademicCalendarPage() {
               </CardContent>
             </Card>
             <UpcomingEventsPanel
-              entries={filteredEntries}
+              entries={entries}
               onEntryClick={openDetails}
               onViewAll={() => setView("list")}
             />
@@ -323,7 +297,7 @@ export default function AcademicCalendarPage() {
             <CardContent className="p-4">
               <CalendarWeekView
                 days={days}
-                entries={filteredEntries}
+                entries={entries}
                 yearStart={yearStart}
                 yearEnd={yearEnd}
                 weekStart={weekStart}
@@ -338,10 +312,16 @@ export default function AcademicCalendarPage() {
         {view === "list" && (
           <Card>
             <CardContent className="space-y-3 p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-medium">All Calendar Entries</p>
                 {viewControls}
               </div>
+              <CalendarToolbar
+                search={search}
+                onSearchChange={setSearch}
+                kinds={kinds}
+                onKindsChange={setKinds}
+              />
               <CalendarListView entries={filteredEntries} onEntryClick={openDetails} />
             </CardContent>
           </Card>
@@ -368,7 +348,7 @@ export default function AcademicCalendarPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredEntries.map((entry) => (
+            {entries.map((entry) => (
               <tr key={entry.key}>
                 <td className="border border-border p-1">
                   {formatDisplayDate(entry.startDate)}
@@ -403,7 +383,7 @@ export default function AcademicCalendarPage() {
 
       <DayEventsDialog
         day={dayDialog}
-        entries={dayDialog ? entriesOnDate(filteredEntries, dayDialog.date) : []}
+        entries={dayDialog ? entriesOnDate(entries, dayDialog.date) : []}
         open={dayDialog !== null}
         onOpenChange={(open) => !open && setDayDialog(null)}
         onEntryClick={openDetails}

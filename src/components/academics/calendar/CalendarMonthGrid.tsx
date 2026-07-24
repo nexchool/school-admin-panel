@@ -22,13 +22,9 @@ export const CALENDAR_LEGEND = [
   { label: "Working Day", className: "bg-green-500" },
   { label: "Weekly Holiday", className: "bg-muted-foreground/50" },
   { label: "Public Holiday", className: "bg-red-500" },
+  { label: "Exam", className: "bg-blue-500" },
+  { label: "Event", className: "bg-amber-500" },
   { label: "Vacation", className: "bg-violet-500" },
-  { label: "Examination", className: "bg-blue-500" },
-  { label: "School Event", className: "bg-amber-500" },
-  { label: "Teacher Training", className: "bg-yellow-500" },
-  { label: "Parent Meeting", className: "bg-pink-500" },
-  { label: "Semester Start", className: "bg-blue-900" },
-  { label: "Semester End", className: "bg-green-900" },
 ];
 
 export function monthKey(iso: string): string {
