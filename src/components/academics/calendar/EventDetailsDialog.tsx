@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Pencil, Trash2 } from "lucide-react";
 
@@ -12,11 +13,22 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { toastError } from "@/lib/errorToast";
 
 import { entryColorClass, type CalendarEntry } from "./calendarEntries";
-import { formatDisplayDate, statusBadgeClass } from "./calendarOptions";
+import { EVENT_STATUS_OPTIONS, formatDisplayDate, statusBadgeClass } from "./calendarOptions";
 import { MiniMonthCalendar } from "./MiniMonthCalendar";
+import type { EventStatus } from "@/services/academicCalendarService";
+import { useUpdateExamWindow, useUpdateSchoolEvent } from "@/hooks/useAcademicCalendar";
 
 const IMPACT: Record<CalendarEntry["kind"], { attendance: string; timetable: string }> = {
   holiday: {
@@ -84,9 +96,37 @@ export function EventDetailsDialog({
   onEdit,
   onDelete,
 }: EventDetailsDialogProps) {
+  const updateEvent = useUpdateSchoolEvent();
+  const updateExam = useUpdateExamWindow();
+  // Optimistic mirror of the status: the `entry` prop is a snapshot, so a
+  // plain controlled Select would snap back after selection.
+  const [statusValue, setStatusValue] = useState<EventStatus | null>(null);
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setStatusValue(entry?.statusValue ?? null);
+  }, [entry?.id, entry?.statusValue]);
+
   if (!entry) return null;
   const impact = IMPACT[entry.kind];
   const related = RELATED_LINK[entry.kind];
+  // Only exams and school events carry a lifecycle status.
+  const hasStatus = entry.kind === "exam" || entry.kind === "event";
+  const statusPending = updateEvent.isPending || updateExam.isPending;
+  const currentStatus = statusValue ?? entry.statusValue;
+
+  const changeStatus = (status: EventStatus) => {
+    const prev = entry.statusValue;
+    setStatusValue(status); // optimistic
+    const opts = {
+      onSuccess: () => toast.success("Status updated"),
+      onError: (e: unknown) => {
+        setStatusValue(prev); // revert on failure
+        toastError(e, "Could not update status");
+      },
+    };
+    if (entry.kind === "exam") updateExam.mutate({ id: entry.id, data: { status } }, opts);
+    else updateEvent.mutate({ id: entry.id, data: { status } }, opts);
+  };
 
   const rows: { label: string; value: React.ReactNode }[] = [
     {
@@ -100,16 +140,34 @@ export function EventDetailsDialog({
     { label: "Applies To", value: entry.appliesTo },
     {
       label: "Status",
-      value: (
-        <span
-          className={cn(
-            "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
-            statusBadgeClass(entry.statusValue),
-          )}
-        >
-          {entry.status}
-        </span>
-      ),
+      value:
+        canManage && hasStatus ? (
+          <Select
+            value={currentStatus}
+            disabled={statusPending}
+            onValueChange={(v) => changeStatus(v as EventStatus)}
+          >
+            <SelectTrigger className="h-7 w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {EVENT_STATUS_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span
+            className={cn(
+              "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+              statusBadgeClass(entry.statusValue),
+            )}
+          >
+            {entry.status}
+          </span>
+        ),
     },
     { label: "Created By", value: entry.createdByName ?? "—" },
     { label: "Created On", value: formatTimestamp(entry.createdAt) },

@@ -10,7 +10,7 @@ import {
   FileSpreadsheet,
   FileText,
   History,
-  MoreHorizontal,
+  MoreVertical,
   Plus,
   Printer,
   Settings2,
@@ -87,7 +87,6 @@ import type {
 } from "@/services/academicCalendarService";
 import { triggerDownload } from "@/lib/download";
 import {
-  formatDisplayDate,
   todayIso,
   weekStartOf,
 } from "@/components/academics/calendar/calendarOptions";
@@ -96,7 +95,7 @@ function clampIso(iso: string, min: string, max: string): string {
   return iso < min ? min : iso > max ? max : iso;
 }
 
-type PrintMode = "full" | "month" | "holidays" | "semesters" | "events";
+type PrintMode = "full" | "holidays" | "semesters" | "events";
 
 // Dashboard entry kind → backend export section key (for filtered exports).
 const KIND_TO_SECTION: Record<CalendarEntryKind, string> = {
@@ -113,12 +112,12 @@ const EXPORT_EXT: Record<CalendarExportFormat, string> = {
   csv: "csv",
 };
 
-const PRINT_MODE_LABEL: Record<PrintMode, string> = {
-  full: "Full calendar",
-  month: "Monthly schedule",
-  holidays: "Holiday list",
-  semesters: "Semester schedule",
-  events: "Event list",
+// Print produces a PDF via the backend export; each mode maps to its sections.
+const PRINT_SECTIONS: Record<PrintMode, string[] | undefined> = {
+  full: undefined,
+  holidays: ["public_holidays", "vacations", "weekly_holidays"],
+  semesters: ["semesters"],
+  events: ["events", "exam_windows"],
 };
 
 export default function AcademicCalendarPage() {
@@ -161,10 +160,6 @@ export default function AcademicCalendarPage() {
   const [monthOverride, setMonthOverride] = useState<string | null>(null);
   const [weekOverride, setWeekOverride] = useState<string | null>(null);
 
-  // Print: `printMode` picks what the print stylesheet renders; bumping
-  // `printTick` fires window.print() after the DOM reflects the new mode.
-  const [printMode, setPrintMode] = useState<PrintMode>("full");
-  const [printTick, setPrintTick] = useState(0);
 
   // Dialog state.
   const [addEventOpen, setAddEventOpen] = useState(false);
@@ -238,40 +233,22 @@ export default function AcademicCalendarPage() {
     }
   };
 
-  const requestPrint = (mode: PrintMode) => {
-    setPrintMode(mode);
-    setPrintTick((t) => t + 1);
-    // Record "Print Executed" in the activity log (fire-and-forget).
-    if (calendar) {
+  // Print downloads a print-ready PDF from the backend (works with no printer);
+  // each mode narrows the sections. Also logs "Print Executed".
+  const printAs = async (mode: PrintMode) => {
+    if (!calendar) return;
+    try {
+      const blob = await academicCalendarService.exportCalendar(
+        calendar.id,
+        "pdf",
+        PRINT_SECTIONS[mode],
+      );
+      triggerDownload(blob, `academic-calendar-${year?.name ?? "export"}-${mode}.pdf`);
       academicCalendarService.logPrint(calendar.id, mode).catch(() => {});
+    } catch (e) {
+      toastError(e, "Could not generate the PDF");
     }
   };
-
-  // Fire the browser print dialog once the print DOM reflects `printMode`.
-  useEffect(() => {
-    if (printTick > 0) window.print();
-  }, [printTick]);
-
-  // Entries the print layout renders, scoped to the chosen print mode. Uses
-  // live entries only (drafts/cancelled events stay off the printout), matching
-  // the backend export which is active-only.
-  const printEntries = useMemo(() => {
-    switch (printMode) {
-      case "holidays":
-        return liveEntries.filter((e) => e.kind === "holiday" || e.kind === "vacation");
-      case "semesters":
-        return liveEntries.filter((e) => e.kind === "semester");
-      case "events":
-        return liveEntries.filter((e) => e.kind === "exam" || e.kind === "event");
-      case "month": {
-        const start = `${month}-01`;
-        const end = `${month}-31`; // lexicographic upper bound for yyyy-mm-dd
-        return liveEntries.filter((e) => e.startDate <= end && e.endDate >= start);
-      }
-      default:
-        return liveEntries;
-    }
-  }, [liveEntries, printMode, month]);
 
   // Apply saved default view/month (the cheap-to-apply preferences).
   const applyPrefs = (prefs: CalendarPreferences) => {
@@ -391,11 +368,16 @@ export default function AcademicCalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {canEdit && (
+            <Button onClick={() => setAddEventOpen(true)}>
+              <Plus className="mr-1 h-4 w-4" /> Add Event
+            </Button>
+          )}
           {hasMenuAction && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" aria-label="More actions">
-                <MoreHorizontal className="h-4 w-4" />
+                <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -432,19 +414,16 @@ export default function AcademicCalendarPage() {
                     <Printer className="mr-2 h-4 w-4" /> Print
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    <DropdownMenuItem onClick={() => requestPrint("full")}>
+                    <DropdownMenuItem onClick={() => printAs("full")}>
                       Full calendar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => requestPrint("month")}>
-                      This month
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => requestPrint("holidays")}>
+                    <DropdownMenuItem onClick={() => printAs("holidays")}>
                       Holiday list
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => requestPrint("semesters")}>
+                    <DropdownMenuItem onClick={() => printAs("semesters")}>
                       Semester schedule
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => requestPrint("events")}>
+                    <DropdownMenuItem onClick={() => printAs("events")}>
                       Event list
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
@@ -494,11 +473,6 @@ export default function AcademicCalendarPage() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          )}
-          {canEdit && (
-            <Button onClick={() => setAddEventOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" /> Add Event
-            </Button>
           )}
         </div>
       </div>
@@ -592,45 +566,6 @@ export default function AcademicCalendarPage() {
             </CardContent>
           </Card>
         )}
-      </div>
-
-      {/* Print-friendly rendering: summary + the chosen print mode's entries. */}
-      <div className="hidden print:block">
-        <h2 className="text-lg font-semibold">
-          Academic Calendar — {year?.name}
-        </h2>
-        <p className="mb-1 text-sm text-muted-foreground">
-          {PRINT_MODE_LABEL[printMode]}
-        </p>
-        <p className="mb-3 text-sm">
-          Working days: {summary?.working_days} of {summary?.total_days} · Public
-          holidays: {summary?.public_holiday_days} · Vacation days:{" "}
-          {summary?.vacation_days} · Exam days: {summary?.exam_days}
-        </p>
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr>
-              <th className="border border-border p-1 text-left">Date</th>
-              <th className="border border-border p-1 text-left">Name</th>
-              <th className="border border-border p-1 text-left">Type</th>
-              <th className="border border-border p-1 text-left">Applies To</th>
-            </tr>
-          </thead>
-          <tbody>
-            {printEntries.map((entry) => (
-              <tr key={entry.key}>
-                <td className="border border-border p-1">
-                  {formatDisplayDate(entry.startDate)}
-                  {entry.endDate !== entry.startDate &&
-                    ` – ${formatDisplayDate(entry.endDate)}`}
-                </td>
-                <td className="border border-border p-1">{entry.name}</td>
-                <td className="border border-border p-1">{entry.typeLabel}</td>
-                <td className="border border-border p-1">{entry.appliesTo}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
 
       {academicYearId && (
