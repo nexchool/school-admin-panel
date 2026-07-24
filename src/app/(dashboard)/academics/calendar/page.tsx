@@ -121,7 +121,19 @@ const PRINT_MODE_LABEL: Record<PrintMode, string> = {
 
 export default function AcademicCalendarPage() {
   const { hasAnyPermission } = useAuth();
-  const canManage = hasAnyPermission(["academic_calendar.manage"]);
+  // Per-action capabilities. hasAnyPermission treats `academic_calendar.manage`
+  // as a superset, so an Admin (manage) sees everything; a sub-admin sees only
+  // the actions their granular permissions allow.
+  const canCreate = hasAnyPermission(["academic_calendar.create"]);
+  const canEdit = hasAnyPermission(["academic_calendar.edit"]);
+  const canDelete = hasAnyPermission(["academic_calendar.delete"]);
+  const canArchive = hasAnyPermission(["academic_calendar.archive"]);
+  const canExport = hasAnyPermission(["academic_calendar.export"]);
+  const canImport = hasAnyPermission(["academic_calendar.import"]);
+  const canPrint = hasAnyPermission(["academic_calendar.print"]);
+  const canSettings = hasAnyPermission(["academic_calendar.settings"]);
+  const hasMenuAction =
+    canExport || canPrint || canEdit || canImport || canSettings || canArchive || canDelete;
 
   const { academicYearId: activeYearId } = useActiveAcademicYear();
   const { data: years = [], isLoading: yearsLoading } = useAcademicYears();
@@ -318,7 +330,7 @@ export default function AcademicCalendarPage() {
                 semesters, exams and events.
               </p>
             </div>
-            {canManage && (
+            {canCreate && (
               <Button asChild>
                 <Link
                   href={
@@ -370,6 +382,7 @@ export default function AcademicCalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {hasMenuAction && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon" aria-label="More actions">
@@ -377,50 +390,54 @@ export default function AcademicCalendarPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Download className="mr-2 h-4 w-4" /> Export
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => exportAs("pdf")}>
-                    <FileText className="mr-2 h-4 w-4" /> PDF document
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportAs("excel")}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel workbook
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => exportAs("csv")}>
-                    <Download className="mr-2 h-4 w-4" /> CSV file
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
+              {canExport && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Download className="mr-2 h-4 w-4" /> Export
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => exportAs("pdf")}>
+                      <FileText className="mr-2 h-4 w-4" /> PDF document
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportAs("excel")}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel workbook
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportAs("csv")}>
+                      <Download className="mr-2 h-4 w-4" /> CSV file
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
 
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Printer className="mr-2 h-4 w-4" /> Print
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuItem onClick={() => requestPrint("full")}>
-                    Full calendar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => requestPrint("month")}>
-                    This month
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => requestPrint("holidays")}>
-                    Holiday list
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => requestPrint("semesters")}>
-                    Semester schedule
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => requestPrint("events")}>
-                    Event list
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
+              {canPrint && (
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Printer className="mr-2 h-4 w-4" /> Print
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onClick={() => requestPrint("full")}>
+                      Full calendar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => requestPrint("month")}>
+                      This month
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => requestPrint("holidays")}>
+                      Holiday list
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => requestPrint("semesters")}>
+                      Semester schedule
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => requestPrint("events")}>
+                      Event list
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              )}
 
-              {canManage && (
+              {(canEdit || canImport || canSettings || canArchive || canDelete) && (
                 <>
-                  <DropdownMenuSeparator />
-                  {calendar.status !== "archived" && (
+                  {(canExport || canPrint) && <DropdownMenuSeparator />}
+                  {canEdit && calendar.status !== "archived" && (
                     <DropdownMenuItem asChild>
                       <Link href={`/academics/calendar/setup?year=${academicYearId}`}>
                         <Settings2 className="mr-2 h-4 w-4" />
@@ -428,25 +445,27 @@ export default function AcademicCalendarPage() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  {calendar.status !== "archived" && (
+                  {canImport && calendar.status !== "archived" && (
                     <DropdownMenuItem onClick={() => setImportOpen(true)}>
                       <Upload className="mr-2 h-4 w-4" /> Import data
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={() => setPrefsOpen(true)}>
-                    <SlidersHorizontal className="mr-2 h-4 w-4" /> Preferences
-                  </DropdownMenuItem>
-                  {calendar.status === "published" && (
+                  {canSettings && (
+                    <DropdownMenuItem onClick={() => setPrefsOpen(true)}>
+                      <SlidersHorizontal className="mr-2 h-4 w-4" /> Preferences
+                    </DropdownMenuItem>
+                  )}
+                  {canArchive && calendar.status === "published" && (
                     <DropdownMenuItem onClick={handleArchive}>
                       <Archive className="mr-2 h-4 w-4" /> Archive calendar
                     </DropdownMenuItem>
                   )}
-                  {calendar.status === "archived" && (
+                  {canArchive && calendar.status === "archived" && (
                     <DropdownMenuItem onClick={handleRestore}>
                       <ArchiveRestore className="mr-2 h-4 w-4" /> Restore calendar
                     </DropdownMenuItem>
                   )}
-                  {calendar.status === "draft" && (
+                  {canDelete && calendar.status === "draft" && (
                     <DropdownMenuItem
                       onClick={() => setDeleteOpen(true)}
                       className="text-destructive focus:text-destructive"
@@ -458,7 +477,8 @@ export default function AcademicCalendarPage() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          {canManage && (
+          )}
+          {canEdit && (
             <Button onClick={() => setAddEventOpen(true)}>
               <Plus className="mr-1 h-4 w-4" /> Add Event
             </Button>
@@ -608,7 +628,7 @@ export default function AcademicCalendarPage() {
         entry={detailsEntry}
         open={detailsEntry !== null}
         onOpenChange={(open) => !open && setDetailsEntry(null)}
-        canManage={canManage}
+        canManage={canEdit}
         onEdit={(entry) => startAction(entry, "edit")}
         onDelete={(entry) => startAction(entry, "delete")}
       />
