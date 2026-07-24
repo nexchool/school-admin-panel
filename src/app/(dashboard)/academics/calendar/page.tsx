@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  Archive,
+  ArchiveRestore,
   CalendarPlus,
   Download,
   FileSpreadsheet,
@@ -11,6 +13,9 @@ import {
   Plus,
   Printer,
   Settings2,
+  SlidersHorizontal,
+  Trash2,
+  Upload,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,9 +39,12 @@ import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import {
   useAcademicCalendarState,
+  useArchiveCalendar,
   useCalendarDays,
   useCalendarSummary,
+  useDeleteCalendar,
   useExamWindows,
+  useRestoreCalendar,
   useSchoolEvents,
 } from "@/hooks/useAcademicCalendar";
 import { useHolidays } from "@/hooks/useHolidays";
@@ -44,6 +52,9 @@ import { useTerms } from "@/hooks/useTerms";
 import type { CalendarDay } from "@/services/academicCalendarService";
 
 import { AddEventDialog } from "@/components/academics/calendar/AddEventDialog";
+import { CalendarImportDialog } from "@/components/academics/calendar/CalendarImportDialog";
+import { CalendarPreferencesDialog } from "@/components/academics/calendar/CalendarPreferencesDialog";
+import { ConfirmDialog } from "@/components/academics/calendar/ConfirmDialog";
 import {
   CalendarMonthGrid,
   monthKey,
@@ -69,8 +80,10 @@ import {
 import { academicCalendarService } from "@/services/academicCalendarService";
 import type {
   CalendarExportFormat,
+  CalendarPreferences,
   EventStatus,
 } from "@/services/academicCalendarService";
+import { triggerDownload } from "@/lib/download";
 import {
   formatDisplayDate,
   todayIso,
@@ -105,15 +118,6 @@ const PRINT_MODE_LABEL: Record<PrintMode, string> = {
   semesters: "Semester schedule",
   events: "Event list",
 };
-
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 export default function AcademicCalendarPage() {
   const { hasAnyPermission } = useAuth();
@@ -152,6 +156,14 @@ export default function AcademicCalendarPage() {
   const [actionEntry, setActionEntry] = useState<CalendarEntry | null>(null);
   const [actionMode, setActionMode] = useState<"edit" | "delete" | null>(null);
   const [dayDialog, setDayDialog] = useState<CalendarDay | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const archiveCalendar = useArchiveCalendar();
+  const restoreCalendar = useRestoreCalendar();
+  const deleteCalendar = useDeleteCalendar();
+  const prefsAppliedRef = useRef(false);
 
   const entries = useMemo(
     () => buildCalendarEntries({ holidays, examWindows, events, terms }),
@@ -240,6 +252,44 @@ export default function AcademicCalendarPage() {
     }
   }, [liveEntries, printMode, month]);
 
+  // Apply saved default view/month (the cheap-to-apply preferences).
+  const applyPrefs = (prefs: CalendarPreferences) => {
+    setView(prefs.default_view);
+    if (prefs.default_month) setMonthOverride(prefs.default_month);
+  };
+  // Run once when the calendar first loads (controlled sync from server prefs).
+  useEffect(() => {
+    if (!calendar || prefsAppliedRef.current) return;
+    prefsAppliedRef.current = true;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    applyPrefs(calendar.preferences);
+  }, [calendar]);
+
+  const handleArchive = () => {
+    if (!calendar) return;
+    archiveCalendar.mutate(calendar.id, {
+      onSuccess: () => toast.success("Calendar archived"),
+      onError: (e) => toastError(e, "Could not archive the calendar"),
+    });
+  };
+  const handleRestore = () => {
+    if (!calendar) return;
+    restoreCalendar.mutate(calendar.id, {
+      onSuccess: () => toast.success("Calendar restored"),
+      onError: (e) => toastError(e, "Could not restore the calendar"),
+    });
+  };
+  const handleConfirmDelete = () => {
+    if (!calendar) return;
+    deleteCalendar.mutate(calendar.id, {
+      onSuccess: () => {
+        toast.success("Draft calendar deleted");
+        setDeleteOpen(false);
+      },
+      onError: (e) => toastError(e, "Could not delete the calendar"),
+    });
+  };
+
   if (yearsLoading || (academicYearId && calendarLoading)) {
     return (
       <div className="space-y-4">
@@ -313,6 +363,7 @@ export default function AcademicCalendarPage() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-semibold">Academic Calendar</h1>
             {calendar.status === "draft" && <Badge variant="secondary">Draft</Badge>}
+            {calendar.status === "archived" && <Badge variant="outline">Archived</Badge>}
           </div>
           <p className="text-sm text-muted-foreground">
             {year?.name} · Academics › Academic Calendar
@@ -369,12 +420,40 @@ export default function AcademicCalendarPage() {
               {canManage && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href={`/academics/calendar/setup?year=${academicYearId}`}>
-                      <Settings2 className="mr-2 h-4 w-4" />
-                      {calendar.status === "published" ? "Edit Setup" : "Resume Setup"}
-                    </Link>
+                  {calendar.status !== "archived" && (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/academics/calendar/setup?year=${academicYearId}`}>
+                        <Settings2 className="mr-2 h-4 w-4" />
+                        {calendar.status === "published" ? "Edit Setup" : "Resume Setup"}
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {calendar.status !== "archived" && (
+                    <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                      <Upload className="mr-2 h-4 w-4" /> Import data
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setPrefsOpen(true)}>
+                    <SlidersHorizontal className="mr-2 h-4 w-4" /> Preferences
                   </DropdownMenuItem>
+                  {calendar.status === "published" && (
+                    <DropdownMenuItem onClick={handleArchive}>
+                      <Archive className="mr-2 h-4 w-4" /> Archive calendar
+                    </DropdownMenuItem>
+                  )}
+                  {calendar.status === "archived" && (
+                    <DropdownMenuItem onClick={handleRestore}>
+                      <ArchiveRestore className="mr-2 h-4 w-4" /> Restore calendar
+                    </DropdownMenuItem>
+                  )}
+                  {calendar.status === "draft" && (
+                    <DropdownMenuItem
+                      onClick={() => setDeleteOpen(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete draft
+                    </DropdownMenuItem>
+                  )}
                 </>
               )}
             </DropdownMenuContent>
@@ -391,6 +470,13 @@ export default function AcademicCalendarPage() {
         <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 print:hidden">
           This calendar is still a draft — finish the setup wizard and generate
           it so other modules can use it.
+        </p>
+      )}
+
+      {calendar.status === "archived" && (
+        <p className="rounded-md border border-border bg-muted p-3 text-xs text-muted-foreground print:hidden">
+          This calendar is archived and read-only. Restore it from the ⋮ menu to
+          make changes.
         </p>
       )}
 
@@ -546,6 +632,30 @@ export default function AcademicCalendarPage() {
           }}
         />
       )}
+
+      <CalendarImportDialog
+        calendarId={calendar.id}
+        open={importOpen}
+        onOpenChange={setImportOpen}
+      />
+
+      <CalendarPreferencesDialog
+        calendarId={calendar.id}
+        preferences={calendar.preferences}
+        open={prefsOpen}
+        onOpenChange={setPrefsOpen}
+        onSaved={applyPrefs}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete Academic Calendar?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleConfirmDelete}
+        isPending={deleteCalendar.isPending}
+      />
     </div>
   );
 }

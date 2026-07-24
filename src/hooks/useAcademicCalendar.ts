@@ -6,6 +6,8 @@ import { holidayKeys } from "@/hooks/useHolidays";
 import {
   academicCalendarService,
   type AcademicCalendar,
+  type CalendarImportType,
+  type CalendarPreferences,
   type ExamWindow,
   type SchoolEvent,
   type WeeklyHolidaysConfig,
@@ -166,5 +168,60 @@ export function useDeleteSchoolEvent() {
   return useMutation({
     mutationFn: (id: string) => academicCalendarService.deleteEvent(id),
     onSuccess: () => invalidateCalendar(qc),
+  });
+}
+
+// ── Admin lifecycle + import ────────────────────────────────────────────────
+
+export function useDeleteCalendar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicCalendarService.deleteCalendar(id),
+    onSuccess: () => invalidateCalendar(qc),
+  });
+}
+
+export function useArchiveCalendar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicCalendarService.archiveCalendar(id),
+    onSuccess: () => invalidateCalendar(qc),
+  });
+}
+
+export function useRestoreCalendar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => academicCalendarService.restoreCalendar(id),
+    onSuccess: () => invalidateCalendar(qc),
+  });
+}
+
+export function useUpdateCalendarPreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, prefs }: { id: string; prefs: Partial<CalendarPreferences> }) =>
+      academicCalendarService.updatePreferences(id, prefs),
+    onSuccess: () => invalidateCalendar(qc),
+  });
+}
+
+export function useImportCalendarData() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      type,
+      file,
+    }: {
+      id: string;
+      type: CalendarImportType;
+      file: File;
+    }) => academicCalendarService.importData(id, type, file),
+    onSuccess: () => {
+      invalidateCalendar(qc);
+      // Import may add holidays / vacations, which have their own cache.
+      qc.invalidateQueries({ queryKey: holidayKeys.all });
+    },
   });
 }

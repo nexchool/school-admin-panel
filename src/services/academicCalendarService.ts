@@ -1,4 +1,12 @@
-import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost, apiPut } from "@/services/api";
+import {
+  apiDelete,
+  apiGet,
+  apiGetBlob,
+  apiPatch,
+  apiPost,
+  apiPostForm,
+  apiPut,
+} from "@/services/api";
 
 import type { AcademicYear } from "@/services/academicYearsService";
 
@@ -8,9 +16,38 @@ export interface WeeklyHolidaysConfig {
   fourth_saturday: boolean;
 }
 
-export type CalendarStatus = "draft" | "published";
+export type CalendarStatus = "draft" | "published" | "archived";
 
 export type CalendarExportFormat = "pdf" | "excel" | "csv";
+
+export interface CalendarPreferences {
+  default_view: "month" | "week" | "list";
+  default_month: string | null; // yyyy-mm
+  week_start: "monday" | "sunday";
+  date_format: "dd_mmm_yyyy" | "yyyy_mm_dd" | "mm_dd_yyyy";
+  time_format: "24h" | "12h";
+  default_event_color: "amber" | "blue" | "green" | "red" | "violet" | "gray";
+}
+
+export type CalendarImportType =
+  | "public_holidays"
+  | "vacations"
+  | "exam_windows"
+  | "events";
+
+export interface CalendarImportError {
+  row: number;
+  field: string;
+  message: string;
+}
+
+export interface CalendarImportReport {
+  import_type: CalendarImportType;
+  total: number;
+  imported: number;
+  skipped: number;
+  errors: CalendarImportError[];
+}
 
 export interface AcademicCalendar {
   id: string;
@@ -20,9 +57,12 @@ export interface AcademicCalendar {
   current_step: number;
   total_steps: number;
   weekly_holidays_config: WeeklyHolidaysConfig;
+  preferences: CalendarPreferences;
   published_summary: CalendarSummary | null;
   published_at: string | null;
   published_by: string | null;
+  archived_at: string | null;
+  archived_by: string | null;
 }
 
 export interface CalendarSummary {
@@ -152,6 +192,23 @@ export const academicCalendarService = {
     const params = new URLSearchParams({ format });
     if (sections?.length) params.set("sections", sections.join(","));
     return apiGetBlob(`${BASE}/${id}/export?${params.toString()}`);
+  },
+
+  // ── Admin lifecycle ──────────────────────────────────────────────────────
+  deleteCalendar: (id: string) => apiDelete<void>(`${BASE}/${id}`),
+  archiveCalendar: (id: string) => apiPost<AcademicCalendar>(`${BASE}/${id}/archive`, {}),
+  restoreCalendar: (id: string) => apiPost<AcademicCalendar>(`${BASE}/${id}/restore`, {}),
+  updatePreferences: (id: string, prefs: Partial<CalendarPreferences>) =>
+    apiPatch<AcademicCalendar>(`${BASE}/${id}/preferences`, prefs),
+
+  // ── Import ───────────────────────────────────────────────────────────────
+  getImportTemplate: (id: string, type: CalendarImportType): Promise<Blob> =>
+    apiGetBlob(`${BASE}/${id}/import-template?type=${type}`),
+  importData: (id: string, type: CalendarImportType, file: File) => {
+    const fd = new FormData();
+    fd.append("type", type);
+    fd.append("file", file);
+    return apiPostForm<CalendarImportReport>(`${BASE}/${id}/import`, fd);
   },
 
   listExamWindows: (academicYearId: string) =>
