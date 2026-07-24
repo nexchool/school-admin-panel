@@ -12,16 +12,20 @@ export interface Holiday {
   recurring_day_name?: string | null;
   academic_year_id?: string | null;
   academic_year_name?: string | null;
+  applies_to?: string;
+  duration_days?: number;
 }
 
 export interface CreateHolidayPayload {
   name: string;
   holiday_type: string;
+  description?: string;
   start_date?: string;
   end_date?: string;
   is_recurring: boolean;
   recurring_day_of_week?: number;
   academic_year_id?: string;
+  applies_to?: string;
 }
 
 export const holidayService = {

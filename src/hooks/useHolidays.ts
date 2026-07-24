@@ -1,8 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "@/services/api";
-import type { Holiday } from "@/services/holidayService";
+import {
+  holidayService,
+  type CreateHolidayPayload,
+  type Holiday,
+} from "@/services/holidayService";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 export type { Holiday } from "@/services/holidayService";
@@ -35,5 +39,37 @@ export function useHolidays(params?: {
       const arr = Array.isArray(data) ? data : (data as { data: Holiday[] })?.data;
       return Array.isArray(arr) ? arr : [];
     },
+  });
+}
+
+function invalidateHolidayConsumers(qc: ReturnType<typeof useQueryClient>) {
+  qc.invalidateQueries({ queryKey: holidayKeys.all });
+  // The academic calendar derives day classification and stats from holidays.
+  qc.invalidateQueries({ queryKey: ["academic-calendar"] });
+}
+
+export function useCreateHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateHolidayPayload) =>
+      holidayService.createHoliday(payload),
+    onSuccess: () => invalidateHolidayConsumers(qc),
+  });
+}
+
+export function useUpdateHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateHolidayPayload> }) =>
+      holidayService.updateHoliday(id, data),
+    onSuccess: () => invalidateHolidayConsumers(qc),
+  });
+}
+
+export function useDeleteHoliday() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => holidayService.deleteHoliday(id),
+    onSuccess: () => invalidateHolidayConsumers(qc),
   });
 }

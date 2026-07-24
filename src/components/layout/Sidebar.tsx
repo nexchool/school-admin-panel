@@ -46,6 +46,7 @@ type NavItem = {
 const SIDEBAR_NAV_CORE: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/academics", label: "Academics", icon: School, permissions: ROUTE_PERMISSIONS["/academics"] },
+  { href: "/academics/calendar", label: "Academic Calendar", icon: CalendarDays, feature: "academic_calendar", permissions: ROUTE_PERMISSIONS["/academics/calendar"] },
   { href: "/students", label: "Students", icon: GraduationCap, permissions: ROUTE_PERMISSIONS["/students"] },
   { href: "/teachers", label: "Teachers", icon: Users, permissions: ROUTE_PERMISSIONS["/teachers"] },
   { href: "/classes", label: "Classes", icon: BookOpen, permissions: ROUTE_PERMISSIONS["/classes"] },
