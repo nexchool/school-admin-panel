@@ -51,15 +51,16 @@ type EventKind =
   | "meeting"
   | "other";
 
-const EVENT_KINDS: { kind: EventKind; label: string; icon: typeof Flag }[] = [
-  { kind: "holiday", label: "Public Holiday", icon: Flag },
-  { kind: "exam", label: "Examination", icon: BookOpenCheck },
-  { kind: "event", label: "School Event", icon: PartyPopper },
-  { kind: "vacation", label: "Vacation", icon: CalendarHeart },
-  { kind: "semester", label: "Semester", icon: BookOpen },
-  { kind: "training", label: "Teacher Training", icon: Presentation },
-  { kind: "meeting", label: "Parent Meeting", icon: UsersRound },
-  { kind: "other", label: "Other", icon: MoreHorizontal },
+// Icon colors follow the calendar legend so each type reads consistently.
+const EVENT_KINDS: { kind: EventKind; label: string; icon: typeof Flag; color: string }[] = [
+  { kind: "holiday", label: "Public Holiday", icon: Flag, color: "text-red-500" },
+  { kind: "exam", label: "Examination", icon: BookOpenCheck, color: "text-blue-500" },
+  { kind: "event", label: "School Event", icon: PartyPopper, color: "text-amber-500" },
+  { kind: "vacation", label: "Vacation", icon: CalendarHeart, color: "text-violet-500" },
+  { kind: "semester", label: "Semester", icon: BookOpen, color: "text-emerald-600" },
+  { kind: "training", label: "Teacher Training", icon: Presentation, color: "text-yellow-600" },
+  { kind: "meeting", label: "Parent Meeting", icon: UsersRound, color: "text-pink-500" },
+  { kind: "other", label: "Other", icon: MoreHorizontal, color: "text-muted-foreground" },
 ];
 
 /** Event kinds that reuse the school-event form with a preselected type. */
@@ -154,7 +155,7 @@ export function AddEventDialog({ open, onOpenChange, academicYearId }: AddEventD
                 onClick={() => setKind(k.kind)}
                 className="flex flex-col items-center gap-2 rounded-md border border-border p-4 text-center text-sm transition-colors hover:border-primary hover:bg-primary/5"
               >
-                <k.icon className="h-6 w-6 text-primary" />
+                <k.icon className={`h-6 w-6 ${k.color}`} />
                 {k.label}
               </button>
             ))}

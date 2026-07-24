@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
+import { CalendarDays, Pencil, Trash2 } from "lucide-react";
 
 import {
   Dialog,
@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-import { entryColorClass, type CalendarEntry } from "./calendarEntries";
+import { type CalendarEntry } from "./calendarEntries";
 import { formatDisplayDate } from "./calendarOptions";
 
 const IMPACT: Record<CalendarEntry["kind"], { attendance: string; timetable: string }> = {
@@ -38,6 +38,15 @@ const IMPACT: Record<CalendarEntry["kind"], { attendance: string; timetable: str
     attendance: "Defines the reporting period for attendance summaries.",
     timetable: "Used by exams, reports and academic planning.",
   },
+};
+
+/** Soft icon-tile tint per kind (pairs with entryColorClass dots). */
+const ICON_TILE: Record<CalendarEntry["kind"], string> = {
+  holiday: "bg-red-50 text-red-500",
+  vacation: "bg-violet-50 text-violet-500",
+  exam: "bg-blue-50 text-blue-500",
+  event: "bg-amber-50 text-amber-500",
+  semester: "bg-emerald-50 text-emerald-600",
 };
 
 const RELATED_LINK: Partial<Record<CalendarEntry["kind"], { href: string; label: string }>> = {
@@ -103,10 +112,19 @@ export function EventDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span className={cn("h-2.5 w-2.5 rounded-full", entryColorClass(entry))} />
-            {entry.name}
-            <Badge variant="secondary">{entry.typeLabel}</Badge>
+          <DialogTitle className="flex items-center gap-3">
+            <span
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                ICON_TILE[entry.kind],
+              )}
+            >
+              <CalendarDays className="h-5 w-5" />
+            </span>
+            <span className="flex flex-wrap items-center gap-2">
+              {entry.name}
+              <Badge variant="secondary">{entry.typeLabel}</Badge>
+            </span>
           </DialogTitle>
         </DialogHeader>
 

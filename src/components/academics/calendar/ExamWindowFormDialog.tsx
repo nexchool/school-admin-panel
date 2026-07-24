@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
 import { useClasses } from "@/hooks/useClasses";
 import { classAssignmentLabel } from "@/components/subjects/SubjectFormModal";
@@ -172,6 +173,28 @@ export function ExamWindowFormDialog({
             <p className="text-xs text-muted-foreground">
               Leave empty to apply to all classes.
             </p>
+            {selectedClassIds.size > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {classes
+                  .filter((c) => selectedClassIds.has(c.id))
+                  .map((c) => (
+                    <span
+                      key={c.id}
+                      className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                    >
+                      {classAssignmentLabel(c)}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${classAssignmentLabel(c)}`}
+                        onClick={() => toggleClass(c.id)}
+                        className="hover:text-primary/70"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+              </div>
+            )}
             {classes.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 No classes found for this academic year.
@@ -198,7 +221,7 @@ export function ExamWindowFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="exam_description">Description</Label>
-            <Input
+            <Textarea
               id="exam_description"
               {...form.register("description")}
               placeholder="Optional description"

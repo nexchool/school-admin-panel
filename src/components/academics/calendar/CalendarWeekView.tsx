@@ -33,6 +33,8 @@ interface CalendarWeekViewProps {
   weekStart: string;
   onWeekChange: (weekStart: string) => void;
   onEntryClick: (entry: CalendarEntry) => void;
+  /** Right side of the header row (view switcher + Today, per the design). */
+  headerRight?: React.ReactNode;
 }
 
 /** Seven-day columns: day classification plus the entry chips of each day. */
@@ -44,6 +46,7 @@ export function CalendarWeekView({
   weekStart,
   onWeekChange,
   onEntryClick,
+  headerRight,
 }: CalendarWeekViewProps) {
   const byDate = useMemo(() => new Map(days.map((d) => [d.date, d])), [days]);
   const today = todayIso();
@@ -51,28 +54,31 @@ export function CalendarWeekView({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Previous week"
-          disabled={addDaysIso(weekStart, 6) < yearStart}
-          onClick={() => onWeekChange(addDaysIso(weekStart, -7))}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <p className="font-medium">
-          {formatDisplayDate(weekDates[0])} – {formatDisplayDate(weekDates[6])}
-        </p>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Next week"
-          disabled={weekStart > yearEnd}
-          onClick={() => onWeekChange(addDaysIso(weekStart, 7))}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Previous week"
+            disabled={addDaysIso(weekStart, 6) < yearStart}
+            onClick={() => onWeekChange(addDaysIso(weekStart, -7))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <p className="font-medium">
+            {formatDisplayDate(weekDates[0])} – {formatDisplayDate(weekDates[6])}
+          </p>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Next week"
+            disabled={weekStart > yearEnd}
+            onClick={() => onWeekChange(addDaysIso(weekStart, 7))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {headerRight}
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-7">

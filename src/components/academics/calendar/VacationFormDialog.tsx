@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
 import type { CreateHolidayPayload, Holiday } from "@/services/holidayService";
 
@@ -153,7 +154,7 @@ export function VacationFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="vacation_description">Description</Label>
-            <Input
+            <Textarea
               id="vacation_description"
               {...form.register("description")}
               placeholder="Optional description"

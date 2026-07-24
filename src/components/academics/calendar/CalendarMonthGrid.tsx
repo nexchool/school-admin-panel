@@ -52,6 +52,8 @@ interface CalendarMonthGridProps {
   onMonthChange: (month: string) => void;
   onDayClick?: (day: CalendarDay) => void;
   showLegend?: boolean;
+  /** Right side of the header row (view switcher + Today, per the design). */
+  headerRight?: React.ReactNode;
 }
 
 /** Month calendar rendering the per-day classification feed with exam/event
@@ -64,6 +66,7 @@ export function CalendarMonthGrid({
   onMonthChange,
   onDayClick,
   showLegend = true,
+  headerRight,
 }: CalendarMonthGridProps) {
   const months = useMemo(() => {
     const keys: string[] = [];
@@ -119,26 +122,29 @@ export function CalendarMonthGrid({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Previous month"
-          disabled={monthIndex <= 0}
-          onClick={() => onMonthChange(months[monthIndex - 1])}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <p className="font-medium">{monthLabel(currentMonth)}</p>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Next month"
-          disabled={monthIndex >= months.length - 1}
-          onClick={() => onMonthChange(months[monthIndex + 1])}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Previous month"
+            disabled={monthIndex <= 0}
+            onClick={() => onMonthChange(months[monthIndex - 1])}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <p className="min-w-32 text-center font-medium">{monthLabel(currentMonth)}</p>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Next month"
+            disabled={monthIndex >= months.length - 1}
+            onClick={() => onMonthChange(months[monthIndex + 1])}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        {headerRight}
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">

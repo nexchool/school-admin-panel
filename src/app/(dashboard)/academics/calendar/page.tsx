@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarCheck, CalendarPlus, Download, Plus, Printer, Settings2 } from "lucide-react";
+import { CalendarPlus, Download, Plus, Printer, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,7 @@ import { CalendarWeekView } from "@/components/academics/calendar/CalendarWeekVi
 import { CalendarListView } from "@/components/academics/calendar/CalendarListView";
 import {
   CalendarToolbar,
+  ViewSwitcher,
   type CalendarViewMode,
 } from "@/components/academics/calendar/CalendarToolbar";
 import { DayEventsDialog } from "@/components/academics/calendar/DayEventsDialog";
@@ -203,6 +204,16 @@ export default function AcademicCalendarPage() {
     { label: "Parent Meetings", value: summary?.events_by_type?.meeting ?? 0, tone: "text-pink-600" },
   ];
 
+  // View pills + Today live in the calendar card header (per the reference).
+  const viewControls = (
+    <div className="flex items-center gap-2">
+      <ViewSwitcher view={view} onViewChange={setView} />
+      <Button variant="outline" size="sm" onClick={goToToday}>
+        Today
+      </Button>
+    </div>
+  );
+
   return (
     <div className="space-y-4 p-6">
       <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
@@ -218,9 +229,6 @@ export default function AcademicCalendarPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={goToToday}>
-            <CalendarCheck className="mr-1 h-4 w-4" /> Today
-          </Button>
           <Select value={month} onValueChange={(m) => setMonthOverride(m)}>
             <SelectTrigger className="w-40" aria-label="Jump to month">
               <SelectValue />
@@ -266,8 +274,8 @@ export default function AcademicCalendarPage() {
         {stats.map((s) => (
           <Card key={s.label}>
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className={`text-2xl font-semibold ${s.tone}`}>{s.value ?? "—"}</p>
+              <p className={`text-xs font-medium ${s.tone}`}>{s.label}</p>
+              <p className="text-2xl font-semibold text-foreground">{s.value ?? "—"}</p>
             </CardContent>
           </Card>
         ))}
@@ -275,8 +283,6 @@ export default function AcademicCalendarPage() {
 
       <div className="print:hidden">
         <CalendarToolbar
-          view={view}
-          onViewChange={setView}
           search={search}
           onSearchChange={setSearch}
           kinds={kinds}
@@ -297,13 +303,18 @@ export default function AcademicCalendarPage() {
                     month={month}
                     onMonthChange={setMonthOverride}
                     onDayClick={setDayDialog}
+                    headerRight={viewControls}
                   />
                 ) : (
                   <Skeleton className="h-80" />
                 )}
               </CardContent>
             </Card>
-            <UpcomingEventsPanel entries={filteredEntries} onEntryClick={openDetails} />
+            <UpcomingEventsPanel
+              entries={filteredEntries}
+              onEntryClick={openDetails}
+              onViewAll={() => setView("list")}
+            />
           </div>
         )}
 
@@ -318,13 +329,22 @@ export default function AcademicCalendarPage() {
                 weekStart={weekStart}
                 onWeekChange={setWeekOverride}
                 onEntryClick={openDetails}
+                headerRight={viewControls}
               />
             </CardContent>
           </Card>
         )}
 
         {view === "list" && (
-          <CalendarListView entries={filteredEntries} onEntryClick={openDetails} />
+          <Card>
+            <CardContent className="space-y-3 p-4">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">All Calendar Entries</p>
+                {viewControls}
+              </div>
+              <CalendarListView entries={filteredEntries} onEntryClick={openDetails} />
+            </CardContent>
+          </Card>
         )}
       </div>
 

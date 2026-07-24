@@ -3,7 +3,21 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, CalendarCheck, CheckCircle2, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Banknote,
+  Bell,
+  BookOpenCheck,
+  Bus,
+  CalendarCheck,
+  CalendarSync,
+  CheckCircle2,
+  ClipboardCheck,
+  Loader2,
+  Plane,
+  Table2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -183,6 +197,28 @@ function CalendarSetupWizard() {
               </div>
             ))}
           </div>
+
+          <div className="rounded-md border border-border p-4">
+            <p className="mb-3 text-sm font-medium">Affects These Modules</p>
+            <div className="grid grid-cols-4 gap-3 text-center text-xs text-muted-foreground">
+              {[
+                { icon: ClipboardCheck, label: "Attendance" },
+                { icon: Table2, label: "Timetable" },
+                { icon: BookOpenCheck, label: "Exams" },
+                { icon: Plane, label: "Leave Management" },
+                { icon: Bus, label: "Transport" },
+                { icon: Banknote, label: "Fees" },
+                { icon: Bell, label: "Notifications" },
+                { icon: CalendarSync, label: "Calendar Sync" },
+              ].map((module) => (
+                <div key={module.label} className="flex flex-col items-center gap-1.5">
+                  <module.icon className="h-5 w-5 text-primary" />
+                  {module.label}
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex justify-center gap-3 pt-2">
             <Button asChild>
               <Link href="/academics/calendar">

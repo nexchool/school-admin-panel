@@ -11,10 +11,16 @@ import { addDaysIso, formatDisplayDate, todayIso } from "./calendarOptions";
 interface UpcomingEventsPanelProps {
   entries: CalendarEntry[];
   onEntryClick: (entry: CalendarEntry) => void;
+  /** Shows a "View all" action (switches to the List view). */
+  onViewAll?: () => void;
 }
 
 /** Upcoming entries bucketed into Today / Tomorrow / Next 7 / Next 30 days. */
-export function UpcomingEventsPanel({ entries, onEntryClick }: UpcomingEventsPanelProps) {
+export function UpcomingEventsPanel({
+  entries,
+  onEntryClick,
+  onViewAll,
+}: UpcomingEventsPanelProps) {
   const today = todayIso();
 
   const buckets = useMemo(() => {
@@ -84,6 +90,15 @@ export function UpcomingEventsPanel({ entries, onEntryClick }: UpcomingEventsPan
               ))}
             </div>
           ))
+        )}
+        {onViewAll && (
+          <button
+            type="button"
+            onClick={onViewAll}
+            className="block w-full text-right text-xs font-medium text-primary hover:underline"
+          >
+            View all →
+          </button>
         )}
       </CardContent>
     </Card>

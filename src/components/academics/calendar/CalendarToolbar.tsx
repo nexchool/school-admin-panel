@@ -16,19 +16,45 @@ const VIEW_MODES: { value: CalendarViewMode; label: string }[] = [
   { value: "list", label: "List" },
 ];
 
-interface CalendarToolbarProps {
+interface ViewSwitcherProps {
   view: CalendarViewMode;
   onViewChange: (view: CalendarViewMode) => void;
+}
+
+/** Month | Week | List pills — lives in the calendar card header (per the
+ * reference design), so it stays visible in every view. */
+export function ViewSwitcher({ view, onViewChange }: ViewSwitcherProps) {
+  return (
+    <div className="flex rounded-md border border-border p-0.5">
+      {VIEW_MODES.map((mode) => (
+        <button
+          key={mode.value}
+          type="button"
+          onClick={() => onViewChange(mode.value)}
+          aria-pressed={view === mode.value}
+          className={cn(
+            "rounded px-3 py-1 text-sm transition-colors",
+            view === mode.value
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface CalendarToolbarProps {
   search: string;
   onSearchChange: (search: string) => void;
   kinds: CalendarEntryKind[];
   onKindsChange: (kinds: CalendarEntryKind[]) => void;
 }
 
-/** Search box, entry-kind filter chips and the Month/Week/List switcher. */
+/** Search box and entry-kind filter chips with a Clear action. */
 export function CalendarToolbar({
-  view,
-  onViewChange,
   search,
   onSearchChange,
   kinds,
@@ -84,25 +110,6 @@ export function CalendarToolbar({
             <X className="mr-1 h-3 w-3" /> Clear
           </Button>
         )}
-      </div>
-
-      <div className="ml-auto flex rounded-md border border-border p-0.5">
-        {VIEW_MODES.map((mode) => (
-          <button
-            key={mode.value}
-            type="button"
-            onClick={() => onViewChange(mode.value)}
-            aria-pressed={view === mode.value}
-            className={cn(
-              "rounded px-3 py-1 text-sm transition-colors",
-              view === mode.value
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {mode.label}
-          </button>
-        ))}
       </div>
     </div>
   );
