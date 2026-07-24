@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/services/api";
+import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost, apiPut } from "@/services/api";
 
 import type { AcademicYear } from "@/services/academicYearsService";
 
@@ -9,6 +9,8 @@ export interface WeeklyHolidaysConfig {
 }
 
 export type CalendarStatus = "draft" | "published";
+
+export type CalendarExportFormat = "pdf" | "excel" | "csv";
 
 export interface AcademicCalendar {
   id: string;
@@ -137,6 +139,20 @@ export const academicCalendarService = {
   getSummary: (id: string) => apiGet<CalendarSummary>(`${BASE}/${id}/summary`),
   getDays: (id: string) => apiGet<CalendarDay[]>(`${BASE}/${id}/days`),
   publish: (id: string) => apiPost<PublishResult>(`${BASE}/${id}/publish`, {}),
+
+  /**
+   * Download the calendar as a file. `sections` (backend keys) narrows the
+   * export to the requested blocks; omit for the full calendar.
+   */
+  exportCalendar: (
+    id: string,
+    format: CalendarExportFormat,
+    sections?: string[],
+  ): Promise<Blob> => {
+    const params = new URLSearchParams({ format });
+    if (sections?.length) params.set("sections", sections.join(","));
+    return apiGetBlob(`${BASE}/${id}/export?${params.toString()}`);
+  },
 
   listExamWindows: (academicYearId: string) =>
     apiGet<ExamWindow[]>(

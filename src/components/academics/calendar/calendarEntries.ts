@@ -226,20 +226,3 @@ export function filterEntries(
 export function entriesOnDate(entries: CalendarEntry[], iso: string): CalendarEntry[] {
   return entries.filter((e) => e.startDate <= iso && iso <= e.endDate);
 }
-
-/** CSV of the entries layer for Export (opens fine in Excel). */
-export function entriesToCsv(entries: CalendarEntry[]): string {
-  const escape = (value: string | null | undefined) =>
-    `"${String(value ?? "").replace(/"/g, '""')}"`;
-  const header = [
-    "Start Date", "End Date", "Name", "Category", "Type",
-    "Applies To", "Status", "Created By", "Description",
-  ];
-  const rows = entries.map((e) => [
-    e.startDate, e.endDate, e.name, e.kind, e.typeLabel,
-    e.appliesTo, e.status, e.createdByName ?? "", e.description ?? "",
-  ]);
-  return [header, ...rows]
-    .map((row) => row.map(escape).join(","))
-    .join("\n");
-}
