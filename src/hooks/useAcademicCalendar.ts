@@ -206,6 +206,15 @@ export function useUpdateCalendarPreferences() {
   });
 }
 
+export function useCalendarActivity(calendarId?: string, page = 1, enabled = true) {
+  const { tenantId } = useAuth();
+  return useQuery({
+    queryKey: [...academicCalendarKeys.all, "activity", calendarId ?? "none", page, tenantId],
+    queryFn: () => academicCalendarService.getActivity(calendarId!, page),
+    enabled: !!tenantId && !!calendarId && enabled,
+  });
+}
+
 export function useImportCalendarData() {
   const qc = useQueryClient();
   return useMutation({

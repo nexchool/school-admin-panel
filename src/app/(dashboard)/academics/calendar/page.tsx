@@ -9,6 +9,7 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  History,
   MoreHorizontal,
   Plus,
   Printer,
@@ -52,6 +53,7 @@ import { useTerms } from "@/hooks/useTerms";
 import type { CalendarDay } from "@/services/academicCalendarService";
 
 import { AddEventDialog } from "@/components/academics/calendar/AddEventDialog";
+import { CalendarActivityDialog } from "@/components/academics/calendar/CalendarActivityDialog";
 import { CalendarImportDialog } from "@/components/academics/calendar/CalendarImportDialog";
 import { CalendarPreferencesDialog } from "@/components/academics/calendar/CalendarPreferencesDialog";
 import { ConfirmDialog } from "@/components/academics/calendar/ConfirmDialog";
@@ -132,8 +134,10 @@ export default function AcademicCalendarPage() {
   const canImport = hasAnyPermission(["academic_calendar.import"]);
   const canPrint = hasAnyPermission(["academic_calendar.print"]);
   const canSettings = hasAnyPermission(["academic_calendar.settings"]);
+  const canView = hasAnyPermission(["academic_calendar.read"]);
   const hasMenuAction =
-    canExport || canPrint || canEdit || canImport || canSettings || canArchive || canDelete;
+    canView || canExport || canPrint || canEdit || canImport || canSettings ||
+    canArchive || canDelete;
 
   const { academicYearId: activeYearId } = useActiveAcademicYear();
   const { data: years = [], isLoading: yearsLoading } = useAcademicYears();
@@ -171,6 +175,7 @@ export default function AcademicCalendarPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const archiveCalendar = useArchiveCalendar();
   const restoreCalendar = useRestoreCalendar();
@@ -236,6 +241,10 @@ export default function AcademicCalendarPage() {
   const requestPrint = (mode: PrintMode) => {
     setPrintMode(mode);
     setPrintTick((t) => t + 1);
+    // Record "Print Executed" in the activity log (fire-and-forget).
+    if (calendar) {
+      academicCalendarService.logPrint(calendar.id, mode).catch(() => {});
+    }
   };
 
   // Fire the browser print dialog once the print DOM reflects `printMode`.
@@ -390,6 +399,14 @@ export default function AcademicCalendarPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              {canView && (
+                <DropdownMenuItem onClick={() => setActivityOpen(true)}>
+                  <History className="mr-2 h-4 w-4" /> Activity history
+                </DropdownMenuItem>
+              )}
+              {canView &&
+                (canExport || canPrint || canEdit || canImport || canSettings ||
+                  canArchive || canDelete) && <DropdownMenuSeparator />}
               {canExport && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
@@ -675,6 +692,12 @@ export default function AcademicCalendarPage() {
         confirmLabel="Delete"
         onConfirm={handleConfirmDelete}
         isPending={deleteCalendar.isPending}
+      />
+
+      <CalendarActivityDialog
+        calendarId={calendar.id}
+        open={activityOpen}
+        onOpenChange={setActivityOpen}
       />
     </div>
   );

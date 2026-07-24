@@ -49,6 +49,28 @@ export interface CalendarImportReport {
   errors: CalendarImportError[];
 }
 
+export interface CalendarActivityEntry {
+  id: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  description: string;
+  actor_name: string;
+  actor_role: string;
+  created_at: string | null;
+  meta: Record<string, unknown> | null;
+}
+
+export interface CalendarActivityResult {
+  items: CalendarActivityEntry[];
+  pagination: {
+    page: number;
+    page_size: number;
+    total_items: number;
+    total_pages: number;
+  };
+}
+
 export interface AcademicCalendar {
   id: string;
   academic_year_id: string;
@@ -204,6 +226,14 @@ export const academicCalendarService = {
   // ── Import ───────────────────────────────────────────────────────────────
   getImportTemplate: (id: string, type: CalendarImportType): Promise<Blob> =>
     apiGetBlob(`${BASE}/${id}/import-template?type=${type}`),
+
+  // ── Activity history + print log ──────────────────────────────────────────
+  getActivity: (id: string, page = 1, pageSize = 20) =>
+    apiGet<CalendarActivityResult>(
+      `${BASE}/${id}/activity?page=${page}&page_size=${pageSize}`,
+    ),
+  logPrint: (id: string, mode: string) =>
+    apiPost<void>(`${BASE}/${id}/print-log`, { mode }),
   importData: (id: string, type: CalendarImportType, file: File) => {
     const fd = new FormData();
     fd.append("type", type);
