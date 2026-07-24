@@ -13,6 +13,7 @@ import {
   useUpdateExamWindow,
 } from "@/hooks/useAcademicCalendar";
 import { useClasses } from "@/hooks/useClasses";
+import { classAssignmentLabel } from "@/components/subjects/SubjectFormModal";
 import { toastError } from "@/lib/errorToast";
 import type { ExamWindow } from "@/services/academicCalendarService";
 
@@ -36,7 +37,7 @@ export function StepExamWindows({ academicYearId }: StepExamWindowsProps) {
   const [editing, setEditing] = useState<ExamWindow | null>(null);
 
   const classNameById = useMemo(
-    () => new Map(classes.map((c) => [c.id, c.name || c.section || c.id])),
+    () => new Map(classes.map((c) => [c.id, classAssignmentLabel(c)])),
     [classes],
   );
 

@@ -94,6 +94,9 @@ function CalendarSetupWizard() {
           onCancel={() => router.push("/academics/calendar")}
           onYearReady={(yearId) => {
             setAcademicYearId(yearId);
+            // The calendar query resolves after this; don't let the
+            // resume-from-server adjustment yank the wizard back to step 1.
+            setResumed(true);
             setStep(1);
           }}
         />

@@ -99,10 +99,14 @@ export interface PublishResult {
 const BASE = "/api/academics/calendar";
 
 export const academicCalendarService = {
-  getCalendar: (academicYearId: string) =>
-    apiGet<AcademicCalendar | null>(
+  getCalendar: async (academicYearId: string): Promise<AcademicCalendar | null> => {
+    // The shared envelope unwrap turns `data: null` into `{}` — normalize back
+    // to null so "no calendar yet" is distinguishable from a real row.
+    const result = await apiGet<AcademicCalendar | Record<string, never>>(
       `${BASE}?academic_year_id=${encodeURIComponent(academicYearId)}`,
-    ),
+    );
+    return result && "id" in result ? (result as AcademicCalendar) : null;
+  },
   createDraft: (academicYearId: string) =>
     apiPost<AcademicCalendar>(BASE, { academic_year_id: academicYearId }),
   updateCalendar: (
