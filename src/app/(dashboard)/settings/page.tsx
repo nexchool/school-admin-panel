@@ -107,9 +107,10 @@ export default function AcademicSettingsPage() {
   const [idSaveError, setIdSaveError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
 
-  // Sync from server once loaded
+  // Sync form fields from the server payload once it loads (controlled reset).
   useEffect(() => {
     if (!settings) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setWorkingDays(settings.default_working_days_json ?? [1, 2, 3, 4, 5, 6]);
     setBellScheduleId(settings.default_bell_schedule_id ?? "");
     setAllowAdminOverride(settings.allow_admin_attendance_override ?? true);
@@ -117,6 +118,7 @@ export default function AcademicSettingsPage() {
     setTeacherFormat(settings.teacher_employee_id_format?.trim() ? settings.teacher_employee_id_format : null);
     setIdSaveError(null);
     setDirty(false);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -175,7 +177,7 @@ export default function AcademicSettingsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/academics">
+          <Link href="/academics/academic-years">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="size-4" />
             </Button>

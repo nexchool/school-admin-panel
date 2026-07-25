@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import {
@@ -29,7 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
-import { ArrowLeft, CalendarRange, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarRange, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
 
@@ -54,6 +53,7 @@ export default function AcademicYearsPage() {
     queryKey: academicYearsKeys.list(false),
     queryFn: () => academicYearsService.getAcademicYears(false),
   });
+  const activeYear = years.find((y) => y.is_active !== false);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AcademicYear | null>(null);
@@ -174,28 +174,43 @@ export default function AcademicYearsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link
-            href="/academics"
-            className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Academics
-          </Link>
-          <h1 className="text-xl font-semibold tracking-tight">Academic years</h1>
-          <p className="text-sm text-muted-foreground">
-            Create and edit school years (date ranges must not overlap another year). Classes and fees
-            reference these records.
-          </p>
+          <h1 className="text-2xl font-semibold">Academic Years</h1>
+          <p className="text-sm text-muted-foreground">Academics › Academic Years</p>
         </div>
         {canManage && (
-          <Button type="button" onClick={openCreate} className="gap-2 shrink-0">
-            <Plus className="h-4 w-4" />
+          <Button type="button" onClick={openCreate} className="shrink-0">
+            <Plus className="mr-1 h-4 w-4" />
             New academic year
           </Button>
         )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground">Total Years</p>
+            <p className="text-2xl font-semibold text-foreground">{years.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground">Active Year</p>
+            <p className="truncate text-2xl font-semibold text-foreground">
+              {activeYear?.name ?? "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-muted-foreground">Current Period</p>
+            <p className="mt-1.5 text-sm font-medium text-foreground">
+              {activeYear ? fmtRange(activeYear.start_date, activeYear.end_date) : "—"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
