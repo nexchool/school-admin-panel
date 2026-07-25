@@ -73,6 +73,53 @@ export function useUpdateTeacher() {
   );
 }
 
+export function useBulkDeleteTeachers() {
+  const queryClient = useQueryClient();
+  return useAppMutation(
+    {
+      mutationFn: (teacherIds: string[]) =>
+        teachersService.bulkDelete(teacherIds),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+      },
+    },
+    {
+      success: (result) => {
+        const n = result.deleted;
+        return `Deleted ${n} teacher${n === 1 ? "" : "s"}`;
+      },
+      error: "Couldn't delete the teachers",
+      retry: true,
+    },
+  );
+}
+
+export function useBulkUpdateTeacherStatus() {
+  const queryClient = useQueryClient();
+  return useAppMutation(
+    {
+      mutationFn: ({
+        teacherIds,
+        status,
+      }: {
+        teacherIds: string[];
+        status: string;
+      }) => teachersService.bulkUpdateStatus(teacherIds, status),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: teachersKeys.all });
+      },
+    },
+    {
+      success: (result) => {
+        const n = result.updated;
+        return `Updated ${n} teacher${n === 1 ? "" : "s"}`;
+      },
+      error: "Couldn't update the teachers",
+      retry: true,
+    },
+  );
+}
+
 export function useDeleteTeacher() {
   const queryClient = useQueryClient();
   return useAppMutation(
