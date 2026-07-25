@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { FieldError } from "@/components/ui/field-error";
+import { RequiredMark } from "@/components/ui/required-mark";
 import type { Student, CreateStudentInput } from "@/types/student";
 import type { ClassItem } from "@/services/classesService";
 import { StructuredClassPicker } from "@/components/students/StructuredClassPicker";
@@ -48,6 +49,7 @@ import {
   requiredPhone,
   optionalString,
   optionalEmail,
+  optionalPhone,
   optionalPhoneLoose,
   optionalAadhar,
   optionalPincode,
@@ -65,8 +67,14 @@ const studentSchema = z.object({
   guardian_relationship: requiredString("Relationship"),
   guardian_phone: requiredPhone("Guardian phone"),
   guardian_email: optionalEmail,
-  class_id: z.string().optional(),
-  phone: optionalPhoneLoose,
+  // Required: a student is always placed in a class. Enforced here rather than
+  // as a submit-time setError so the message appears with every other field's,
+  // and the section auto-expands via FIELD_SECTION like any other error.
+  class_id: z.string().trim().min(1, "Please select a class for this student."),
+  // The student's own number is a mobile (it receives OTPs and SMS), so it gets
+  // the strict 10-digit rule. Parent/emergency contacts stay `loose` — those
+  // may legitimately be landlines with STD codes.
+  phone: optionalPhone,
   date_of_birth: optionalDate,
   gender: optionalString,
   address: optionalString,
@@ -232,13 +240,6 @@ const FIELD_SECTION: Partial<Record<keyof StudentFormValues, SectionId>> = {
 const TEXTAREA_CLASS =
   "min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
 
-function RequiredMark() {
-  return (
-    <span aria-hidden className="text-destructive">
-      *
-    </span>
-  );
-}
 
 function FormSection({
   title,
@@ -561,15 +562,6 @@ export function StudentForm({
         payload[k] = v as any;
       }
 
-      if (!values.class_id) {
-        // A class is required — never silently drop the student into an
-        // arbitrary class. Force the admin to pick one.
-        form.setError("class_id", {
-          type: "manual",
-          message: "Please select a class for this student.",
-        });
-        return;
-      }
       await onSubmit(payload);
     }
   );
@@ -656,10 +648,12 @@ export function StudentForm({
             <div className="space-y-2 sm:col-span-2">
               <StructuredClassPicker
                 classes={classes}
+                required
                 value={form.watch("class_id") || ""}
                 onChange={(v) => {
-                  form.setValue("class_id", v);
-                  if (v) form.clearErrors("class_id");
+                  // shouldValidate: setValue skips the resolver by default, so
+                  // without it the error would linger after a valid pick.
+                  form.setValue("class_id", v, { shouldValidate: true });
                 }}
               />
               <FieldError message={form.formState.errors.class_id?.message} />

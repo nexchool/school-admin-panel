@@ -13,18 +13,29 @@ import type {
   CreateStudentResponse,
 } from "@/types/student";
 
+/** What an import row will do: add a student, or enrich one already on record. */
+export type BulkImportAction = "create" | "update";
+
 export type BulkImportPreviewRow = {
   row_number: number;
   values: Record<string, unknown>;
   errors: string[];
   warnings: string[];
   valid: boolean;
+  /** Null on invalid rows, which resolve to no action. */
+  action: BulkImportAction | null;
 };
 
 export type BulkImportPreviewResult = {
   preview: BulkImportPreviewRow[];
   errors: unknown[];
-  summary: { valid: number; invalid: number; total: number };
+  summary: {
+    valid: number;
+    invalid: number;
+    total: number;
+    create: number;
+    update: number;
+  };
   headers: string[];
 };
 
@@ -36,7 +47,10 @@ export type BulkImportFailedRow = {
 
 export type BulkImportResult = {
   total: number;
+  /** Newly created students. Kept for compatibility; equals `created`. */
   success: number;
+  created: number;
+  updated: number;
   failed: number;
   failed_rows: BulkImportFailedRow[];
 };
@@ -160,6 +174,16 @@ export const studentsService = {
 
   deleteStudent: async (id: string): Promise<void> => {
     await apiDelete(`/api/students/${id}`);
+  },
+
+  /** Delete many students in one request (server caps the batch at 500). */
+  bulkDelete: async (
+    studentIds: string[]
+  ): Promise<{ deleted: number; missing: string[] }> => {
+    return apiPost<{ deleted: number; missing: string[] }>(
+      "/api/students/bulk-delete",
+      { student_ids: studentIds }
+    );
   },
 
   bulkImportPreview: async (

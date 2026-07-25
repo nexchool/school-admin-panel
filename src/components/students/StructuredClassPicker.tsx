@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { Label } from "@/components/ui/label";
+import { RequiredMark } from "@/components/ui/required-mark";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,12 @@ interface Props {
   /** Currently chosen class id (controlled). */
   value: string;
   onChange: (classId: string) => void;
+  /**
+   * Marks Class / section as mandatory. Only the final level is marked — the
+   * Branch / Programme / Grade dropdowns above it are filters that narrow the
+   * list, not values that get saved.
+   */
+  required?: boolean;
 }
 
 const ANY = "__any__";
@@ -32,7 +39,12 @@ const ANY = "__any__";
  * dropdown, the active filter mirrors the currently selected class. That
  * keeps everything in sync without setState-in-effect machinery.
  */
-export function StructuredClassPicker({ classes, value, onChange }: Props) {
+export function StructuredClassPicker({
+  classes,
+  value,
+  onChange,
+  required = false,
+}: Props) {
   const selected = classes.find((c) => c.id === value);
 
   const [unitOverride, setUnitOverride] = useState<string | null>(null);
@@ -194,9 +206,11 @@ export function StructuredClassPicker({ classes, value, onChange }: Props) {
       </div>
 
       <div className="space-y-1">
-        <Label>Class / section</Label>
-        <Select value={value} onValueChange={onChange}>
-          <SelectTrigger>
+        <Label htmlFor="class_id">
+          Class / section {required && <RequiredMark />}
+        </Label>
+        <Select value={value} onValueChange={onChange} required={required}>
+          <SelectTrigger id="class_id" aria-required={required}>
             <SelectValue placeholder="Select class" />
           </SelectTrigger>
           <SelectContent>

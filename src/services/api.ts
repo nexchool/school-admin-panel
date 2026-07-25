@@ -159,6 +159,19 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
     notifyForbidden();
   }
 
+  // 413 needs its own branch: nginx rejects an oversized body with an HTML
+  // error page, not our JSON envelope, so extractErrorMessage would fall back
+  // to a bare status text like "Request Entity Too Large". Clients validate
+  // size up front, but a proxy limit lower than the app's own can still land
+  // here — say what actually happened instead of leaking the proxy's page.
+  if (response.status === 413) {
+    throw new ApiException(
+      "The file you selected is too large to upload. Please choose a smaller file.",
+      413,
+      data
+    );
+  }
+
   if (data && typeof data === "object" && "success" in data) {
     const res = data as { success: boolean; data?: unknown; message?: string; error?: string };
     if (res.success) {
