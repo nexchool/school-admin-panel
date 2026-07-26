@@ -24,13 +24,29 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTeachers, useCreateTeacher } from "@/hooks/useTeachers";
+import {
+  useTeachers,
+  useCreateTeacher,
+  useBulkDeleteTeachers,
+  useBulkUpdateTeacherStatus,
+} from "@/hooks/useTeachers";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { BulkActionBar } from "@/components/tables/BulkActionBar";
 import { TeacherFormModal } from "@/components/teachers/TeacherFormModal";
 import { BulkImportTeachers } from "@/components/teachers/BulkImportTeachers";
 import {
@@ -47,7 +63,7 @@ import type { Teacher, TeacherLeave } from "@/types/teacher";
 import {
   Plus,
   Search,
-  Upload,
+  FileUp,
   ClipboardList,
   Users,
   Check,
@@ -55,6 +71,8 @@ import {
   Loader2,
   SlidersHorizontal,
   RotateCcw,
+  ChevronDown,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TabNav, type TabNavItem } from "@/components/detail";
@@ -249,6 +267,7 @@ const VALID_SORT_BYS: TeachersSortBy[] = [
   "date_of_joining",
 ];
 
+// Mirrors TEACHER_STATUS_VALUES in server/modules/teachers/teacher_schemas.py.
 const TEACHER_STATUS_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
@@ -447,6 +466,65 @@ export default function TeachersPage() {
 
   const { data, isLoading, isFetching, isError, refetch } = useTeachers(queryParams);
   const createMutation = useCreateTeacher();
+  const bulkDeleteMutation = useBulkDeleteTeachers();
+  const bulkStatusMutation = useBulkUpdateTeacherStatus();
+
+  const { hasPermission } = useAuth();
+  const canUpdate = hasPermission("teacher.update");
+  const canDelete = hasPermission("teacher.delete");
+
+  // Row selection (persists across pages; ids may span pages).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const toggleRow = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleAllVisible = useCallback(
+    (visibleIds: string[], select: boolean) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of visibleIds) {
+          if (select) next.add(id);
+          else next.delete(id);
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const selectedCount = selectedIds.size;
+
+  const handleBulkStatus = async (status: string) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      await bulkStatusMutation.mutateAsync({ teacherIds: ids, status });
+      clearSelection();
+    } catch {
+      // Keep the selection so the user can retry.
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      await bulkDeleteMutation.mutateAsync(ids);
+      clearSelection();
+    } catch {
+      // Keep the selection so the user can retry.
+    }
+  };
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -587,7 +665,7 @@ export default function TeachersPage() {
               onClick={() => setImportOpen(true)}
               className="gap-2"
             >
-              <Upload className="size-4" />
+              <FileUp className="size-4" />
               Bulk import
             </Button>
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
@@ -885,10 +963,66 @@ export default function TeachersPage() {
           </CardHeader>
 
           <CardContent>
+            {(canUpdate || canDelete) && (
+              <BulkActionBar
+                selectedCount={selectedCount}
+                onClear={clearSelection}
+                noun="teacher"
+              >
+                {canUpdate && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        disabled={bulkStatusMutation.isPending}
+                      >
+                        Change status
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Set status to</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {TEACHER_STATUS_OPTIONS.map((o) => (
+                        <DropdownMenuItem
+                          key={o.value}
+                          onClick={() => handleBulkStatus(o.value)}
+                        >
+                          {o.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setBulkDeleteOpen(true)}
+                    disabled={bulkDeleteMutation.isPending}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                )}
+              </BulkActionBar>
+            )}
             <DataTable
               columns={columns}
               data={items}
               getRowId={(row) => row.id}
+              selection={
+                canUpdate || canDelete
+                  ? {
+                      selectedIds,
+                      onToggle: toggleRow,
+                      onToggleAll: toggleAllVisible,
+                    }
+                  : undefined
+              }
               isLoading={isLoading}
               isError={isError}
               onRetry={() => refetch()}
@@ -929,6 +1063,17 @@ export default function TeachersPage() {
         onSubmit={handleCreate}
       />
       <BulkImportTeachers open={importOpen} onOpenChange={setImportOpen} />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={`Delete ${selectedCount} teacher${selectedCount === 1 ? "" : "s"}?`}
+        description="This removes the selected teachers and disables their logins. Their class-teacher assignments are cleared, while attendance they recorded is preserved. This cannot be undone."
+        confirmLabel="Delete permanently"
+        variant="destructive"
+        loading={bulkDeleteMutation.isPending}
+        onConfirm={handleBulkDelete}
+      />
     </div>
   );
 }

@@ -22,6 +22,8 @@ import {
 import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABELS,
+  MAX_DOCUMENT_SIZE_LABEL,
+  validateDocumentFile,
 } from "@/services/studentDocumentsService";
 import { useUploadStudentDocument } from "@/hooks/useStudentDocuments";
 import { FileText, Loader2 } from "lucide-react";
@@ -45,6 +47,9 @@ export function UploadDocumentModal({
   // Local object URL for an image preview so the user can verify the file
   // before uploading. Null for non-images (e.g. PDFs).
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Blocks the upload and explains why, rather than letting an oversized
+  // body fail mid-flight as an opaque network error (NXS-31 / NXS-38).
+  const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadMutation = useUploadStudentDocument(studentId);
 
@@ -62,11 +67,13 @@ export function UploadDocumentModal({
         ? URL.createObjectURL(next)
         : null;
     });
+    setFileError(next ? validateDocumentFile(next) : null);
     setFile(next);
   };
 
   const reset = () => {
     setDocumentType("");
+    setFileError(null);
     setSelectedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -81,6 +88,7 @@ export function UploadDocumentModal({
       toast.error("Please select document type and choose a file.");
       return;
     }
+    if (fileError) return;
     try {
       await uploadMutation.mutateAsync({ documentType, file });
       // Success + error toasts owned by useUploadStudentDocument.
@@ -97,7 +105,8 @@ export function UploadDocumentModal({
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Add a document for this student. Supported formats: PDF, images, etc.
+            Add a document for this student. PDF, JPG or PNG, up to{" "}
+            {MAX_DOCUMENT_SIZE_LABEL}.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -123,7 +132,11 @@ export function UploadDocumentModal({
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+              aria-invalid={fileError ? true : undefined}
             />
+            {fileError && (
+              <p className="text-xs text-destructive">{fileError}</p>
+            )}
             {file && (
               // Stack vertically and cap the image to the container width so a
               // wide image can't push content outside the dialog.
@@ -156,7 +169,9 @@ export function UploadDocumentModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!documentType || !file || uploadMutation.isPending}
+            disabled={
+              !documentType || !file || !!fileError || uploadMutation.isPending
+            }
           >
             {uploadMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />

@@ -41,7 +41,7 @@ import Link from "next/link";
 import {
   useStudents,
   useCreateStudent,
-  useDeleteStudent,
+  useBulkDeleteStudents,
   useBulkUpdateStudentStatus,
 } from "@/hooks/useStudents";
 import { useClasses } from "@/hooks/useClasses";
@@ -51,6 +51,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { BulkImportStudents } from "@/components/students/BulkImportStudents";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { BulkActionBar } from "@/components/tables/BulkActionBar";
 import {
   DataTable,
   type DataTableColumn,
@@ -64,7 +65,7 @@ import type {
 import type { Student } from "@/types/student";
 import { STUDENT_STATUS_OPTIONS } from "@/constants/studentStatus";
 import {
-  Upload,
+  FileUp,
   Plus,
   Search,
   SlidersHorizontal,
@@ -76,7 +77,6 @@ import {
   ChevronDown,
   Loader2,
 } from "lucide-react";
-import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
 import { cn } from "@/lib/utils";
 
@@ -331,6 +331,13 @@ export default function StudentsPage() {
           next.set(paramName, value);
         }
       }
+
+      // Any change to what is being listed invalidates the current page number:
+      // clearing a filter while on page 3 of the filtered set would otherwise
+      // leave you on page 3 of the unfiltered set (often past the end, showing
+      // nothing) — which reads as "the clear button did nothing".
+      const changesResultSet = Object.keys(updates).some((k) => k !== "page");
+      if (changesResultSet) next.delete(PARAM.page);
       // Strip any param that's at its default.
       const stripIfDefault = (name: string, defaultValue: string) => {
         if (next.get(name) === defaultValue) next.delete(name);
@@ -350,9 +357,16 @@ export default function StudentsPage() {
   // Push the debounced search value into the URL (only when it diverges from
   // what's already there to avoid loops / pointless history churn).
   useEffect(() => {
+    // Ignore a debounced value that no longer matches the box. Clearing sets
+    // `searchInput` to "" immediately while `debouncedSearch` still holds the
+    // old term for up to 300ms; without this guard the URL change re-runs this
+    // effect and writes the old term straight back, resurrecting the search the
+    // user just cleared until the debounce catches up. That race is why Clear
+    // appeared to do nothing on the first click.
+    if (debouncedSearch !== searchInput) return;
     if (debouncedSearch === url.search) return;
     setUrlParams({ search: debouncedSearch || null });
-  }, [debouncedSearch, url.search, setUrlParams]);
+  }, [debouncedSearch, searchInput, url.search, setUrlParams]);
 
   // Build the server query from URL state.
   const queryParams = useMemo(
@@ -385,7 +399,7 @@ export default function StudentsPage() {
   const { data: academicYears = [] } = useAcademicYears();
   const { data: programmes = [] } = useProgrammes();
   const createMutation = useCreateStudent();
-  const deleteMutation = useDeleteStudent();
+  const bulkDeleteMutation = useBulkDeleteStudents();
   const bulkStatusMutation = useBulkUpdateStudentStatus();
   const { hasPermission } = useAuth();
   const canUpdate = hasPermission("student.update");
@@ -436,15 +450,15 @@ export default function StudentsPage() {
   const handleBulkDelete = async () => {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
-    const results = await Promise.allSettled(
-      ids.map((id) => deleteMutation.mutateAsync(id))
-    );
-    const ok = results.filter((r) => r.status === "fulfilled").length;
-    const failed = ids.length - ok;
-    if (ok) toast.success(`Deleted ${ok} student${ok === 1 ? "" : "s"}`);
-    if (failed) toast.error(`${failed} could not be deleted`);
-    clearSelection();
-    refetch();
+    try {
+      // One request for the whole selection — this used to fire a DELETE per
+      // row, so deleting a full page meant 100 concurrent calls.
+      await bulkDeleteMutation.mutateAsync(ids);
+      // Success + error toasts owned by useBulkDeleteStudents.
+      clearSelection();
+    } catch {
+      // Keep the selection so the user can retry.
+    }
   };
 
   const handleExport = async () => {
@@ -681,7 +695,12 @@ export default function StudentsPage() {
             onClick={() => setImportOpen(true)}
             className="gap-2"
           >
-            <Upload className="size-4" />
+            {/* Document-with-arrow vs. the tray-with-arrow on Export: lucide's
+                Upload/Download pair are mirror images of one another, which is
+                what made these two read as interchangeable. Differing by
+                silhouette, not just arrow direction, tells them apart at a
+                glance — and a document glyph matches what Bulk Import takes. */}
+            <FileUp className="size-4" />
             Bulk Import
           </Button>
           <Button
@@ -779,7 +798,16 @@ export default function StudentsPage() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-[340px] p-4">
+              {/* The panel is taller than a short viewport (or a laptop screen
+                  with the browser chrome expanded), so it is capped to the space
+                  Radix reports as available and scrolls internally instead of
+                  being clipped at the bottom. collisionPadding keeps it off the
+                  viewport edge. */}
+              <PopoverContent
+                align="end"
+                collisionPadding={16}
+                className="max-h-[var(--radix-popover-content-available-height)] w-[340px] overflow-y-auto p-4"
+              >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-semibold">Filters</h4>
@@ -1072,13 +1100,13 @@ export default function StudentsPage() {
         </CardHeader>
 
         <CardContent>
-          {selectedCount > 0 && (canUpdate || canDelete) && (
-            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
-              <span className="text-sm font-medium">
-                {selectedCount} selected
-              </span>
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {canUpdate && (
+          {(canUpdate || canDelete) && (
+            <BulkActionBar
+              selectedCount={selectedCount}
+              onClear={clearSelection}
+              noun="student"
+            >
+              {canUpdate && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -1105,23 +1133,19 @@ export default function StudentsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-                {canDelete && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setBulkDeleteOpen(true)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="size-4" />
-                    Delete
-                  </Button>
-                )}
-                <Button variant="ghost" size="sm" onClick={clearSelection}>
-                  Clear
+              {canDelete && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setBulkDeleteOpen(true)}
+                  disabled={bulkDeleteMutation.isPending}
+                >
+                  <Trash2 className="size-4" />
+                  Delete
                 </Button>
-              </div>
-            </div>
+              )}
+            </BulkActionBar>
           )}
           <DataTable
             columns={columns}
@@ -1174,7 +1198,7 @@ export default function StudentsPage() {
         description="This permanently removes the selected students along with their logins, uploaded documents, and fee records. This cannot be undone."
         confirmLabel="Delete permanently"
         variant="destructive"
-        loading={deleteMutation.isPending}
+        loading={bulkDeleteMutation.isPending}
         onConfirm={handleBulkDelete}
       />
 

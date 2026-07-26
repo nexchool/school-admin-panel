@@ -124,6 +124,27 @@ export const teachersService = {
     await apiDelete(`/api/teachers/${id}`);
   },
 
+  /** Delete many teachers in one request (server caps the batch at 500). */
+  bulkDelete: async (
+    teacherIds: string[]
+  ): Promise<{ deleted: number; missing: string[] }> => {
+    return apiPost<{ deleted: number; missing: string[] }>(
+      "/api/teachers/bulk-delete",
+      { teacher_ids: teacherIds }
+    );
+  },
+
+  /** Set status for many teachers at once. */
+  bulkUpdateStatus: async (
+    teacherIds: string[],
+    status: string
+  ): Promise<{ updated: number; missing: string[] }> => {
+    return apiPost<{ updated: number; missing: string[] }>(
+      "/api/teachers/bulk-status",
+      { teacher_ids: teacherIds, status }
+    );
+  },
+
   bulkImportPreview: async (
     formData: FormData
   ): Promise<BulkImportPreviewResult> => {

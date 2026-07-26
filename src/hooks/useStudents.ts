@@ -116,8 +116,8 @@ export function useUpdateStudent() {
   );
 }
 
-// No centralized toast: this mutation is fired per-row inside a bulk-delete
-// loop on the list page, so the call site shows one aggregated toast instead.
+// No centralized toast: the row-level delete menu shows its own confirmation
+// and message at the call site.
 export function useDeleteStudent() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -126,6 +126,27 @@ export function useDeleteStudent() {
       queryClient.invalidateQueries({ queryKey: studentsKeys.all });
     },
   });
+}
+
+export function useBulkDeleteStudents() {
+  const queryClient = useQueryClient();
+  return useAppMutation(
+    {
+      mutationFn: (studentIds: string[]) =>
+        studentsService.bulkDelete(studentIds),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+      },
+    },
+    {
+      success: (result) => {
+        const n = result.deleted;
+        return `Deleted ${n} student${n === 1 ? "" : "s"}`;
+      },
+      error: "Couldn't delete the students",
+      retry: true,
+    },
+  );
 }
 
 export function useBulkUpdateStudentStatus() {

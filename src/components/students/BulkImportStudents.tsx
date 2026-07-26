@@ -296,8 +296,13 @@ function ImportGuidePopover() {
                 Academics.
               </li>
               <li>
-                Admission numbers are assigned automatically — an
-                admission_number column is ignored.
+                Leave admission_number blank for new students — it is assigned
+                automatically. Fill it in to update a student already on record.
+              </li>
+              <li>
+                Re-uploading a sheet does not create duplicates: rows matching an
+                existing student by admission number (or email) update that
+                record, and blank cells leave existing values untouched.
               </li>
               <li>Dates use YYYY-MM-DD (DD-MM-YYYY / DD/MM/YYYY also work).</li>
               <li>
@@ -366,7 +371,10 @@ export function BulkImportStudents({
     valid: number;
     invalid: number;
     total: number;
+    create: number;
+    update: number;
   } | null>(null);
+  const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [importResult, setImportResult] = useState<BulkImportResult | null>(
     null
   );
@@ -381,6 +389,7 @@ export function BulkImportStudents({
     setImportResult(null);
     setPreviewError(null);
     setSendEmail(true);
+    setConfirmUpdates(false);
   }, []);
 
   // Default to the active academic year once years load. "Adjust state during
@@ -446,6 +455,9 @@ export function BulkImportStudents({
       setPreviewRows(res.preview ?? []);
       setPreviewHeaders(res.headers ?? []);
       setSummary(res.summary ?? null);
+      // A fresh preview is a fresh decision — never carry an acknowledgement
+      // over from a sheet the user has since replaced.
+      setConfirmUpdates(false);
       setStep("preview");
     } catch (err) {
       const msg =
@@ -461,9 +473,14 @@ export function BulkImportStudents({
   };
 
   const validCount = summary?.valid ?? previewRows.filter((r) => r.valid).length;
+  const updateCount =
+    summary?.update ??
+    previewRows.filter((r) => r.valid && r.action === "update").length;
+  const needsUpdateConfirmation = updateCount > 0 && !confirmUpdates;
 
   const handleImport = async () => {
     if (!file || !academicYearId || validCount === 0) return;
+    if (needsUpdateConfirmation) return;
     setStep("importing");
     try {
       const fd = new FormData();
@@ -475,7 +492,7 @@ export function BulkImportStudents({
       setStep("results");
       queryClient.invalidateQueries({ queryKey: studentsKeys.all });
       toast.success(
-        `Import finished: ${res.success} created, ${res.failed} failed`
+        `Import finished: ${res.created} created, ${res.updated} updated, ${res.failed} failed`
       );
     } catch (err) {
       const msg =
@@ -609,6 +626,19 @@ export function BulkImportStudents({
                 <CheckCircle2 className="size-4" />
                 Valid: <strong>{summary?.valid ?? validCount}</strong>
               </span>
+              {/* Split out so a re-import makes plain how many rows add students
+                  and how many only fill in detail on students already on record. */}
+              {(summary?.create ?? 0) > 0 && (
+                <span>
+                  New students: <strong>{summary?.create}</strong>
+                </span>
+              )}
+              {(summary?.update ?? 0) > 0 && (
+                <span>
+                  Existing (details updated):{" "}
+                  <strong>{summary?.update}</strong>
+                </span>
+              )}
               {(summary?.invalid ?? 0) > 0 && (
                 <span className="flex items-center gap-1 text-destructive">
                   <XCircle className="size-4" />
@@ -625,6 +655,32 @@ export function BulkImportStudents({
               />
               Send welcome email (push notification is always sent)
             </label>
+            {/* Updating existing students is the one irreversible thing this
+                dialog does — a sheet older than the app can overwrite details
+                someone corrected by hand. Creates need no such gate, so the
+                acknowledgement only appears when the sheet actually touches
+                records already on file. */}
+            {updateCount > 0 && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={confirmUpdates}
+                    onChange={(e) => setConfirmUpdates(e.target.checked)}
+                    className="mt-0.5 rounded border-input"
+                  />
+                  <span>
+                    <strong>
+                      {updateCount} existing student
+                      {updateCount === 1 ? "" : "s"} will be updated
+                    </strong>{" "}
+                    from this sheet. Filled-in cells replace what is currently
+                    stored, including details edited in the app; blank cells are
+                    left untouched, and no one is moved between classes.
+                  </span>
+                </label>
+              </div>
+            )}
             <div className="max-h-[min(420px,50vh)] overflow-auto rounded-lg border border-border">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="sticky top-0 bg-muted/80">
@@ -696,7 +752,7 @@ export function BulkImportStudents({
               </Button>
               <Button
                 onClick={handleImport}
-                disabled={validCount === 0}
+                disabled={validCount === 0 || needsUpdateConfirmation}
                 className="gap-2"
               >
                 Import valid rows ({validCount})
@@ -724,7 +780,11 @@ export function BulkImportStudents({
                 <span>Total: {importResult.total}</span>
                 <span className="flex items-center gap-1 text-green-600">
                   <CheckCircle2 className="size-4" />
-                  Success: {importResult.success}
+                  Created: {importResult.created}
+                </span>
+                <span className="flex items-center gap-1 text-green-600">
+                  <CheckCircle2 className="size-4" />
+                  Updated: {importResult.updated}
                 </span>
                 <span className="flex items-center gap-1 text-destructive">
                   <XCircle className="size-4" />
