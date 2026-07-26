@@ -695,12 +695,12 @@ export default function StudentsPage() {
             onClick={() => setImportOpen(true)}
             className="gap-2"
           >
-            {/* Document-with-arrow vs. the tray-with-arrow on Export: lucide's
-                Upload/Download pair are mirror images of one another, which is
-                what made these two read as interchangeable. Differing by
-                silhouette, not just arrow direction, tells them apart at a
-                glance — and a document glyph matches what Bulk Import takes. */}
-            <FileUp className="size-4" />
+            {/* Arrow direction follows data flow, not file transfer: importing
+                brings records down into the app, exporting sends them back out.
+                The silhouettes differ too (tray here, document on Export) —
+                lucide's Upload/Download pair are mirror images, which is what
+                made the original two read as interchangeable. */}
+            <Download className="size-4" />
             Bulk Import
           </Button>
           <Button
@@ -712,7 +712,7 @@ export default function StudentsPage() {
             {exporting ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Download className="size-4" />
+              <FileUp className="size-4" />
             )}
             Export
           </Button>

@@ -63,7 +63,7 @@ import type { Teacher, TeacherLeave } from "@/types/teacher";
 import {
   Plus,
   Search,
-  FileUp,
+  Download,
   ClipboardList,
   Users,
   Check,
@@ -665,7 +665,7 @@ export default function TeachersPage() {
               onClick={() => setImportOpen(true)}
               className="gap-2"
             >
-              <FileUp className="size-4" />
+              <Download className="size-4" />
               Bulk import
             </Button>
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
