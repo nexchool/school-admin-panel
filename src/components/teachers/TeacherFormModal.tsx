@@ -90,6 +90,17 @@ export function TeacherFormModal({
   });
   const departments = departmentsData?.items ?? [];
 
+  // The active-departments facet omits a department that has since gone
+  // inactive. If the teacher being edited is still assigned to it, that id
+  // won't match any SelectItem and Radix falls back to the placeholder —
+  // which reads identically to the real "None" entry. Inject a disabled
+  // option for it so an inactive assignment stays visually distinct from
+  // "no department", instead of looking like one.
+  const currentDepartmentId = initialData?.department_id ?? null;
+  const isCurrentDepartmentInactive =
+    !!currentDepartmentId &&
+    !departments.some((d) => d.id === currentDepartmentId);
+
   // Reseed when opened or when the edited teacher changes — the modal is mounted
   // persistently with initialData toggling, so a once-only seed shows stale fields.
   useEffect(() => {
@@ -177,6 +188,11 @@ export function TeacherFormModal({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={NONE_VALUE}>None</SelectItem>
+                  {isCurrentDepartmentInactive && currentDepartmentId && (
+                    <SelectItem value={currentDepartmentId} disabled>
+                      {initialData?.department ?? "Unknown department"} (inactive)
+                    </SelectItem>
+                  )}
                   {departments.map((d) => (
                     <SelectItem key={d.id} value={d.id}>
                       {d.name}
@@ -184,12 +200,17 @@ export function TeacherFormModal({
                   ))}
                 </SelectContent>
               </Select>
-              {departments.length === 0 && (
+              {departments.length === 0 && !isCurrentDepartmentInactive && (
                 <p className="text-xs text-muted-foreground">
                   No departments yet — create one under Academics → Departments.
                 </p>
               )}
-              <FieldError message={errors.department_id?.message} />
+              {isCurrentDepartmentInactive && (
+                <p className="text-xs text-muted-foreground">
+                  This department is now inactive. Choose another to reassign,
+                  or leave it as-is to keep this teacher&apos;s current assignment.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="teacher_qualification">Qualification</Label>

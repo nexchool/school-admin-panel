@@ -53,9 +53,10 @@ export interface TeachersListResult {
   page: number;
   per_page: number;
   total_pages: number;
-  /** Department catalogue facet — every department (active or not tied to
-   *  a teacher yet), sourced from the departments table, not just names in
-   *  use. See Task 5 on the server. */
+  /** Department catalogue facet — every *active* department, whether or not
+   *  it is tied to a teacher yet (not just names currently in use). Inactive
+   *  departments are excluded by the server's `list_active_departments`.
+   *  See Task 5 on the server. */
   departments: { id: string; name: string }[];
   designations: string[];
 }

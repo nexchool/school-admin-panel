@@ -835,6 +835,12 @@ export default function TeachersPage() {
                               {d.name}
                             </SelectItem>
                           ))}
+                          {url.departmentId &&
+                            !departments.some((d) => d.id === url.departmentId) && (
+                              <SelectItem value={url.departmentId}>
+                                {url.departmentId}
+                              </SelectItem>
+                            )}
                         </SelectContent>
                       </Select>
                     </div>
