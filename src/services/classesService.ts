@@ -46,6 +46,7 @@ function listQueryString(params?: ClassesListFilters): string {
     ["school_unit_id", params.school_unit_id],
     ["programme_id", params.programme_id],
     ["grade_id", params.grade_id],
+    ["department_id", params.department_id],
     ["search", params.search],
     ["search_field", params.search_field],
     ["sort_by", params.sort_by],

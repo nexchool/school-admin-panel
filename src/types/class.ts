@@ -26,6 +26,7 @@ export interface ClassesListFilters {
   school_unit_id?: string | null;
   programme_id?: string | null;
   grade_id?: string | null;
+  department_id?: string | null;
   search?: string | null;
   search_field?: ClassesSearchField;
   sort_by?: ClassesSortBy;
@@ -63,6 +64,8 @@ export interface ClassItem {
   teacher_count?: number;
   medium_id?: string | null;
   medium_name?: string | null;
+  department_id?: string | null;
+  department_name?: string | null;
   stream?: string | null;
   /** Derived server-side from the academic year's `is_active` — `classes` has
    *  no status column of its own. Absent on endpoints other than the list. */
@@ -110,6 +113,7 @@ export interface CreateClassInput {
   programme_id?: string | null;
   school_unit_id?: string | null;
   medium_id?: string | null;
+  department_id?: string | null;
   stream?: string | null;
 }
 

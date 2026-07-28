@@ -40,6 +40,7 @@ import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
 import { useProgrammes } from "@/hooks/useProgrammes";
 import { useGrades } from "@/hooks/useGrades";
+import { useDepartments } from "@/hooks/useDepartments";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import { toastError } from "@/lib/errorToast";
@@ -78,6 +79,7 @@ export default function ClassesPage() {
     branchParam === null ? unitId ?? "" : branchParam === ANY ? "" : branchParam;
   const programmeId = searchParams.get("programme") ?? "";
   const gradeId = searchParams.get("grade") ?? "";
+  const departmentId = searchParams.get("department") ?? "";
   const sortBy = (searchParams.get("sort") as ClassesSortBy | null) ?? DEFAULT_SORT;
   const sortDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
   const page = Number(searchParams.get("page") ?? 1) || 1;
@@ -142,6 +144,7 @@ export default function ClassesPage() {
       school_unit_id: branchId || null,
       programme_id: programmeId || null,
       grade_id: gradeId || null,
+      department_id: departmentId || null,
       search: search || null,
       sort_by: sortBy,
       sort_dir: sortDir,
@@ -149,8 +152,8 @@ export default function ClassesPage() {
       per_page: pageSize,
     }),
     [
-      academicYearId, branchId, programmeId, gradeId, search, sortBy, sortDir,
-      page, pageSize,
+      academicYearId, branchId, programmeId, gradeId, departmentId, search,
+      sortBy, sortDir, page, pageSize,
     ]
   );
 
@@ -166,6 +169,11 @@ export default function ClassesPage() {
   const { data: units = [] } = useSchoolUnits();
   const { data: programmes = [] } = useProgrammes();
   const { data: grades = [] } = useGrades();
+  const { data: departmentsData } = useDepartments({
+    status: "active",
+    perPage: 100,
+  });
+  const departments = departmentsData?.items ?? [];
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -194,8 +202,23 @@ export default function ClassesPage() {
   // header switcher isn't one, so it must not light up "Clear" or turn the
   // empty state into "no matches".
   const hasFilters = Boolean(
-    branchParam !== null || programmeId || gradeId || search
+    branchParam !== null || programmeId || gradeId || departmentId || search
   );
+
+  // The active-departments facet (used for the filter's option list) omits a
+  // department that has since gone inactive. If the URL still carries its id,
+  // it won't match any option and the Select would silently fall back to the
+  // "All Departments" placeholder — indistinguishable from no filter being
+  // applied at all, even though results are still narrowed. Recover a label
+  // for it from the already-loaded rows (which carry department_name
+  // regardless of the department's current status) so FilterSelect can show
+  // it as a disabled, clearly-labeled entry instead. `departments` and
+  // `items` are already fresh per-render derivations of query data, so this
+  // gains nothing from useMemo.
+  const currentDepartmentName =
+    departmentId && !departments.some((d) => d.id === departmentId)
+      ? items.find((i) => i.department_id === departmentId)?.department_name ?? undefined
+      : undefined;
 
   const columns: DataTableColumn<ClassItem>[] = useMemo(
     () => [
@@ -252,6 +275,11 @@ export default function ClassesPage() {
             {row.teacher_count ?? 0}
           </span>
         ),
+      },
+      {
+        key: "department",
+        header: "Department",
+        cell: (row) => row.department_name ?? "—",
       },
       {
         key: "status",
@@ -356,6 +384,17 @@ export default function ClassesPage() {
                 placeholder="All Grades"
                 options={grades.map((g) => ({ id: g.id, name: g.name }))}
               />
+              <FilterSelect
+                value={departmentId}
+                onChange={(v) => setFilter("department", v)}
+                placeholder="All Departments"
+                options={departments.map((d) => ({ id: d.id, name: d.name }))}
+                unmatchedLabel={
+                  currentDepartmentName
+                    ? `${currentDepartmentName} (inactive)`
+                    : undefined
+                }
+              />
               {hasFilters && (
                 <Button
                   variant="ghost"
@@ -364,7 +403,7 @@ export default function ClassesPage() {
                     setSearchInput("");
                     setParams({
                       branch: null, programme: null, grade: null,
-                      q: null, page: null,
+                      department: null, q: null, page: null,
                     });
                   }}
                   className="h-9 gap-1.5 text-muted-foreground"
@@ -485,12 +524,20 @@ function FilterSelect({
   onChange,
   placeholder,
   options,
+  unmatchedLabel,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   options: { id: string; name: string }[];
+  /** Label for `value` when it isn't present in `options` — e.g. a filter
+   *  value (a department id) whose record has since gone inactive and
+   *  dropped out of the active-only option list. Without this, Radix falls
+   *  back to `placeholder`, which reads identically to "no filter" even
+   *  though one is still applied. */
+  unmatchedLabel?: string;
 }) {
+  const isUnmatched = !!value && !options.some((o) => o.id === value);
   return (
     <Select value={value || ANY} onValueChange={onChange}>
       <SelectTrigger className="h-9 w-[170px]">
@@ -498,6 +545,11 @@ function FilterSelect({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={ANY}>{placeholder}</SelectItem>
+        {isUnmatched && (
+          <SelectItem value={value} disabled>
+            {unmatchedLabel ?? value}
+          </SelectItem>
+        )}
         {options
           .filter((o) => o.id !== ANY)
           .map((o) => (
