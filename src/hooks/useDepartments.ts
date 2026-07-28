@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useAppMutation } from "@/hooks/useAppMutation";
 import { departmentsService } from "@/services/departmentsService";
 import type {
   CreateDepartmentInput,
@@ -45,27 +46,43 @@ export function useDepartmentStats() {
   });
 }
 
+// The three mutations below use useAppMutation with `error` omitted: both the
+// form modal (duplicate name/code, 409) and the delete dialog (in-use, 409)
+// surface API failures inline against the offending field / dialog body, so a
+// toast on top would double-report the same failure. `success` still fires so
+// the happy path gets standard confirmation. See
+// .superpowers/sdd/2026-07-28-departments-module/task-10-brief.md Step 1b.
+
 export function useCreateDepartment() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateDepartmentInput) => departmentsService.create(data),
-    onSuccess: () => invalidateAll(qc),
-  });
+  return useAppMutation(
+    {
+      mutationFn: (data: CreateDepartmentInput) => departmentsService.create(data),
+      onSuccess: () => invalidateAll(qc),
+    },
+    { success: "Department created" },
+  );
 }
 
 export function useUpdateDepartment() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, ...data }: { id: string } & UpdateDepartmentInput) =>
-      departmentsService.update(id, data),
-    onSuccess: () => invalidateAll(qc),
-  });
+  return useAppMutation(
+    {
+      mutationFn: ({ id, ...data }: { id: string } & UpdateDepartmentInput) =>
+        departmentsService.update(id, data),
+      onSuccess: () => invalidateAll(qc),
+    },
+    { success: "Department updated" },
+  );
 }
 
 export function useDeleteDepartment() {
   const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => departmentsService.remove(id),
-    onSuccess: () => invalidateAll(qc),
-  });
+  return useAppMutation(
+    {
+      mutationFn: (id: string) => departmentsService.remove(id),
+      onSuccess: () => invalidateAll(qc),
+    },
+    { success: "Department deleted" },
+  );
 }

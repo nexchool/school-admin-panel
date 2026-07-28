@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { StatCard } from "@/components/ui/stat-card";
+import { DepartmentFormModal } from "@/components/departments/DepartmentFormModal";
+import { DeleteDepartmentDialog } from "@/components/departments/DeleteDepartmentDialog";
 import { useDepartments, useDepartmentStats } from "@/hooks/useDepartments";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuth } from "@/hooks";
@@ -59,15 +61,8 @@ export default function DepartmentsPage() {
   const [sortBy, setSortBy] = useState<DepartmentSortBy>(DEFAULT_SORT_BY);
   const [sortDir, setSortDir] = useState<DepartmentSortDir>(DEFAULT_SORT_DIR);
 
-  // editing / deleting / isCreateOpen are read by DepartmentFormModal and
-  // DeleteDepartmentDialog, added in Task 10. Row actions and the "New
-  // Department" button already set them; only the modals that consume them
-  // are missing, so eslint sees no reads yet.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- consumed by Task 10's DepartmentFormModal
   const [editing, setEditing] = useState<Department | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- consumed by Task 10's DeleteDepartmentDialog
   const [deleting, setDeleting] = useState<Department | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- consumed by Task 10's DepartmentFormModal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const search = useDebouncedValue(searchInput, 300);
@@ -336,9 +331,24 @@ export default function DepartmentsPage() {
         </Card>
       )}
 
-      {/* DepartmentFormModal (create/edit) and DeleteDepartmentDialog land in
-          Task 10. Selection is held in state above so this page's buttons are
-          ready to be wired once those components exist. */}
+      <DepartmentFormModal
+        open={isCreateOpen || !!editing}
+        onOpenChange={(o) => {
+          if (!o) {
+            setIsCreateOpen(false);
+            setEditing(null);
+          }
+        }}
+        department={editing}
+      />
+
+      <DeleteDepartmentDialog
+        open={!!deleting}
+        onOpenChange={(o) => {
+          if (!o) setDeleting(null);
+        }}
+        department={deleting}
+      />
     </div>
   );
 }
