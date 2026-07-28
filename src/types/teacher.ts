@@ -6,7 +6,10 @@ export interface Teacher {
   profile_picture?: string;
   employee_id: string;
   designation?: string;
+  /** Resolved department name, returned for backward-compat display.
+   *  Read-only here — department_id is the source of truth for writes. */
   department?: string;
+  department_id: string | null;
   qualification?: string;
   specialization?: string;
   experience_years?: number;
@@ -23,7 +26,7 @@ export interface CreateTeacherInput {
   email?: string;
   phone?: string;
   designation?: string;
-  department?: string;
+  department_id?: string | null;
   qualification?: string;
   specialization?: string;
   experience_years?: number;

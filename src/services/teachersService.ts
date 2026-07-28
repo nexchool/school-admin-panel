@@ -41,7 +41,7 @@ export interface TeachersListParams {
   search?: string;
   search_field?: TeachersSearchField;
   status?: string;
-  department?: string;
+  department_id?: string;
   designation?: string;
   date_of_joining_from?: string;
   date_of_joining_to?: string;
@@ -53,7 +53,10 @@ export interface TeachersListResult {
   page: number;
   per_page: number;
   total_pages: number;
-  departments: string[];
+  /** Department catalogue facet — every department (active or not tied to
+   *  a teacher yet), sourced from the departments table, not just names in
+   *  use. See Task 5 on the server. */
+  departments: { id: string; name: string }[];
   designations: string[];
 }
 
@@ -71,7 +74,7 @@ export const teachersService = {
       if (params.page !== undefined) qp.set("page", String(params.page));
       if (params.per_page !== undefined) qp.set("per_page", String(params.per_page));
       if (params.status) qp.set("status", params.status);
-      if (params.department) qp.set("department", params.department);
+      if (params.department_id) qp.set("department_id", params.department_id);
       if (params.designation) qp.set("designation", params.designation);
       if (params.date_of_joining_from) qp.set("date_of_joining_from", params.date_of_joining_from);
       if (params.date_of_joining_to) qp.set("date_of_joining_to", params.date_of_joining_to);

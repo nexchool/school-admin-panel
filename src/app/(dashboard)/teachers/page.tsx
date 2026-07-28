@@ -288,7 +288,12 @@ const PARAM = {
   search: "search",
   searchField: "search_field",
   status: "status",
-  department: "department",
+  // Renamed from "department" (a name substring) to "department_id" (an
+  // exact FK) to match the server's Task 5 filter change. A bookmarked
+  // `?department=Science` link no longer filters — deliberate, since the
+  // old value (a name) has no equivalent meaning under the new id-based
+  // param. See task-11-report.md.
+  departmentId: "department_id",
   designation: "designation",
   joiningFrom: "date_of_joining_from",
   joiningTo: "date_of_joining_to",
@@ -334,7 +339,7 @@ type UrlState = {
   search: string;
   searchField: TeachersSearchField;
   status: string;
-  department: string;
+  departmentId: string;
   designation: string;
   joiningDateFrom: string;
   joiningDateTo: string;
@@ -373,7 +378,7 @@ function readUrlState(sp: URLSearchParams): UrlState {
       ? (searchFieldRaw as TeachersSearchField)
       : DEFAULT_SEARCH_FIELD,
     status: sp.get(PARAM.status) ?? "",
-    department: sp.get(PARAM.department) ?? "",
+    departmentId: sp.get(PARAM.departmentId) ?? "",
     designation: sp.get(PARAM.designation) ?? "",
     joiningDateFrom: sp.get(PARAM.joiningFrom) ?? "",
     joiningDateTo: sp.get(PARAM.joiningTo) ?? "",
@@ -383,7 +388,7 @@ function readUrlState(sp: URLSearchParams): UrlState {
 function activeFilterCount(s: UrlState): number {
   return (
     (s.status ? 1 : 0) +
-    (s.department ? 1 : 0) +
+    (s.departmentId ? 1 : 0) +
     (s.designation ? 1 : 0) +
     (s.joiningDateFrom || s.joiningDateTo ? 1 : 0)
   );
@@ -456,7 +461,7 @@ export default function TeachersPage() {
       search: url.search || undefined,
       search_field: url.searchField,
       status: url.status || undefined,
-      department: url.department || undefined,
+      department_id: url.departmentId || undefined,
       designation: url.designation || undefined,
       date_of_joining_from: url.joiningDateFrom || undefined,
       date_of_joining_to: url.joiningDateTo || undefined,
@@ -577,7 +582,7 @@ export default function TeachersPage() {
   const setStatus = (next: string) => setUrlParams({ status: next || null });
 
   const setDepartment = (next: string) =>
-    setUrlParams({ department: next || null });
+    setUrlParams({ departmentId: next || null });
 
   const setDesignation = (next: string) =>
     setUrlParams({ designation: next || null });
@@ -588,7 +593,7 @@ export default function TeachersPage() {
   const clearAllFilters = () =>
     setUrlParams({
       status: null,
-      department: null,
+      departmentId: null,
       designation: null,
       joiningFrom: null,
       joiningTo: null,
@@ -815,7 +820,7 @@ export default function TeachersPage() {
                         Department
                       </label>
                       <Select
-                        value={url.department || "__all__"}
+                        value={url.departmentId || "__all__"}
                         onValueChange={(v) =>
                           setDepartment(v === "__all__" ? "" : v)
                         }
@@ -826,16 +831,10 @@ export default function TeachersPage() {
                         <SelectContent>
                           <SelectItem value="__all__">Any</SelectItem>
                           {departments.map((d) => (
-                            <SelectItem key={d} value={d}>
-                              {d}
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
                             </SelectItem>
                           ))}
-                          {url.department &&
-                            !departments.includes(url.department) && (
-                              <SelectItem value={url.department}>
-                                {url.department}
-                              </SelectItem>
-                            )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -930,9 +929,12 @@ export default function TeachersPage() {
                     onRemove={() => setStatus("")}
                   />
                 )}
-                {url.department && (
+                {url.departmentId && (
                   <FilterPill
-                    label={`Department: ${url.department}`}
+                    label={`Department: ${
+                      departments.find((d) => d.id === url.departmentId)
+                        ?.name ?? url.departmentId
+                    }`}
                     onRemove={() => setDepartment("")}
                   />
                 )}

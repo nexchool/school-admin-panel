@@ -13,6 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FieldError } from "@/components/ui/field-error";
 import {
   requiredString,
@@ -22,7 +29,10 @@ import {
   optionalDate,
   optionalNumberInRange,
 } from "@/lib/validation/fields";
+import { useDepartments } from "@/hooks/useDepartments";
 import type { Teacher, CreateTeacherInput } from "@/types/teacher";
+
+const NONE_VALUE = "__none__";
 
 interface TeacherFormModalProps {
   open: boolean;
@@ -36,7 +46,7 @@ const teacherSchema = z.object({
   email: optionalEmail,
   phone: optionalPhoneLoose,
   designation: optionalString,
-  department: optionalString,
+  department_id: z.string().optional().nullable(),
   qualification: optionalString,
   specialization: optionalString,
   experience_years: optionalNumberInRange(0, 80, "Experience (years)"),
@@ -51,7 +61,7 @@ const toDefaults = (t?: Teacher): TeacherFormValues => ({
   email: t?.email ?? "",
   phone: t?.phone ?? "",
   designation: t?.designation ?? "",
-  department: t?.department ?? "",
+  department_id: t?.department_id ?? "",
   qualification: t?.qualification ?? "",
   specialization: t?.specialization ?? "",
   experience_years: t?.experience_years ?? undefined,
@@ -66,9 +76,19 @@ export function TeacherFormModal({
   onSubmit,
 }: TeacherFormModalProps) {
   const form = useForm<TeacherFormValues>({
+    // zodResolver's inferred input/output types diverge from RHF's generic
+    // here (same cast DepartmentFormModal/SubjectFormModal use for the same
+    // reason).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(teacherSchema) as any,
     defaultValues: toDefaults(initialData),
   });
+
+  const { data: departmentsData } = useDepartments({
+    status: "active",
+    perPage: 100,
+  });
+  const departments = departmentsData?.items ?? [];
 
   // Reseed when opened or when the edited teacher changes — the modal is mounted
   // persistently with initialData toggling, so a once-only seed shows stale fields.
@@ -93,7 +113,7 @@ export function TeacherFormModal({
         email: trimmed(values.email),
         phone: trimmed(values.phone),
         designation: trimmed(values.designation),
-        department: trimmed(values.department),
+        department_id: values.department_id || null,
         qualification: trimmed(values.qualification),
         specialization: trimmed(values.specialization),
         experience_years: values.experience_years,
@@ -146,11 +166,30 @@ export function TeacherFormModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="teacher_department">Department</Label>
-              <Input
-                id="teacher_department"
-                {...form.register("department")}
-                placeholder="e.g. Mathematics"
-              />
+              <Select
+                value={form.watch("department_id") || NONE_VALUE}
+                onValueChange={(v) =>
+                  form.setValue("department_id", v === NONE_VALUE ? "" : v)
+                }
+              >
+                <SelectTrigger id="teacher_department">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_VALUE}>None</SelectItem>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {departments.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No departments yet — create one under Academics → Departments.
+                </p>
+              )}
+              <FieldError message={errors.department_id?.message} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="teacher_qualification">Qualification</Label>
@@ -174,6 +213,9 @@ export function TeacherFormModal({
                 id="teacher_experience"
                 type="number"
                 min={0}
+                // register()'s generic can't express a numeric field name
+                // narrowed from the schema's string-keyed type here.
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 {...form.register("experience_years" as any)}
                 placeholder="0"
               />
