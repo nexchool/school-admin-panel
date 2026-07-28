@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
+import { StatCard } from "@/components/ui/stat-card";
 import { useAuth } from "@/hooks";
 import { useClassesList, useClassesStats } from "@/hooks/useClasses";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
@@ -39,6 +40,7 @@ import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
 import { useProgrammes } from "@/hooks/useProgrammes";
 import { useGrades } from "@/hooks/useGrades";
+import { useDepartments } from "@/hooks/useDepartments";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import { toastError } from "@/lib/errorToast";
@@ -77,6 +79,7 @@ export default function ClassesPage() {
     branchParam === null ? unitId ?? "" : branchParam === ANY ? "" : branchParam;
   const programmeId = searchParams.get("programme") ?? "";
   const gradeId = searchParams.get("grade") ?? "";
+  const departmentId = searchParams.get("department") ?? "";
   const sortBy = (searchParams.get("sort") as ClassesSortBy | null) ?? DEFAULT_SORT;
   const sortDir = searchParams.get("dir") === "desc" ? "desc" : "asc";
   const page = Number(searchParams.get("page") ?? 1) || 1;
@@ -141,6 +144,7 @@ export default function ClassesPage() {
       school_unit_id: branchId || null,
       programme_id: programmeId || null,
       grade_id: gradeId || null,
+      department_id: departmentId || null,
       search: search || null,
       sort_by: sortBy,
       sort_dir: sortDir,
@@ -148,8 +152,8 @@ export default function ClassesPage() {
       per_page: pageSize,
     }),
     [
-      academicYearId, branchId, programmeId, gradeId, search, sortBy, sortDir,
-      page, pageSize,
+      academicYearId, branchId, programmeId, gradeId, departmentId, search,
+      sortBy, sortDir, page, pageSize,
     ]
   );
 
@@ -165,6 +169,11 @@ export default function ClassesPage() {
   const { data: units = [] } = useSchoolUnits();
   const { data: programmes = [] } = useProgrammes();
   const { data: grades = [] } = useGrades();
+  const { data: departmentsData } = useDepartments({
+    status: "active",
+    perPage: 100,
+  });
+  const departments = departmentsData?.items ?? [];
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -193,8 +202,23 @@ export default function ClassesPage() {
   // header switcher isn't one, so it must not light up "Clear" or turn the
   // empty state into "no matches".
   const hasFilters = Boolean(
-    branchParam !== null || programmeId || gradeId || search
+    branchParam !== null || programmeId || gradeId || departmentId || search
   );
+
+  // The active-departments facet (used for the filter's option list) omits a
+  // department that has since gone inactive. If the URL still carries its id,
+  // it won't match any option and the Select would silently fall back to the
+  // "All Departments" placeholder — indistinguishable from no filter being
+  // applied at all, even though results are still narrowed. Recover a label
+  // for it from the already-loaded rows (which carry department_name
+  // regardless of the department's current status) so FilterSelect can show
+  // it as a disabled, clearly-labeled entry instead. `departments` and
+  // `items` are already fresh per-render derivations of query data, so this
+  // gains nothing from useMemo.
+  const currentDepartmentName =
+    departmentId && !departments.some((d) => d.id === departmentId)
+      ? items.find((i) => i.department_id === departmentId)?.department_name ?? undefined
+      : undefined;
 
   const columns: DataTableColumn<ClassItem>[] = useMemo(
     () => [
@@ -251,6 +275,11 @@ export default function ClassesPage() {
             {row.teacher_count ?? 0}
           </span>
         ),
+      },
+      {
+        key: "department",
+        header: "Department",
+        cell: (row) => row.department_name ?? "—",
       },
       {
         key: "status",
@@ -355,6 +384,17 @@ export default function ClassesPage() {
                 placeholder="All Grades"
                 options={grades.map((g) => ({ id: g.id, name: g.name }))}
               />
+              <FilterSelect
+                value={departmentId}
+                onChange={(v) => setFilter("department", v)}
+                placeholder="All Departments"
+                options={departments.map((d) => ({ id: d.id, name: d.name }))}
+                unmatchedLabel={
+                  currentDepartmentName
+                    ? `${currentDepartmentName} (inactive)`
+                    : undefined
+                }
+              />
               {hasFilters && (
                 <Button
                   variant="ghost"
@@ -363,7 +403,7 @@ export default function ClassesPage() {
                     setSearchInput("");
                     setParams({
                       branch: null, programme: null, grade: null,
-                      q: null, page: null,
+                      department: null, q: null, page: null,
                     });
                   }}
                   className="h-9 gap-1.5 text-muted-foreground"
@@ -461,55 +501,6 @@ function classLabel(row: ClassItem): string {
   return row.section ? `${grade} ${row.section}` : grade;
 }
 
-const TONE_CLASSES = {
-  primary: "bg-primary/10 text-primary ring-1 ring-primary/20",
-  info: "bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400",
-  warning: "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400",
-  success: "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400",
-} as const;
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  tone,
-  loading,
-}: {
-  icon: typeof BookOpen;
-  label: string;
-  value: number | undefined;
-  sub: string;
-  tone: keyof typeof TONE_CLASSES;
-  loading: boolean;
-}) {
-  return (
-    <Card className="shadow-sm">
-      <CardContent className="flex items-center gap-4 pt-5">
-        <div
-          className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-xl",
-            TONE_CLASSES[tone]
-          )}
-        >
-          <Icon className="size-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          {loading ? (
-            <div className="mt-1 h-7 w-16 animate-pulse rounded bg-muted" />
-          ) : (
-            <p className="mt-0.5 text-2xl font-bold tracking-tight tabular-nums">
-              {value?.toLocaleString() ?? 0}
-            </p>
-          )}
-          <p className="truncate text-xs text-muted-foreground">{sub}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function StatusPill({ status }: { status?: string }) {
   if (!status) return <span className="text-muted-foreground">—</span>;
   const tone =
@@ -533,12 +524,29 @@ function FilterSelect({
   onChange,
   placeholder,
   options,
+  unmatchedLabel,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   options: { id: string; name: string }[];
+  /** Opt-in: when supplied, and `value` isn't present in `options`, renders
+   *  a disabled entry with this label instead of letting Radix fall back to
+   *  `placeholder` (which reads identically to "no filter" even though one
+   *  is still applied) — e.g. a department that went inactive after a class
+   *  was assigned to it. Omitted callers (Branch/Programme/Grade) keep the
+   *  old fallback-to-placeholder behavior verbatim, since for them an
+   *  unmatched `value` is normally just the pre-hydration render window
+   *  before their options list has loaded, not a real orphaned reference. */
+  unmatchedLabel?: string;
 }) {
+  // Gated on unmatchedLabel being supplied: Branch/Programme/Grade don't pass
+  // it and must stay on their old behavior (fall back to the placeholder)
+  // rather than surfacing a raw id — e.g. during the ordinary render window
+  // before useSchoolUnits/useProgrammes/useGrades resolve, when `options` is
+  // still `[]` but the URL already carries a value.
+  const isUnmatched =
+    !!unmatchedLabel && !!value && !options.some((o) => o.id === value);
   return (
     <Select value={value || ANY} onValueChange={onChange}>
       <SelectTrigger className="h-9 w-[170px]">
@@ -546,6 +554,12 @@ function FilterSelect({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={ANY}>{placeholder}</SelectItem>
+        {isUnmatched && (
+          // isUnmatched already implies unmatchedLabel is set.
+          <SelectItem value={value} disabled>
+            {unmatchedLabel}
+          </SelectItem>
+        )}
         {options
           .filter((o) => o.id !== ANY)
           .map((o) => (

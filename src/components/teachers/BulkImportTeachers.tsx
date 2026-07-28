@@ -219,11 +219,17 @@ export function BulkImportTeachers({
             column: <code className="text-xs">name</code>. Optional: email,
             phone, designation, department, qualification,
             specialization, experience_years, address, date_of_joining, status
-            (active or inactive). Unknown columns are ignored. Employee IDs are
-            always generated from your school&apos;s format (Academic settings);
-            a legacy <code className="text-xs">employee_id</code> column, if
-            present, is ignored. If <code className="text-xs">email</code> is
-            omitted, a login address is created from the employee ID.
+            (active or inactive).{" "}
+            <code className="text-xs">department</code> is the academic
+            division (Primary, Higher Secondary, …) and must match an existing
+            department&apos;s name exactly (case-insensitive) — manage the list
+            under Departments. An unknown name fails just that row; it is
+            never auto-created. Unknown columns
+            are ignored. Employee IDs are always generated from your
+            school&apos;s format (Academic settings); a legacy{" "}
+            <code className="text-xs">employee_id</code> column, if present,
+            is ignored. If <code className="text-xs">email</code> is omitted,
+            a login address is created from the employee ID.
           </DialogDescription>
         </DialogHeader>
 

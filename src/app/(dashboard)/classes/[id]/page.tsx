@@ -106,6 +106,7 @@ export default function ClassDetailPage() {
     section: string;
     academic_year_id: string;
     teacher_id?: string;
+    department_id?: string | null;
   }) => {
     if (!id) return;
     // Toasts owned by useUpdateClass. On error the rejection propagates to the
