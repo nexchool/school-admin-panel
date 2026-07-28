@@ -530,14 +530,23 @@ function FilterSelect({
   onChange: (value: string) => void;
   placeholder: string;
   options: { id: string; name: string }[];
-  /** Label for `value` when it isn't present in `options` — e.g. a filter
-   *  value (a department id) whose record has since gone inactive and
-   *  dropped out of the active-only option list. Without this, Radix falls
-   *  back to `placeholder`, which reads identically to "no filter" even
-   *  though one is still applied. */
+  /** Opt-in: when supplied, and `value` isn't present in `options`, renders
+   *  a disabled entry with this label instead of letting Radix fall back to
+   *  `placeholder` (which reads identically to "no filter" even though one
+   *  is still applied) — e.g. a department that went inactive after a class
+   *  was assigned to it. Omitted callers (Branch/Programme/Grade) keep the
+   *  old fallback-to-placeholder behavior verbatim, since for them an
+   *  unmatched `value` is normally just the pre-hydration render window
+   *  before their options list has loaded, not a real orphaned reference. */
   unmatchedLabel?: string;
 }) {
-  const isUnmatched = !!value && !options.some((o) => o.id === value);
+  // Gated on unmatchedLabel being supplied: Branch/Programme/Grade don't pass
+  // it and must stay on their old behavior (fall back to the placeholder)
+  // rather than surfacing a raw id — e.g. during the ordinary render window
+  // before useSchoolUnits/useProgrammes/useGrades resolve, when `options` is
+  // still `[]` but the URL already carries a value.
+  const isUnmatched =
+    !!unmatchedLabel && !!value && !options.some((o) => o.id === value);
   return (
     <Select value={value || ANY} onValueChange={onChange}>
       <SelectTrigger className="h-9 w-[170px]">
@@ -546,8 +555,9 @@ function FilterSelect({
       <SelectContent>
         <SelectItem value={ANY}>{placeholder}</SelectItem>
         {isUnmatched && (
+          // isUnmatched already implies unmatchedLabel is set.
           <SelectItem value={value} disabled>
-            {unmatchedLabel ?? value}
+            {unmatchedLabel}
           </SelectItem>
         )}
         {options
