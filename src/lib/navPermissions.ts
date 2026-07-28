@@ -49,6 +49,7 @@ export const ROUTE_PERMISSIONS = {
   ],
   "/classes": ["class.read", "class.manage"],
   "/subjects": ["subject.read", "subject.manage"],
+  "/departments": ["department.read", "department.manage"],
   "/timetable": ["timetable.read", "timetable.manage"],
   "/attendance": [
     "attendance.read.all",

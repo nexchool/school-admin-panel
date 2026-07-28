@@ -59,6 +59,7 @@ const ACADEMICS_GROUP: NavGroup = {
     { href: "/academics/calendar", label: "Academic Calendar", feature: "academic_calendar", permissions: ROUTE_PERMISSIONS["/academics/calendar"] },
     { href: "/timetable", label: "Timetable", feature: "timetable", permissions: ROUTE_PERMISSIONS["/timetable"] },
     { href: "/subjects", label: "Subjects", permissions: ROUTE_PERMISSIONS["/subjects"] },
+    { href: "/departments", label: "Departments", permissions: ROUTE_PERMISSIONS["/departments"] },
   ],
 };
 
