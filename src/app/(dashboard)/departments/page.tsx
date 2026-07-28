@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Building, Plus, Pencil, Trash2, Users, GraduationCap, CheckCircle2 } from "lucide-react";
+import { Building, BookOpen, Plus, Pencil, Trash2, GraduationCap, CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
+import { StatCard } from "@/components/ui/stat-card";
 import { useDepartments, useDepartmentStats } from "@/hooks/useDepartments";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useAuth } from "@/hooks";
-import { cn } from "@/lib/utils";
 import type {
   Department,
   DepartmentsListParams,
@@ -32,55 +32,6 @@ const PAGE_SIZE = 20;
 const ALL_STATUSES = "__all__";
 const DEFAULT_SORT_BY: DepartmentSortBy = "display_order";
 const DEFAULT_SORT_DIR: DepartmentSortDir = "asc";
-
-const TONE_CLASSES = {
-  primary: "bg-primary/10 text-primary ring-1 ring-primary/20",
-  success: "bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20 dark:text-emerald-400",
-  info: "bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/20 dark:text-sky-400",
-  warning: "bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20 dark:text-amber-400",
-} as const;
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  tone,
-  loading,
-}: {
-  icon: typeof Building;
-  label: string;
-  value: number | undefined;
-  sub: string;
-  tone: keyof typeof TONE_CLASSES;
-  loading: boolean;
-}) {
-  return (
-    <Card className="shadow-sm">
-      <CardContent className="flex items-center gap-4 pt-5">
-        <div
-          className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-xl",
-            TONE_CLASSES[tone]
-          )}
-        >
-          <Icon className="size-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          {loading ? (
-            <div className="mt-1 h-7 w-16 animate-pulse rounded bg-muted" />
-          ) : (
-            <p className="mt-0.5 text-2xl font-bold tracking-tight tabular-nums">
-              {value?.toLocaleString() ?? 0}
-            </p>
-          )}
-          <p className="truncate text-xs text-muted-foreground">{sub}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function StatusPill({ status }: { status: DepartmentStatus }) {
   return (
@@ -295,7 +246,7 @@ export default function DepartmentsPage() {
           loading={statsQuery.isLoading}
         />
         <StatCard
-          icon={Users}
+          icon={BookOpen}
           label="Total Classes Assigned"
           value={stats?.classes_assigned}
           sub="Across all departments"
