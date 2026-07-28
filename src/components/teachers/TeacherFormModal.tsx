@@ -202,7 +202,7 @@ export function TeacherFormModal({
               </Select>
               {departments.length === 0 && !isCurrentDepartmentInactive && (
                 <p className="text-xs text-muted-foreground">
-                  No departments yet — create one under Academics → Departments.
+                  No academic divisions yet — create one under Departments.
                 </p>
               )}
               {isCurrentDepartmentInactive && (

@@ -198,7 +198,8 @@ export default function DepartmentsPage() {
             <Building className="size-5 text-primary" />
           </h1>
           <p className="text-muted-foreground">
-            Group teachers and classes into departments for reporting and assignment.
+            Academic divisions used to organize teachers and classes — for example
+            Primary, Secondary or Higher Secondary.
           </p>
         </div>
         {canManage && (
@@ -255,9 +256,10 @@ export default function DepartmentsPage() {
           <CardHeader>
             <CardTitle>No departments yet</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Departments group teachers and classes together, making it easier to
-              organize staff and report on them. Create your first department to
-              get started.
+              Departments are the academic divisions your school is organized into
+              — Primary, Middle School, Higher Secondary, Junior Wing, and so on.
+              Teachers and classes are assigned to them. Create your first
+              department to get started.
             </p>
           </CardHeader>
           <CardContent>

@@ -145,12 +145,17 @@ export function DepartmentFormModal({
           <DialogTitle>{isEdit ? "Edit Department" : "Add Department"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Academic divisions used to organize teachers and classes — for
+            example Primary, Secondary or Higher Secondary.
+          </p>
+
           <div className="space-y-2">
             <Label htmlFor="department_name">Department Name *</Label>
             <Input
               id="department_name"
               {...form.register("name")}
-              placeholder="e.g. Science"
+              placeholder="e.g. Higher Secondary"
             />
             <FieldError message={errors.name?.message} />
           </div>
@@ -160,7 +165,7 @@ export function DepartmentFormModal({
             <Input
               id="department_code"
               {...form.register("code")}
-              placeholder="e.g. SCI"
+              placeholder="e.g. HS"
               className="uppercase"
             />
             <FieldError message={errors.code?.message} />
