@@ -120,12 +120,14 @@ export function SchoolUnitsList() {
                   className="flex items-center justify-between gap-3 px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="flex items-center gap-2 truncate font-medium">
+                    {/* div, not p — Badge renders a div, which is invalid
+                        inside a p and breaks hydration. */}
+                    <div className="flex items-center gap-2 truncate font-medium">
                       {unit.name}
                       {unit.status === "inactive" ? (
                         <Badge variant="secondary">Inactive</Badge>
                       ) : null}
-                    </p>
+                    </div>
                     <p className="truncate text-xs text-muted-foreground">
                       {[unit.code, unit.phone, unit.address]
                         .filter(Boolean)
