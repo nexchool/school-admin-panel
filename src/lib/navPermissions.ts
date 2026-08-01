@@ -77,6 +77,7 @@ export const ROUTE_PERMISSIONS = {
     "announcement.recall",
   ],
   "/hostel": ["hostel.read", "hostel.manage"],
+  "/school-units": ["school_unit.read", "school_unit.manage"],
   "/sub-admins": ["subadmin.manage"],
   "/audit-log": ["audit_log.view"],
 } as const satisfies Record<string, readonly string[]>;

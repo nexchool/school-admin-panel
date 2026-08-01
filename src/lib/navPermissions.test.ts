@@ -86,4 +86,22 @@ describe("requiredPermissionsForPath", () => {
       expect(perms).toContain("teacher.manage");
     });
   });
+
+  describe("branch management is gated", () => {
+    it("/school-units resolves to school_unit perms", () => {
+      expect(requiredPermissionsForPath("/school-units")).toEqual(
+        ROUTE_PERMISSIONS["/school-units"]
+      );
+    });
+
+    it("accepts either read or manage", () => {
+      const perms = requiredPermissionsForPath("/school-units");
+      expect(perms).toContain("school_unit.read");
+      expect(perms).toContain("school_unit.manage");
+    });
+
+    it("does not leak into an unrelated similarly-prefixed route", () => {
+      expect(requiredPermissionsForPath("/school-units-archive")).toBeNull();
+    });
+  });
 });
