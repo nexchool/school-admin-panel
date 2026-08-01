@@ -55,6 +55,7 @@ const ACADEMICS_GROUP: NavGroup = {
   label: "Academics",
   icon: School,
   children: [
+    { href: "/school-units", label: "Branches", feature: "class_management", permissions: ROUTE_PERMISSIONS["/school-units"] },
     { href: "/academics/academic-years", label: "Academic Years", permissions: ROUTE_PERMISSIONS["/academics"] },
     { href: "/academics/calendar", label: "Academic Calendar", feature: "academic_calendar", permissions: ROUTE_PERMISSIONS["/academics/calendar"] },
     { href: "/timetable", label: "Timetable", feature: "timetable", permissions: ROUTE_PERMISSIONS["/timetable"] },
