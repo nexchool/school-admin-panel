@@ -167,11 +167,13 @@ export function BranchFormModal({
 
               <div className="space-y-2">
                 <Label htmlFor="branch_name">Name *</Label>
+                {/* No autoFocus: --ring is near-black, so a focused field opens
+                    with a heavy dark ring. Every other form modal (departments,
+                    subjects, …) opens unfocused — match them. */}
                 <Input
                   id="branch_name"
                   {...form.register("name")}
                   placeholder="e.g. North Campus"
-                  autoFocus
                 />
                 <FieldError message={errors.name?.message} />
               </div>
