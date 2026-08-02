@@ -127,3 +127,13 @@ body {
   background: var(--muted) !important;
   color: var(--foreground) !important;
 }
+
+/* Scrollable region that keeps its scrollbar hidden (dialog bodies, etc.).
+   Content still scrolls by wheel, trackpad, touch and keyboard. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
