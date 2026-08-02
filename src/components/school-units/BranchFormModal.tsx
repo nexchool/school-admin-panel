@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 
 import {
   Dialog,
@@ -24,93 +25,119 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FieldError } from "@/components/ui/field-error";
+import { requiredString, optionalStringMax, optionalPhoneLoose } from "@/lib/validation/fields";
+import { useCreateSchoolUnit, useUpdateSchoolUnit } from "@/hooks/useSchoolUnits";
+import { ApiException } from "@/services/api";
 import type { ActiveStatus, SchoolUnit } from "@/services/schoolUnitsService";
 
+const STATUS_OPTIONS: { value: ActiveStatus; label: string }[] = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
 const branchSchema = z.object({
-  name: z.string().trim().min(1, "Branch name is required"),
-  code: z
-    .string()
-    .trim()
-    .min(1, "Branch code is required")
-    .max(32, "Code must be 32 characters or fewer"),
-  status: z.enum(["active", "inactive"]),
-  phone: z.string().trim().max(32, "Phone must be 32 characters or fewer"),
-  address: z.string().trim(),
-  dise_no: z.string().trim().max(64, "DISE number must be 64 characters or fewer"),
-  index_no: z.string().trim().max(64, "Index number must be 64 characters or fewer"),
-  recognition_no: z
-    .string()
-    .trim()
-    .max(64, "Recognition number must be 64 characters or fewer"),
-  gr_number_scheme: z
-    .string()
-    .trim()
-    .max(64, "GR number scheme must be 64 characters or fewer"),
+  name: requiredString("Branch name").max(
+    255,
+    "Branch name must be 255 characters or fewer"
+  ),
+  code: requiredString("Branch code").max(
+    32,
+    "Branch code must be 32 characters or fewer"
+  ),
+  status: z.enum(["active", "inactive"]).default("active"),
+  // Lenient: a campus contact is often a landline with an STD code.
+  phone: optionalPhoneLoose,
+  address: optionalStringMax(1000, "Address"),
+  dise_no: optionalStringMax(64, "DISE number"),
+  index_no: optionalStringMax(64, "Index number"),
+  recognition_no: optionalStringMax(64, "Recognition number"),
+  gr_number_scheme: optionalStringMax(64, "GR number scheme"),
 });
 
 type BranchFormValues = z.infer<typeof branchSchema>;
 
 /** Optional text fields go to the API as null, not "" — matches server _clean(). */
-const orNull = (value: string): string | null => value.trim() || null;
+const orNull = (value: string | undefined): string | null => value?.trim() || null;
 
-interface BranchFormDialogProps {
+interface BranchFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Omit or pass null to create; pass a unit to edit. */
-  unit?: SchoolUnit | null;
-  onSubmit: (payload: Partial<SchoolUnit>) => Promise<void>;
+  /** null means create mode. */
+  branch: SchoolUnit | null;
 }
 
-export function BranchFormDialog({
+export function BranchFormModal({
   open,
   onOpenChange,
-  unit,
-  onSubmit,
-}: BranchFormDialogProps) {
-  const isEdit = !!unit;
+  branch,
+}: BranchFormModalProps) {
+  const isEdit = !!branch;
+  const createBranch = useCreateSchoolUnit();
+  const updateBranch = useUpdateSchoolUnit();
 
   const toDefaults = (): BranchFormValues => ({
-    name: unit?.name ?? "",
-    code: unit?.code ?? "",
-    status: unit?.status ?? "active",
-    phone: unit?.phone ?? "",
-    address: unit?.address ?? "",
-    dise_no: unit?.dise_no ?? "",
-    index_no: unit?.index_no ?? "",
-    recognition_no: unit?.recognition_no ?? "",
-    gr_number_scheme: unit?.gr_number_scheme ?? "",
+    name: branch?.name ?? "",
+    code: branch?.code ?? "",
+    status: branch?.status ?? "active",
+    phone: branch?.phone ?? "",
+    address: branch?.address ?? "",
+    dise_no: branch?.dise_no ?? "",
+    index_no: branch?.index_no ?? "",
+    recognition_no: branch?.recognition_no ?? "",
+    gr_number_scheme: branch?.gr_number_scheme ?? "",
   });
 
   const form = useForm<BranchFormValues>({
-    resolver: zodResolver(branchSchema),
+    // Same cast DepartmentFormModal uses: zodResolver's inferred input/output
+    // types diverge from RHF's generic because of .default() on status.
+    resolver: zodResolver(branchSchema) as never,
     defaultValues: toDefaults(),
   });
 
+  // Reseed when opened or when the edited branch changes — the modal is
+  // mounted persistently with `branch` toggling null<->row.
   useEffect(() => {
     if (open) form.reset(toDefaults());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, unit]);
+  }, [open, branch]);
+
+  const handleClose = (o: boolean) => {
+    if (!o) form.reset(toDefaults());
+    onOpenChange(o);
+  };
 
   const handleSubmit = form.handleSubmit(async (values) => {
+    const payload: Partial<SchoolUnit> = {
+      name: values.name.trim(),
+      code: values.code.trim(),
+      status: values.status,
+      phone: orNull(values.phone),
+      address: orNull(values.address),
+      dise_no: orNull(values.dise_no),
+      index_no: orNull(values.index_no),
+      recognition_no: orNull(values.recognition_no),
+      gr_number_scheme: orNull(values.gr_number_scheme),
+    };
+
     try {
-      await onSubmit({
-        name: values.name.trim(),
-        code: values.code.trim(),
-        status: values.status,
-        phone: orNull(values.phone),
-        address: orNull(values.address),
-        dise_no: orNull(values.dise_no),
-        index_no: orNull(values.index_no),
-        recognition_no: orNull(values.recognition_no),
-        gr_number_scheme: orNull(values.gr_number_scheme),
-      });
-      onOpenChange(false);
+      if (isEdit && branch) {
+        await updateBranch.mutateAsync({ id: branch.id, data: payload });
+      } else {
+        await createBranch.mutateAsync(payload);
+      }
+      handleClose(false);
     } catch (error) {
-      // Keep the dialog open so the admin can correct the input. A duplicate
-      // code is by far the likeliest rejection, so route it to that field.
-      const message =
-        error instanceof Error ? error.message : "Could not save branch.";
-      form.setError(/code/i.test(message) ? "code" : "root", { message });
+      // A duplicate code lands on the Code field rather than a toast, keyed off
+      // the server's error code rather than its message text.
+      const body =
+        error instanceof ApiException
+          ? (error.data as { error?: string } | undefined)
+          : undefined;
+      if (body?.error === "DuplicateError" && error instanceof ApiException) {
+        form.setError("code", { message: error.message });
+        return;
+      }
+      toast.error(error instanceof Error ? error.message : "Something went wrong");
     }
   });
 
@@ -118,15 +145,20 @@ export function BranchFormDialog({
   const status = form.watch("status");
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-lg" onClose={() => handleClose(false)}>
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit branch" : "Add branch"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Branch" : "New Branch"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="max-h-[70vh] space-y-5 overflow-y-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="max-h-[70vh] space-y-6 overflow-y-auto pr-1"
+        >
           <section className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Identity</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Identity
+            </h3>
 
             <div className="space-y-2">
               <Label htmlFor="branch_name">Name *</Label>
@@ -165,8 +197,11 @@ export function BranchFormDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    {STATUS_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FieldError message={errors.status?.message} />
@@ -175,7 +210,9 @@ export function BranchFormDialog({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Contact</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Contact
+            </h3>
 
             <div className="space-y-2">
               <Label htmlFor="branch_phone">Phone</Label>
@@ -200,7 +237,9 @@ export function BranchFormDialog({
           </section>
 
           <section className="space-y-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Regulatory</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Regulatory
+            </h3>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
@@ -218,10 +257,7 @@ export function BranchFormDialog({
 
             <div className="space-y-2">
               <Label htmlFor="branch_recognition">Recognition No.</Label>
-              <Input
-                id="branch_recognition"
-                {...form.register("recognition_no")}
-              />
+              <Input id="branch_recognition" {...form.register("recognition_no")} />
               <FieldError message={errors.recognition_no?.message} />
             </div>
 
@@ -240,18 +276,12 @@ export function BranchFormDialog({
             </div>
           </section>
 
-          <FieldError message={errors.root?.message} />
-
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => handleClose(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving…" : isEdit ? "Save changes" : "Add branch"}
+              {isSubmitting ? "Saving…" : isEdit ? "Save Changes" : "Create Branch"}
             </Button>
           </DialogFooter>
         </form>
