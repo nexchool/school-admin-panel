@@ -80,9 +80,21 @@ function TransportHealthBadge({ enrollment }: { enrollment: TransportEnrollment 
   );
 }
 
+/** Matches the students list, so the two screens page alike. */
+const ENROLLMENTS_PER_PAGE = 20;
+
 export default function TransportStudentsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // A search is a new question, so it is asked from the first page. Staying on
+  // page four of the previous answer shows an empty table and looks like no
+  // matches.
+  const searchFor = (term: string) => {
+    setSearch(term);
+    setPage(1);
+  };
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editRow, setEditRow] = useState<TransportEnrollment | null>(null);
   const [moveRow, setMoveRow] = useState<TransportEnrollment | null>(null);
@@ -97,8 +109,16 @@ export default function TransportStudentsPage() {
   });
 
   const enrollQ = useTenantQuery({
-    queryKey: ["transport", "enrollments"],
-    queryFn: () => transportService.listEnrollments(),
+    // The page and the search are part of the question, so they belong in the
+    // key — otherwise every page is served the first one from cache.
+    queryKey: ["transport", "enrollments", "page", page, search],
+    queryFn: () =>
+      transportService.listEnrollmentsPage({
+        page,
+        pageSize: ENROLLMENTS_PER_PAGE,
+        search: search.trim() || undefined,
+      }),
+    placeholderData: (previous) => previous,
   });
 
   const studentsQ = useTenantQuery({
@@ -132,17 +152,13 @@ export default function TransportStudentsPage() {
     return m;
   }, [studentsQ.data]);
 
-  const rows = enrollQ.data ?? [];
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
-      const name = (r.student_name ?? "").toLowerCase();
-      const adm = (r.admission_number ?? "").toLowerCase();
-      const cls = (studentById.get(r.student_id)?.class_name ?? "").toLowerCase();
-      return name.includes(q) || adm.includes(q) || cls.includes(q);
-    });
-  }, [rows, search, studentById]);
+  const rows = enrollQ.data?.items ?? [];
+  const totalEnrollments = enrollQ.data?.total ?? 0;
+  const totalPages = enrollQ.data?.total_pages ?? 1;
+
+  // Searching happens on the server now: the browser only holds one page, and
+  // filtering that would find a child only if they happened to be on it.
+  const filtered = rows;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["transport", "enrollments"] });
@@ -226,7 +242,7 @@ export default function TransportStudentsPage() {
               className="pl-9"
               placeholder="Search…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => searchFor(e.target.value)}
             />
           </div>
 
@@ -338,12 +354,45 @@ export default function TransportStudentsPage() {
             </table>
             {!enrollQ.isLoading && filtered.length === 0 && (
               <p className="px-3 py-10 text-center text-muted-foreground">
-                {rows.length === 0
-                  ? "No students assigned yet. Use Assign student to transport."
-                  : "No matching enrollments."}
+                {search.trim()
+                  ? "No matching enrollments."
+                  : "No students assigned yet. Use Assign student to transport."}
               </p>
             )}
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                Showing {(page - 1) * ENROLLMENTS_PER_PAGE + 1}–
+                {Math.min(page * ENROLLMENTS_PER_PAGE, totalEnrollments)} of{" "}
+                {totalEnrollments}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || enrollQ.isFetching}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || enrollQ.isFetching}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

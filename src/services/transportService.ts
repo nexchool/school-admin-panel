@@ -284,6 +284,14 @@ async function downloadBlob(filename: string, endpoint: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+export interface TransportEnrollmentsPage {
+  items: TransportEnrollment[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 export const transportService = {
   listBuses: (academicYearId?: string) =>
     apiGet<TransportBus[]>(`/api/transport/buses${qs({ academic_year_id: academicYearId })}`),
@@ -506,8 +514,55 @@ export const transportService = {
     status?: string;
   }) => apiPost("/api/transport/bus-assignments", body),
 
+  /**
+   * Every enrollment. Used by the screens that count and chart them, which
+   * genuinely need the whole set — a page would give them wrong totals.
+   */
   listEnrollments: (academicYearId?: string) =>
     apiGet<TransportEnrollment[]>(`/api/transport/enrollments${qs({ academic_year_id: academicYearId })}`),
+
+  /**
+   * One page of enrollments, searched on the server.
+   *
+   * Searching has to happen server-side once the list is paged: filtering in
+   * the browser can only find a child who is already on the fetched page, and
+   * a student who is simply on page four reads as one who does not exist.
+   *
+   * Tolerates the plain array the endpoint still returns when no page is
+   * requested, so this keeps working whichever shape comes back.
+   */
+  listEnrollmentsPage: async (params: {
+    academicYearId?: string;
+    page?: number;
+    pageSize?: number;
+    search?: string;
+  }): Promise<TransportEnrollmentsPage> => {
+    const data = await apiGet<Partial<TransportEnrollmentsPage> | TransportEnrollment[]>(
+      `/api/transport/enrollments${qs({
+        academic_year_id: params.academicYearId,
+        page: params.page ? String(params.page) : undefined,
+        pageSize: params.pageSize ? String(params.pageSize) : undefined,
+        search: params.search || undefined,
+      })}`,
+    );
+
+    if (Array.isArray(data)) {
+      return {
+        items: data,
+        total: data.length,
+        page: 1,
+        per_page: data.length,
+        total_pages: 1,
+      };
+    }
+    return {
+      items: data?.items ?? [],
+      total: data?.total ?? 0,
+      page: data?.page ?? 1,
+      per_page: data?.per_page ?? 0,
+      total_pages: data?.total_pages ?? 1,
+    };
+  },
   enroll: (body: {
     student_id: string;
     bus_id: string;
