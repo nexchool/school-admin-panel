@@ -15,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { transportService } from "@/services/transportService";
-import { studentsService } from "@/services/studentsService";
 import { OccupancyHealthBadge } from "@/components/transport/transport-badges";
 import {
   AlertTriangle,
@@ -94,32 +93,16 @@ export default function TransportOverviewPage() {
         queryFn: () => transportService.listRoutes(),
         enabled: !!tenantId,
       },
-      {
-        queryKey: ["transport", "enrollments", tenantId],
-        queryFn: () => transportService.listEnrollments(),
-        enabled: !!tenantId,
-      },
-      {
-        queryKey: ["students", "all", tenantId],
-        queryFn: () => studentsService.getStudents(),
-        enabled: !!tenantId,
-      },
     ],
   });
 
-  const [dashQ, busesQ, routesQ, enrQ, studentsQ] = results;
+  const [dashQ, busesQ, routesQ] = results;
   const loading = results.some((r) => r.isLoading);
   const err = results.find((r) => r.error)?.error as Error | undefined;
 
   const insights = useMemo(() => {
     const buses = busesQ.data ?? [];
     const routes = routesQ.data ?? [];
-    const enrollments = enrQ.data ?? [];
-    const students = studentsQ.data?.items ?? [];
-
-    const activeEnrStudentIds = new Set(
-      enrollments.filter((e) => e.status === "active").map((e) => e.student_id)
-    );
 
     const routeIdsWithBus = new Set(
       buses
@@ -135,19 +118,17 @@ export default function TransportOverviewPage() {
       (r) => (r.status ?? "active") === "active" && !routeIdsWithBus.has(r.id)
     ).length;
 
-    const optedNotAssigned = students.filter(
-      (s) => s.is_transport_opted && !activeEnrStudentIds.has(s.id)
-    ).length;
-
     const inactiveBuses = buses.filter((b) => b.status !== "active").length;
 
     return {
       busesWithoutDriver,
       routesWithoutBus,
-      optedNotAssigned,
+      // Counted on the server. Working it out here meant fetching every
+      // student and every enrollment to compare two sets for one number.
+      optedNotAssigned: dashQ.data?.students_opted_without_enrollment ?? 0,
       inactiveBuses,
     };
-  }, [busesQ.data, routesQ.data, enrQ.data, studentsQ.data]);
+  }, [busesQ.data, routesQ.data, dashQ.data]);
 
   const data = dashQ.data;
 

@@ -211,6 +211,12 @@ export interface TransportDashboard {
   total_buses: number;
   active_buses: number;
   total_students_on_transport: number;
+  /** Distinct children riding, as opposed to seats filled — they differ if
+   *  anyone rides two buses. */
+  students_with_active_enrollment?: number;
+  /** Children the school marked for transport who are not on a bus. Counted
+   *  on the server; the dashboard used to fetch every student to work it out. */
+  students_opted_without_enrollment?: number;
   buses_near_capacity_count: number;
   occupancy_per_bus: {
     bus_id: string;
