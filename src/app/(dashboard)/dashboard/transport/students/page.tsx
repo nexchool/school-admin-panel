@@ -121,7 +121,11 @@ export default function TransportStudentsPage() {
     placeholderData: (previous) => previous,
   });
 
+  // Only the assign-a-student picker needs the school's students, and only
+  // once it is open. Fetching them to render a table of twenty was the same
+  // waste the dashboard was making.
   const studentsQ = useTenantQuery({
+    enabled: wizardOpen,
     queryKey: ["students", "all"],
     queryFn: () => studentsService.getStudents(),
   });
@@ -299,7 +303,9 @@ export default function TransportStudentsPage() {
                         <td className="px-3 py-3 tabular-nums text-muted-foreground">
                           {r.admission_number ?? st?.admission_number ?? "—"}
                         </td>
-                        <td className="px-3 py-3">{st?.class_name ?? "—"}</td>
+                        <td className="px-3 py-3">
+                          {r.class_name ?? st?.class_name ?? "—"}
+                        </td>
                         <td className="px-3 py-3">{r.route?.name ?? "—"}</td>
                         <td className="px-3 py-3">{r.bus?.bus_number ?? "—"}</td>
                         <td className="px-3 py-3 text-muted-foreground">{pickup}</td>
