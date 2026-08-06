@@ -8,6 +8,8 @@ import { apiGet, apiPatch } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { IdFormatBuilder } from "@/components/academics/IdFormatBuilder";
+import { FeatureGate } from "@/components/auth/FeatureGate";
+import { useAuth } from "@/components/providers";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -85,16 +87,20 @@ function WorkingDaysPicker({
 
 export default function AcademicSettingsPage() {
   const qc = useQueryClient();
+  const { isFeatureEnabled } = useAuth();
 
   const { data: settings, isLoading: settingsLoading } = useTenantQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => apiGet<AcademicSettings>("/api/academics/settings"),
   });
 
+  // Bell schedules belong to the timetable module; asking for them with it
+  // switched off is a request that can only come back 403.
   const { data: bellSchedulesData } = useTenantQuery({
     queryKey: BELL_SCHEDULES_KEY,
     queryFn: () => apiGet<{ items: BellScheduleItem[] }>("/api/academics/bell-schedules"),
     select: (d) => d.items ?? [],
+    enabled: isFeatureEnabled("timetable"),
   });
   const bellSchedules = bellSchedulesData ?? [];
 
@@ -223,7 +229,10 @@ export default function AcademicSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Default bell schedule */}
+      {/* Default bell schedule — only means anything if the school runs
+          timetables. Otherwise this card offers a setting that cannot be
+          used and links to a page the school cannot open. */}
+      <FeatureGate feature="timetable">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Default bell schedule</CardTitle>
@@ -272,6 +281,7 @@ export default function AcademicSettingsPage() {
           )}
         </CardContent>
       </Card>
+      </FeatureGate>
 
       {/* ID formats */}
       <Card>

@@ -11,15 +11,15 @@ interface FeatureRequiredPageProps {
   children: ReactNode;
 }
 
+/** The seven modules a school can be without. Worded as a school would. */
 const DEFAULT_LABELS: Record<string, string> = {
   attendance: "Attendance",
-  fees_management: "Fees & finance",
+  fees_management: "Fees & payments",
   timetable: "Timetable",
-  schedule_management: "Schedule",
-  transport: "Transport",
-  notifications: "Notifications",
-  holiday_management: "Holidays",
-  hostel: "Hostel",
+  transport: "School transport",
+  hostel: "Hostel & boarding",
+  notifications: "Announcements & notifications",
+  academic_calendar: "Academic calendar & holidays",
 };
 
 /**
