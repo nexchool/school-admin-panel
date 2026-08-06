@@ -1,5 +1,6 @@
 import { getApiUrl } from "@/lib/constants";
 import { isPublicAuthApiUrl } from "@/lib/auth-api";
+import { noteFeatureStamp } from "@/lib/featureStamp";
 import { notifyForbidden } from "@/lib/forbiddenHandler";
 import { getCurrentSubdomain } from "@/lib/subdomain";
 import {
@@ -69,6 +70,12 @@ const apiRequest = async (
     if (newAccessToken) {
       await setAccessToken(newAccessToken);
     }
+
+    // Every /api/* response says which module set it was answered under. A
+    // change means the super-admin switched something; the auth layer re-reads
+    // the profile so the sidebar stops offering a module the school no longer
+    // has — without waiting for a logout.
+    noteFeatureStamp(response.headers.get("X-Feature-Stamp"));
 
     return response;
   } catch (err: unknown) {
