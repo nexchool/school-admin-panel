@@ -30,6 +30,7 @@ import {
 import { SummaryCards } from "@/components/academics/year-transition/SummaryCards";
 import { ConfirmDialog } from "@/components/academics/year-transition/ConfirmDialog";
 import { RolloverPanel } from "@/components/academics/year-transition/RolloverPanel";
+import { FeatureGate } from "@/components/auth/FeatureGate";
 import { TransitionComplete } from "@/components/academics/year-transition/TransitionComplete";
 import { Button } from "@/components/ui/button";
 import {
@@ -1160,48 +1161,60 @@ export default function YearTransitionPage() {
                 run rollovers. You can still continue without running them.
               </div>
             )}
-            <RolloverPanel
-              title="Timetables"
-              description="Clone active timetable versions and entries from each old class to its mapped new class. Creates draft versions on the new classes."
-              required
-              done={timetableRollover.done}
-              loading={timetableRollover.loading}
-              disabled={!apiMap || !canRunRollovers}
-              onRun={runTimetableRollover}
-              summary={timetableRollover.summary}
-              error={timetableRollover.error}
-            />
-            <RolloverPanel
-              title="Fee structures"
-              description="Clone fee structures + components and remap class links. Does not auto-create student fees — generate those from Finance after review."
-              required
-              done={financeRollover.done}
-              loading={financeRollover.loading}
-              disabled={!apiMap || !canRunRollovers}
-              onRun={runFinanceRollover}
-              summary={financeRollover.summary}
-              error={financeRollover.error}
-            />
-            <RolloverPanel
-              title="Transport"
-              description="Clone fee plans and carry forward active transport enrollments for promoted students only. Graduated students are skipped."
-              done={transportRollover.done}
-              loading={transportRollover.loading}
-              disabled={!canRunRollovers}
-              onRun={runTransportRollover}
-              summary={transportRollover.summary}
-              error={transportRollover.error}
-            />
-            <RolloverPanel
-              title="Holidays"
-              description="Copy holidays bound to the source year, shifting non-recurring dates by one year."
-              done={holidaysRollover.done}
-              loading={holidaysRollover.loading}
-              disabled={!canRunRollovers}
-              onRun={runHolidaysRollover}
-              summary={holidaysRollover.summary}
-              error={holidaysRollover.error}
-            />
+            {/* Each rollover carries one module's data forward, so a school
+                that does not use the module has nothing to carry. Offering it
+                anyway asks a school with no buses to roll over bus routes,
+                and the button can only answer 403. */}
+            <FeatureGate feature="timetable">
+              <RolloverPanel
+                title="Timetables"
+                description="Clone active timetable versions and entries from each old class to its mapped new class. Creates draft versions on the new classes."
+                required
+                done={timetableRollover.done}
+                loading={timetableRollover.loading}
+                disabled={!apiMap || !canRunRollovers}
+                onRun={runTimetableRollover}
+                summary={timetableRollover.summary}
+                error={timetableRollover.error}
+              />
+            </FeatureGate>
+            <FeatureGate feature="fees_management">
+              <RolloverPanel
+                title="Fee structures"
+                description="Clone fee structures + components and remap class links. Does not auto-create student fees — generate those from Finance after review."
+                required
+                done={financeRollover.done}
+                loading={financeRollover.loading}
+                disabled={!apiMap || !canRunRollovers}
+                onRun={runFinanceRollover}
+                summary={financeRollover.summary}
+                error={financeRollover.error}
+              />
+            </FeatureGate>
+            <FeatureGate feature="transport">
+              <RolloverPanel
+                title="Transport"
+                description="Clone fee plans and carry forward active transport enrollments for promoted students only. Graduated students are skipped."
+                done={transportRollover.done}
+                loading={transportRollover.loading}
+                disabled={!canRunRollovers}
+                onRun={runTransportRollover}
+                summary={transportRollover.summary}
+                error={transportRollover.error}
+              />
+            </FeatureGate>
+            <FeatureGate feature="academic_calendar">
+              <RolloverPanel
+                title="Holidays"
+                description="Copy holidays bound to the source year, shifting non-recurring dates by one year."
+                done={holidaysRollover.done}
+                loading={holidaysRollover.loading}
+                disabled={!canRunRollovers}
+                onRun={runHolidaysRollover}
+                summary={holidaysRollover.summary}
+                error={holidaysRollover.error}
+              />
+            </FeatureGate>
 
             <div className="flex flex-wrap gap-2 pt-2">
               <Button
