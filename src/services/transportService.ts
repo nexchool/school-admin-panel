@@ -184,6 +184,7 @@ export interface TransportEnrollment {
   /** The class as the row displays it, sent with the row so the screen
    *  need not fetch every student in the school to label twenty. */
   class_name?: string | null;
+  guardian_phone?: string | null;
   id: string;
   student_id: string;
   bus_id: string;

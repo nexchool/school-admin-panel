@@ -6,6 +6,7 @@ import {
   apiPut,
   apiDelete,
 } from "@/services/api";
+import { gql } from "@/services/graphql";
 import type {
   Student,
   CreateStudentInput,
@@ -86,7 +87,6 @@ export interface StudentsListParams {
   is_transport_opted?: boolean;
   admission_date_from?: string;
   admission_date_to?: string;
-  include_transport_summary?: boolean;
 }
 
 export interface StudentsListResult {
@@ -119,36 +119,123 @@ function appendStudentFilters(qp: URLSearchParams, params: StudentsListParams) {
   if (params.admission_date_to) qp.set("admission_date_to", params.admission_date_to);
 }
 
+const STUDENTS_QUERY = `
+  query Students(
+    $first: Int!, $offset: Int, $orderBy: StudentOrder, $direction: OrderDirection,
+    $where: StudentFilter
+  ) {
+    students(
+      first: $first, offset: $offset, orderBy: $orderBy, direction: $direction,
+      where: $where
+    ) {
+      totalCount
+      edges {
+        node {
+          id admissionNumber fullName status rollNumber gender guardianPhone
+          academicYearId
+          currentClass { id displayName programmeName }
+        }
+      }
+    }
+  }
+`;
+
+type StudentNode = {
+  id: string;
+  admissionNumber: string;
+  fullName: string;
+  status: string | null;
+  rollNumber: number | null;
+  gender: string | null;
+  guardianPhone: string | null;
+  academicYearId: string | null;
+  currentClass: {
+    id: string;
+    displayName: string | null;
+    programmeName: string | null;
+  } | null;
+};
+
+/** GraphQL names things the way the business does; the app still speaks the
+ *  REST payload's shape. Mapping here keeps that swap invisible to callers. */
+function toStudent(node: StudentNode): Student {
+  return {
+    id: node.id,
+    name: node.fullName,
+    admission_number: node.admissionNumber,
+    student_status: node.status ?? undefined,
+    roll_number: node.rollNumber ?? undefined,
+    gender: node.gender ?? undefined,
+    guardian_phone: node.guardianPhone ?? undefined,
+    academic_year_id: node.academicYearId ?? undefined,
+    class_id: node.currentClass?.id,
+    class_name: node.currentClass?.displayName ?? undefined,
+    programme_name: node.currentClass?.programmeName ?? undefined,
+  } as Student;
+}
+
+const SORT_FIELD: Record<StudentsSortBy, string> = {
+  admission_number: "ADMISSION_NUMBER",
+  name: "NAME",
+  class: "CLASS",
+  programme: "PROGRAMME",
+  roll_number: "ROLL_NUMBER",
+};
+
+/** Everything except paging and ordering — the "which students" half. */
+function whereFrom(params: StudentsListParams) {
+  return {
+    search: params.search || undefined,
+    searchField: params.search_field || undefined,
+    classId: params.class_ids?.length ? undefined : params.class_id || undefined,
+    classIds: params.class_ids?.length ? params.class_ids : undefined,
+    academicYearId: params.academic_year_id || undefined,
+    programmeId: params.programme_id || undefined,
+    status: params.student_status || undefined,
+    gender: params.gender || undefined,
+    isTransportOpted: params.is_transport_opted,
+    admittedFrom: params.admission_date_from || undefined,
+    admittedTo: params.admission_date_to || undefined,
+  };
+}
+
 export const studentsService = {
+  /**
+   * One page of students.
+   *
+   * Offset paging because the screen has page numbers, which a cursor cannot
+   * express — see `server/docs/architecture/graphql-conventions.md`. A list
+   * that only ever moves forwards should ask for a cursor instead.
+   *
+   * A caller that passes no page size gets the first hundred rather than
+   * every student in the school. Pickers and audience selectors were the
+   * callers doing that, and on a fifteen-thousand-student trust it was one
+   * request away from an outage.
+   */
   getStudents: async (
     params?: StudentsListParams
   ): Promise<StudentsListResult> => {
-    let url = "/api/students/";
-    if (params) {
-      const qp = new URLSearchParams();
-      appendStudentFilters(qp, params);
-      if (params.page !== undefined) qp.set("page", String(params.page));
-      if (params.per_page !== undefined) qp.set("per_page", String(params.per_page));
-      if (params.include_transport_summary) qp.set("include_transport_summary", "true");
-      const qs = qp.toString();
-      if (qs) url += `?${qs}`;
-    }
-    const data = await apiGet<Partial<StudentsListResult> | Student[]>(url);
-    if (Array.isArray(data)) {
-      return {
-        items: data,
-        total: data.length,
-        page: 1,
-        per_page: data.length,
-        total_pages: 1,
-      };
-    }
+    const asked = params ?? {};
+    const perPage = Math.min(asked.per_page ?? 100, 100);
+    const page = Math.max(1, asked.page ?? 1);
+
+    const data = await gql<{
+      students: { totalCount: number; edges: { node: StudentNode }[] };
+    }>(STUDENTS_QUERY, {
+      first: perPage,
+      offset: (page - 1) * perPage,
+      orderBy: SORT_FIELD[asked.sort_by ?? "admission_number"],
+      direction: (asked.sort_dir ?? "asc").toUpperCase(),
+      where: whereFrom(asked),
+    });
+
+    const total = data.students.totalCount;
     return {
-      items: data?.items ?? [],
-      total: data?.total ?? 0,
-      page: data?.page ?? 1,
-      per_page: data?.per_page ?? 0,
-      total_pages: data?.total_pages ?? 1,
+      items: data.students.edges.map((edge) => toStudent(edge.node)),
+      total,
+      page,
+      per_page: perPage,
+      total_pages: Math.max(1, Math.ceil(total / perPage)),
     };
   },
 

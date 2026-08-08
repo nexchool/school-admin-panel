@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -36,10 +36,7 @@ import {
   type TransportBus,
   type TransportEnrollment,
   type TransportFeeCycle,
-  type TransportRoute,
 } from "@/services/transportService";
-import { studentsService } from "@/services/studentsService";
-import type { Student } from "@/types/student";
 import { EnrollmentWizardModal } from "@/components/transport/modals/EnrollmentWizardModal";
 import { StatusBadge } from "@/components/transport/transport-badges";
 import { ConfirmDialog } from "@/components/transport/ConfirmDialog";
@@ -121,14 +118,6 @@ export default function TransportStudentsPage() {
     placeholderData: (previous) => previous,
   });
 
-  // Only the assign-a-student picker needs the school's students, and only
-  // once it is open. Fetching them to render a table of twenty was the same
-  // waste the dashboard was making.
-  const studentsQ = useTenantQuery({
-    enabled: wizardOpen,
-    queryKey: ["students", "all"],
-    queryFn: () => studentsService.getStudents(),
-  });
 
   const routesQ = useTenantQuery({
     queryKey: ["transport", "routes"],
@@ -149,12 +138,6 @@ export default function TransportStudentsPage() {
     queryFn: () => transportService.listStops(editRow!.route_id, false),
     enabled: !!editRow?.route_id,
   });
-
-  const studentById = useMemo(() => {
-    const m = new Map<string, Student>();
-    for (const s of studentsQ.data?.items ?? []) m.set(s.id, s);
-    return m;
-  }, [studentsQ.data]);
 
   const rows = enrollQ.data?.items ?? [];
   const totalEnrollments = enrollQ.data?.total ?? 0;
@@ -281,7 +264,6 @@ export default function TransportStudentsPage() {
                   ))}
                 {!enrollQ.isLoading &&
                   filtered.map((r) => {
-                    const st = studentById.get(r.student_id);
                     const pickup =
                       r.pickup_stop?.name ??
                       r.pickup_point ??
@@ -301,10 +283,10 @@ export default function TransportStudentsPage() {
                       >
                         <td className="px-3 py-3 font-medium">{r.student_name ?? r.student_id}</td>
                         <td className="px-3 py-3 tabular-nums text-muted-foreground">
-                          {r.admission_number ?? st?.admission_number ?? "—"}
+                          {r.admission_number ?? "—"}
                         </td>
                         <td className="px-3 py-3">
-                          {r.class_name ?? st?.class_name ?? "—"}
+                          {r.class_name ?? "—"}
                         </td>
                         <td className="px-3 py-3">{r.route?.name ?? "—"}</td>
                         <td className="px-3 py-3">{r.bus?.bus_number ?? "—"}</td>
@@ -315,7 +297,7 @@ export default function TransportStudentsPage() {
                         <td className="px-3 py-3 tabular-nums">{r.monthly_fee}</td>
                         <td className="px-3 py-3 text-muted-foreground">{feeCycleLabel(r.fee_cycle)}</td>
                         <td className="px-3 py-3">{driverForBus(r.bus ?? null)}</td>
-                        <td className="px-3 py-3 tabular-nums">{st?.guardian_phone ?? "—"}</td>
+                        <td className="px-3 py-3 tabular-nums">{r.guardian_phone ?? "—"}</td>
                         <td className="px-3 py-3">
                           <TransportHealthBadge enrollment={r} />
                         </td>
@@ -405,7 +387,6 @@ export default function TransportStudentsPage() {
       <EnrollmentWizardModal
         open={wizardOpen}
         onOpenChange={setWizardOpen}
-        students={studentsQ.data?.items ?? []}
         routes={routesQ.data ?? []}
         onDone={invalidate}
       />
