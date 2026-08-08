@@ -7,6 +7,7 @@ import {
   academicYearsService,
   type AcademicYear,
 } from "@/services/academicYearsService";
+import { academicStructureService } from "@/services/academicStructureService";
 import { academicYearsKeys } from "@/hooks/useAcademicYears";
 import { useAuth } from "@/hooks";
 import { ApiException } from "@/services/api";
@@ -51,7 +52,7 @@ export default function AcademicYearsPage() {
 
   const { data: years = [], isLoading } = useTenantQuery({
     queryKey: academicYearsKeys.list(false),
-    queryFn: () => academicYearsService.getAcademicYears(false),
+    queryFn: () => academicStructureService.academicYears(false),
   });
   const activeYear = years.find((y) => y.is_active !== false);
 

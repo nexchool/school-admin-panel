@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { academicStructureService } from "@/services/academicStructureService";
 import {
   academicYearsService,
   type AcademicYear,
@@ -24,7 +25,7 @@ export function useAcademicYears(
   const { tenantId } = useAuth();
   return useQuery({
     queryKey: [...academicYearsKeys.list(activeOnly), tenantId],
-    queryFn: () => academicYearsService.getAcademicYears(activeOnly),
+    queryFn: () => academicStructureService.academicYears(activeOnly),
     enabled: !!tenantId && (options?.enabled ?? true),
   });
 }
