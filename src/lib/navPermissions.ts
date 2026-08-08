@@ -51,6 +51,11 @@ export const ROUTE_PERMISSIONS = {
   "/subjects": ["subject.read", "subject.manage"],
   "/departments": ["department.read", "department.manage"],
   "/timetable": ["timetable.read", "timetable.manage"],
+  // Deciding on a correction is the register-owner's job, not a marker's.
+  "/attendance/corrections": ["attendance.manage"],
+  // Combining records rewrites which human the school's data refers to, so it
+  // carries its own key rather than riding on a general admin permission.
+  "/settings/duplicates": ["person.merge"],
   "/attendance": [
     "attendance.read.all",
     "attendance.read.class",

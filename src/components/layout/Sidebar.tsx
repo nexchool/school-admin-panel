@@ -74,6 +74,7 @@ const SIDEBAR_NAV_CORE: NavEntry[] = [
   { href: "/teachers", label: "Teachers", icon: Users, permissions: ROUTE_PERMISSIONS["/teachers"] },
   { href: "/classes", label: "Classes", icon: BookOpen, permissions: ROUTE_PERMISSIONS["/classes"] },
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance", permissions: ROUTE_PERMISSIONS["/attendance"] },
+  { href: "/attendance/corrections", label: "Corrections", icon: ClipboardCheck, feature: "attendance", permissions: ROUTE_PERMISSIONS["/attendance/corrections"] },
   { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management", permissions: ROUTE_PERMISSIONS["/dashboard/finance"] },
   { href: "/announcements", label: "Announcements", icon: Megaphone, permissions: ROUTE_PERMISSIONS["/announcements"] },
   { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel", permissions: ROUTE_PERMISSIONS["/hostel"] },
@@ -82,6 +83,7 @@ const SIDEBAR_NAV_CORE: NavEntry[] = [
   { href: "/settings", label: "Settings", icon: Settings, permissions: ROUTE_PERMISSIONS["/settings"] },
   { href: "/subscription", label: "Subscription", icon: CreditCard },
   { href: "/profile", label: "Profile", icon: User },
+  { href: "/settings/duplicates", label: "Duplicate Records", icon: Users, permissions: ROUTE_PERMISSIONS["/settings/duplicates"] },
   { href: "/audit-log", label: "Audit Log", icon: ClipboardList, permissions: ROUTE_PERMISSIONS["/audit-log"] },
 ];
 
