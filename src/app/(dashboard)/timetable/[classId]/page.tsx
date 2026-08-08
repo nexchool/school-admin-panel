@@ -342,7 +342,7 @@ export default function ClassTimetablePage() {
           </Link>
           <div>
             <h1 className="text-lg font-semibold tracking-tight">
-              {cls ? `${cls.name} – ${cls.section}` : "Class Timetable"}
+              {cls?.display_name ?? "Class Timetable"}
             </h1>
             {cls?.academic_year && (
               <p className="text-xs text-muted-foreground">{cls.academic_year}</p>

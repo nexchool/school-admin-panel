@@ -32,7 +32,7 @@ interface FilterBarProps {
   filters: FeeFilters;
   onChange: (filters: FeeFilters) => void;
   academicYears: { id: string; name: string }[];
-  classes: { id: string; name: string; section?: string }[];
+  classes: { id: string; name: string; section?: string; display_name?: string }[];
 }
 
 export function FilterBar({ filters, onChange, academicYears, classes }: FilterBarProps) {
@@ -98,7 +98,7 @@ export function FilterBar({ filters, onChange, academicYears, classes }: FilterB
             <SelectItem value="__all__">All Classes</SelectItem>
             {classes.map((c) => (
               <SelectItem key={c.id} value={c.id}>
-                {c.name}{c.section ? `-${c.section}` : ""}
+                {c.display_name ?? `${c.name}${c.section ? `-${c.section}` : ""}`}
               </SelectItem>
             ))}
           </SelectContent>

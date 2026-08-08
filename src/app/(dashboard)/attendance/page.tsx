@@ -221,8 +221,7 @@ export default function AttendancePage() {
             <SelectContent>
               {classes.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                  {c.section ? ` ${c.section}` : ""}
+                  {c.display_name ?? `${c.name}${c.section ? ` ${c.section}` : ""}`}
                   {c.academic_year ? ` · ${c.academic_year}` : ""}
                   {typeof c.student_count === "number"
                     ? ` · ${c.student_count} students`

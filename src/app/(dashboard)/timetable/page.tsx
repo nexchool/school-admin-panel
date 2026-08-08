@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClasses } from "@/hooks/useClasses";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useTimetableVersions } from "@/hooks/useTimetable";
+import type { ClassItem } from "@/types/class";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Loader2, Calendar, ChevronRight, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 // Per-class status row — loads versions lazily only when rendered
-function ClassRow({ cls }: { cls: { id: string; name: string; section?: string; academic_year?: string | null } }) {
+function ClassRow({ cls }: { cls: ClassItem }) {
   const router = useRouter();
   const { data: versions, isLoading } = useTimetableVersions(cls.id);
 
@@ -25,7 +25,7 @@ function ClassRow({ cls }: { cls: { id: string; name: string; section?: string; 
     >
       <td className="px-4 py-3">
         <div className="font-medium text-sm text-foreground">
-          {cls.name} – {cls.section}
+          {cls.display_name ?? `${cls.name} – ${cls.section}`}
         </div>
         <div className="text-xs text-muted-foreground">{cls.academic_year ?? "—"}</div>
       </td>
@@ -74,13 +74,10 @@ export default function TimetablePage() {
     yearFilter ? { academic_year_id: yearFilter } : undefined
   );
 
-  const sortedClasses = useMemo(
-    () =>
-      [...allClasses].sort((a, b) =>
-        `${a.name} ${a.section}`.localeCompare(`${b.name} ${b.section}`)
-      ),
-    [allClasses]
-  );
+  // Left in the order the server sent: by grade, in teaching order. Sorting
+  // the labels as text is what puts Std 10 before Std 2, and sorting by
+  // `name` sorted nothing at all — that label is empty for every class.
+  const sortedClasses = allClasses;
 
   return (
     <div className="space-y-6">

@@ -180,7 +180,10 @@ export default function ClassDetailPage() {
     );
   }
 
-  const classTitle = cls.section ? `${cls.name} — ${cls.section}` : cls.name;
+  // Composed server-side. `name` is a nullable legacy label and is empty for
+  // every class created through the structured form, which is how this page
+  // came to be titled "— A".
+  const classTitle = cls.display_name ?? cls.name;
   const studentCount = cls.students?.length ?? 0;
   const teacherCount = cls.teachers?.length ?? 0;
 
@@ -343,7 +346,8 @@ export default function ClassDetailPage() {
                             {t.teacher_name}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {t.subject_name ?? "Subject"}
+                            {t.subject_name ??
+                              (t.is_class_teacher ? "Class Teacher" : "Subject")}
                             {t.teacher_employee_id &&
                               ` • ${t.teacher_employee_id}`}
                           </p>
