@@ -725,12 +725,12 @@ function AttendancePanel({ student }: { student: Student }) {
     >
       {isLoading ? (
         <PanelLoading />
-      ) : !data || data.total_days === 0 ? (
+      ) : !data || data.totalDays === 0 ? (
         <PanelEmpty message="No attendance recorded this month." />
       ) : (
         <DetailTable
           rows={[
-            ["Days Recorded", String(data.total_days)],
+            ["Days Recorded", String(data.totalDays)],
             ["Present", String(data.present)],
             ["Absent", String(data.absent)],
             ["Late", String(data.late)],
