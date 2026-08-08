@@ -13,6 +13,7 @@ import {
   type SubjectContextUpsertInput,
 } from "@/services/subjectContextsService";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { academicStructureService } from "@/services/academicStructureService";
 
 export const subjectContextKeys = {
   all: ["subject-contexts"] as const,
@@ -28,7 +29,7 @@ export function useMediums() {
   const { tenantId } = useAuth();
   return useQuery<MediumDto[]>({
     queryKey: [...mediumKeys.all, tenantId],
-    queryFn: () => mediumsService.list(),
+    queryFn: () => academicStructureService.mediums(),
     enabled: !!tenantId,
   });
 }

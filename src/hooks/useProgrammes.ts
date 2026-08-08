@@ -8,6 +8,7 @@ import {
   type AcademicProgramme,
 } from "@/services/programmesService";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { academicStructureService } from "@/services/academicStructureService";
 
 export const programmesKeys = {
   all: ["programmes"] as const,
@@ -23,7 +24,7 @@ export function useProgrammes() {
   const { tenantId } = useAuth();
   return useQuery<AcademicProgramme[]>({
     queryKey: [...programmesKeys.list(), tenantId],
-    queryFn: () => programmesService.list(),
+    queryFn: () => academicStructureService.programmes(),
     enabled: !!tenantId,
   });
 }

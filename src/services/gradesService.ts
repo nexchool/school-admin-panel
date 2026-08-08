@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
+import { apiDelete, apiPatch, apiPost } from "@/services/api";
 
 export interface Grade {
   id: string;
@@ -7,7 +7,6 @@ export interface Grade {
 }
 
 export const gradesService = {
-  list: () => apiGet<Grade[]>("/api/grades/"),
   create: (data: Partial<Grade>) => apiPost<Grade>("/api/grades/", data),
   update: (id: string, data: Partial<Grade>) =>
     apiPatch<Grade>(`/api/grades/${id}`, data),

@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
+import { apiDelete, apiPatch, apiPost } from "@/services/api";
 import type { ActiveStatus } from "@/services/schoolUnitsService";
 
 export interface AcademicProgramme {
@@ -12,7 +12,6 @@ export interface AcademicProgramme {
 }
 
 export const programmesService = {
-  list: () => apiGet<AcademicProgramme[]>("/api/programmes/"),
   create: (data: Partial<AcademicProgramme>) =>
     apiPost<AcademicProgramme>("/api/programmes/", data),
   update: (id: string, data: Partial<AcademicProgramme>) =>

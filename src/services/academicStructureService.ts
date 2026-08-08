@@ -14,6 +14,9 @@
 import { gql } from "./graphql";
 import type { SchoolUnit } from "./schoolUnitsService";
 import type { AcademicYear } from "./academicYearsService";
+import type { AcademicProgramme } from "./programmesService";
+import type { Grade } from "./gradesService";
+import type { MediumDto } from "./mediumsService";
 
 const CAMPUSES = `
   query Campuses($status: String) {
@@ -88,10 +91,89 @@ function toAcademicYear(node: AcademicYearNode): AcademicYear {
   };
 }
 
+const PROGRAMMES = `
+  query Programmes($status: String) {
+    programmes(status: $status) { id name board code status medium mediumId }
+  }
+`;
+
+const GRADES = `query Grades { grades { id name sequence } }`;
+
+const MEDIUMS = `
+  query Mediums($includeInactive: Boolean) {
+    mediums(includeInactive: $includeInactive) { id name code isActive }
+  }
+`;
+
+type ProgrammeNode = {
+  id: string;
+  name: string;
+  board: string;
+  code: string;
+  status: string;
+  medium: string | null;
+  mediumId: string | null;
+};
+
+type MediumNode = {
+  id: string;
+  name: string;
+  code: string | null;
+  isActive: boolean;
+};
+
+// Every one of these gets an explicit mapper rather than a type assertion.
+// Asserting the client's shape onto a GraphQL result is what let camelCase
+// dates through as undefined and rendered "Invalid Date" on every row.
+function toProgramme(node: ProgrammeNode): AcademicProgramme {
+  return {
+    id: node.id,
+    name: node.name,
+    board: node.board,
+    medium: node.medium,
+    medium_id: node.mediumId,
+    code: node.code,
+    status: node.status,
+  } as AcademicProgramme;
+}
+
+function toMedium(node: MediumNode, tenantId = ""): MediumDto {
+  return {
+    id: node.id,
+    tenant_id: tenantId,
+    name: node.name,
+    code: node.code,
+    is_active: node.isActive,
+    created_at: null,
+    updated_at: null,
+  };
+}
+
 export const academicStructureService = {
   campuses: async (status?: string): Promise<SchoolUnit[]> => {
     const data = await gql<{ campuses: CampusNode[] }>(CAMPUSES, { status });
     return data.campuses.map(toSchoolUnit);
+  },
+
+  programmes: async (status?: string): Promise<AcademicProgramme[]> => {
+    const data = await gql<{ programmes: ProgrammeNode[] }>(PROGRAMMES, {
+      status,
+    });
+    return data.programmes.map(toProgramme);
+  },
+
+  grades: async (): Promise<Grade[]> => {
+    const data = await gql<{ grades: Grade[] }>(GRADES);
+    // Grade is { id, name, sequence } on both sides — no names differ, so
+    // there is nothing to map and nothing to get wrong.
+    return data.grades;
+  },
+
+  mediums: async (includeInactive = false): Promise<MediumDto[]> => {
+    const data = await gql<{ mediums: MediumNode[] }>(MEDIUMS, {
+      includeInactive,
+    });
+    return data.mediums.map((node) => toMedium(node));
   },
 
   academicYears: async (activeOnly = false): Promise<AcademicYear[]> => {

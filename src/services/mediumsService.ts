@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
+import { apiDelete, apiPatch, apiPost } from "@/services/api";
 
 export interface MediumDto {
   id: string;
@@ -17,11 +17,6 @@ export interface CreateMediumInput {
 }
 
 export const mediumsService = {
-  list: async (): Promise<MediumDto[]> => {
-    const res = await apiGet<MediumDto[]>("/api/mediums/");
-    return Array.isArray(res) ? res : [];
-  },
-
   create: (input: CreateMediumInput): Promise<MediumDto> =>
     apiPost<MediumDto>("/api/mediums/", input),
 
