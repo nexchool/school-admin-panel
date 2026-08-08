@@ -45,7 +45,9 @@ import {
   DEFAULT_MOTHER_TONGUE,
 } from "@/lib/data/referenceData";
 import {
-  STUDENT_STATUS_OPTIONS,
+  EDITABLE_STUDENT_STATUS_OPTIONS,
+  isWorkflowStatus,
+  studentStatusLabel,
   STUDENT_STATUS_VALUES,
 } from "@/constants/studentStatus";
 import {
@@ -694,6 +696,10 @@ export function StudentForm({
         const v = values[k];
         if (v === undefined || v === null) continue;
         if (typeof v === "string" && v.trim() === "") continue;
+        // A student who has left carries a status no edit may set, and the
+        // server refuses the whole payload if one is sent — even unchanged.
+        // Sending it would block every other correction to their record.
+        if (k === "student_status" && isWorkflowStatus(v as string)) continue;
         // @ts-expect-error - payload is open to extended optional keys
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above
         payload[k] = v as any;
@@ -1704,7 +1710,18 @@ export function StudentForm({
                         {legacyStatus} (legacy)
                       </SelectItem>
                     )}
-                    {STUDENT_STATUS_OPTIONS.map((o) => (
+                    {/* A student who has left holds a status no edit can set;
+                        show it so the box is not empty, disabled so it cannot
+                        be re-picked. Bringing them back is re-enrollment. */}
+                    {isWorkflowStatus(initialData?.student_status) && (
+                      <SelectItem
+                        value={initialData!.student_status!}
+                        disabled
+                      >
+                        {studentStatusLabel(initialData?.student_status)}
+                      </SelectItem>
+                    )}
+                    {EDITABLE_STUDENT_STATUS_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
                         {o.label}
                       </SelectItem>

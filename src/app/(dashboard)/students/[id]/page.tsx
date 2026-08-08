@@ -22,7 +22,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { STUDENT_STATUS_OPTIONS } from "@/constants/studentStatus";
+import {
+  EDITABLE_STUDENT_STATUS_OPTIONS,
+  isWorkflowStatus,
+  studentStatusLabel,
+} from "@/constants/studentStatus";
+import {
+  StudentLifecycleDialog,
+  type LifecycleAct,
+} from "@/components/students/StudentLifecycleDialog";
 import {
   ProfileHeader,
   QuickStats,
@@ -117,6 +125,8 @@ export default function StudentDetailPage() {
     [canSeeRecords]
   );
 
+  const [lifecycleAct, setLifecycleAct] = useState<LifecycleAct | null>(null);
+
   const handleUpdate = async (data: UpdateStudentInput) => {
     if (!id) return;
     await updateMutation.mutateAsync({ id, input: data });
@@ -171,6 +181,10 @@ export default function StudentDetailPage() {
     );
   }
 
+  // A student who has withdrawn, graduated or transferred out holds no place
+  // in a class. What they need is re-enrollment, not another way to leave.
+  const hasLeft = isWorkflowStatus(student.student_status);
+
   const badges: ProfileHeaderBadge[] = [];
   if (student.class_name) {
     badges.push({
@@ -222,40 +236,77 @@ export default function StudentDetailPage() {
         onDelete={() => setDeleteConfirmOpen(true)}
         isDeleting={deleteMutation.isPending}
         extraActions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="gap-2"
-                disabled={updateMutation.isPending}
-              >
-                Status:{" "}
-                <span className="capitalize">
-                  {student.student_status ?? "—"}
-                </span>
-                <ChevronDown className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Change status</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {STUDENT_STATUS_OPTIONS.map((o) => (
-                <DropdownMenuItem
-                  key={o.value}
-                  onClick={() => handleStatusChange(o.value)}
-                  disabled={o.value === student.student_status}
+          <div className="flex flex-wrap items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
                   className="gap-2"
+                  disabled={updateMutation.isPending || hasLeft}
                 >
-                  {o.value === student.student_status ? (
-                    <Check className="size-4" />
-                  ) : (
-                    <span className="size-4" />
-                  )}
-                  {o.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  Status: {studentStatusLabel(student.student_status)}
+                  <ChevronDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Change status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {EDITABLE_STUDENT_STATUS_OPTIONS.map((o) => (
+                  <DropdownMenuItem
+                    key={o.value}
+                    onClick={() => handleStatusChange(o.value)}
+                    disabled={o.value === student.student_status}
+                    className="gap-2"
+                  >
+                    {o.value === student.student_status ? (
+                      <Check className="size-4" />
+                    ) : (
+                      <span className="size-4" />
+                    )}
+                    {o.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  Lifecycle
+                  <ChevronDown className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Record what happened</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {hasLeft ? (
+                  <DropdownMenuItem onClick={() => setLifecycleAct("reEnroll")}>
+                    Re-enroll…
+                  </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => setLifecycleAct("transferToSection")}
+                    >
+                      Move to another section…
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setLifecycleAct("withdraw")}>
+                      Withdraw…
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLifecycleAct("graduate")}>
+                      Record graduation…
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setLifecycleAct("transferOut")}
+                    >
+                      Transfer to another school…
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         }
       />
 
@@ -291,11 +342,23 @@ export default function StudentDetailPage() {
         onSubmit={handleUpdate}
       />
 
+      <StudentLifecycleDialog
+        act={lifecycleAct}
+        student={{
+          id: student.id,
+          name: student.name,
+          class_id: student.class_id,
+        }}
+        onOpenChange={(open) => {
+          if (!open) setLifecycleAct(null);
+        }}
+      />
+
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title={`Delete ${student.name}?`}
-        description="This permanently removes the student along with their login, uploaded documents, and fee records. This cannot be undone — to keep the record but mark them as gone, change their status to Transferred, Leaving, or Graduated instead."
+        description="This permanently removes the student along with their login, uploaded documents, and fee records. This cannot be undone — to keep the record of a student who has left, use Withdraw, Record graduation or Transfer to another school instead."
         confirmLabel="Delete permanently"
         variant="destructive"
         loading={deleteMutation.isPending}
