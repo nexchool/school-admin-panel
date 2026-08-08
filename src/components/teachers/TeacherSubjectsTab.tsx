@@ -25,6 +25,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
+import { academicStructureService } from "@/services/academicStructureService";
 
 interface TeacherSubjectsTabProps {
   teacherId: string;
@@ -46,7 +47,7 @@ export function TeacherSubjectsTab({ teacherId, onRefresh }: TeacherSubjectsTabP
     try {
       const [subs, all] = await Promise.all([
         teacherSubjectService.getSubjects(teacherId),
-        subjectsService.getSubjects(),
+        academicStructureService.subjects(),
       ]);
       setSubjects(Array.isArray(subs) ? subs : []);
       setAllSubjects(Array.isArray(all) ? all : []);

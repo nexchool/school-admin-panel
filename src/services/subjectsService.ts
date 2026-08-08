@@ -13,15 +13,6 @@ import type {
 } from "@/types/subject";
 
 export const subjectsService = {
-  getSubjects: async (opts?: {
-    includeInactive?: boolean;
-  }): Promise<Subject[]> => {
-    const q =
-      opts?.includeInactive === true ? "?include_inactive=true" : "";
-    const data = await apiGet<Subject[]>(`/api/subjects/${q}`);
-    return Array.isArray(data) ? data : [];
-  },
-
   /** Paginated + searchable catalogue. Any list param switches the backend to
    *  the `{items, total, page, per_page, total_pages}` envelope. */
   listSubjects: async (

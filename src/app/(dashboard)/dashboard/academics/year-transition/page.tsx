@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks";
-import { academicYearsService } from "@/services/academicYearsService";
 import { academicStructureService } from "@/services/academicStructureService";
 import { academicYearsKeys } from "@/hooks/useAcademicYears";
 import { classesService } from "@/services/classesService";

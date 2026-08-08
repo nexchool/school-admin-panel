@@ -17,6 +17,7 @@ import type { AcademicYear } from "./academicYearsService";
 import type { AcademicProgramme } from "./programmesService";
 import type { Grade } from "./gradesService";
 import type { MediumDto } from "./mediumsService";
+import type { Subject } from "@/types/subject";
 
 const CAMPUSES = `
   query Campuses($status: String) {
@@ -149,6 +150,34 @@ function toMedium(node: MediumNode, tenantId = ""): MediumDto {
   };
 }
 
+const SUBJECTS = `
+  query Subjects($includeInactive: Boolean) {
+    subjects(includeInactive: $includeInactive) {
+      id name code description subjectType isActive
+    }
+  }
+`;
+
+type SubjectNode = {
+  id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  subjectType: string | null;
+  isActive: boolean;
+};
+
+function toSubject(node: SubjectNode): Subject {
+  return {
+    id: node.id,
+    name: node.name,
+    code: node.code ?? undefined,
+    description: node.description ?? undefined,
+    subject_type: node.subjectType ?? undefined,
+    is_active: node.isActive,
+  };
+}
+
 export const academicStructureService = {
   campuses: async (status?: string): Promise<SchoolUnit[]> => {
     const data = await gql<{ campuses: CampusNode[] }>(CAMPUSES, { status });
@@ -174,6 +203,13 @@ export const academicStructureService = {
       includeInactive,
     });
     return data.mediums.map((node) => toMedium(node));
+  },
+
+  subjects: async (includeInactive = false): Promise<Subject[]> => {
+    const data = await gql<{ subjects: SubjectNode[] }>(SUBJECTS, {
+      includeInactive,
+    });
+    return data.subjects.map(toSubject);
   },
 
   academicYears: async (activeOnly = false): Promise<AcademicYear[]> => {
