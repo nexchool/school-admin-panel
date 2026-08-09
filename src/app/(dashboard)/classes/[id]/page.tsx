@@ -57,7 +57,8 @@ export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasAnyPermission, hasAllPermissions, isFeatureEnabled } = useAuth();
+  const { hasPermission, hasAnyPermission, hasAllPermissions, isFeatureEnabled } =
+    useAuth();
   const timetableEnabled = isFeatureEnabled("timetable");
   const id = params?.id as string | undefined;
   const showSubjectsTab = hasAnyPermission([
@@ -80,6 +81,13 @@ export default function ClassDetailPage() {
   const [removingTeacher, setRemovingTeacher] = useState<string | null>(null);
   const [deleteClassOpen, setDeleteClassOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  // A teacher holds class.read and student.read.class, so this page renders for
+  // them — but Edit, Delete, Add and Remove all answer 403. An action nobody
+  // can perform should not be on screen; the server was already refusing, the
+  // screen was the part that lied.
+  const canManageClass = hasPermission("class.manage");
+  const canManageStudents = hasPermission("student.update");
+  const canManageTeachers = hasPermission("class_teacher.manage");
   // Both halves, because a merge does both: it retires a section and moves
   // every child in it. The server asks for the same pair, and `hasPermission`
   // applies the same `<resource>.manage` implication the server does — an
@@ -240,8 +248,8 @@ export default function ClassDetailPage() {
         badges={badges}
         backHref="/classes"
         backLabel="Back to Classes"
-        onEdit={handleEditOpen}
-        onDelete={() => setDeleteClassOpen(true)}
+        onEdit={canManageClass ? handleEditOpen : undefined}
+        onDelete={canManageClass ? () => setDeleteClassOpen(true) : undefined}
         isDeleting={deleteMutation.isPending}
       />
 
@@ -309,14 +317,16 @@ export default function ClassDetailPage() {
                     {studentCount} student{studentCount === 1 ? "" : "s"} enrolled
                   </CardDescription>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setStudentPickerOpen(true)}
-                  className="gap-1"
-                >
-                  <Plus className="size-4" />
-                  Add
-                </Button>
+                {canManageStudents && (
+                  <Button
+                    size="sm"
+                    onClick={() => setStudentPickerOpen(true)}
+                    className="gap-1"
+                  >
+                    <Plus className="size-4" />
+                    Add
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 {cls.students && cls.students.length > 0 ? (
@@ -338,6 +348,7 @@ export default function ClassDetailPage() {
                             {s.admission_number}
                           </p>
                         </button>
+                        {canManageStudents && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -351,6 +362,7 @@ export default function ClassDetailPage() {
                             <UserMinus className="size-4" />
                           )}
                         </Button>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -373,14 +385,16 @@ export default function ClassDetailPage() {
                     Subject teachers assigned to this class
                   </CardDescription>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setTeacherPickerOpen(true)}
-                  className="gap-1"
-                >
-                  <Plus className="size-4" />
-                  Add
-                </Button>
+                {canManageTeachers && (
+                  <Button
+                    size="sm"
+                    onClick={() => setTeacherPickerOpen(true)}
+                    className="gap-1"
+                  >
+                    <Plus className="size-4" />
+                    Add
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 {cls.teachers && cls.teachers.length > 0 ? (
