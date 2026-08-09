@@ -17,7 +17,8 @@ import { toastError, toastSuccess } from "@/lib/errorToast";
  *   description automatically (see `toastError`). Omit to stay silent on error
  *   (e.g. when a modal surfaces the error inline instead).
  * - `retry` adds a "Retry" button that re-runs the mutation with the same
- *   variables. Only meaningful alongside `error`.
+ *   variables. Only meaningful alongside `error`, and only offered when
+ *   re-running could plausibly succeed (see `couldSucceedOnRetry`).
  */
 export type MutationToasts<TData, TVars> = {
   success?: string | ((data: TData, variables: TVars) => string);
@@ -27,6 +28,26 @@ export type MutationToasts<TData, TVars> = {
   error?: string;
   retry?: boolean;
 };
+
+/**
+ * Whether re-running this mutation unchanged could plausibly succeed.
+ *
+ * A business refusal — "that section already exists", "you may not do this",
+ * "no such record" — will refuse identically every time, so a Retry button
+ * invites the user to press something that cannot work, and makes a clear
+ * explanation look like a glitch worth retrying. A dropped connection, a
+ * timeout, a rate limit or a server fault might clear on their own.
+ *
+ * `ApiException` and `GraphQLException` both carry `status`, so one rule covers
+ * REST and GraphQL. No status at all means the request never got an answer —
+ * the network case, which is exactly when Retry earns its place.
+ */
+export function couldSucceedOnRetry(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null | undefined)?.status;
+  if (typeof status !== "number") return true;
+  if (status >= 500) return true;
+  return status === 408 || status === 429;
+}
 
 /**
  * `useMutation` + standardized toasts. The caller's own `onSuccess`/`onError`
@@ -67,9 +88,10 @@ export function useAppMutation<TData, TVars, TError = unknown, TContext = unknow
       options.onError?.(error, variables, onMutateResult, context);
       if (toasts?.error !== undefined) {
         toastError(error, toasts.error, {
-          onRetry: toasts.retry
-            ? () => mutateRef.current(variables)
-            : undefined,
+          onRetry:
+            toasts.retry && couldSucceedOnRetry(error)
+              ? () => mutateRef.current(variables)
+              : undefined,
         });
       }
     },
