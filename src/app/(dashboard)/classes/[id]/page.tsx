@@ -24,6 +24,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ClassFormModal } from "@/components/classes/ClassFormModal";
 import { ClassAssignStudentModal } from "@/components/classes/ClassAssignStudentModal";
 import { ClassAssignTeacherModal } from "@/components/classes/ClassAssignTeacherModal";
+import { MergeSectionModal } from "@/components/classes/MergeSectionModal";
 import { ClassSubjectsSection } from "@/modules/classes/components/ClassSubjectsSection";
 import { ClassTimetableReadOnly } from "@/components/timetable/ClassTimetableReadOnly";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -46,6 +47,7 @@ import {
   BookOpen,
   User,
   Hash,
+  Merge,
 } from "lucide-react";
 import { toastError } from "@/lib/errorToast";
 
@@ -55,7 +57,7 @@ export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasAnyPermission, isFeatureEnabled } = useAuth();
+  const { hasAnyPermission, hasAllPermissions, isFeatureEnabled } = useAuth();
   const timetableEnabled = isFeatureEnabled("timetable");
   const id = params?.id as string | undefined;
   const showSubjectsTab = hasAnyPermission([
@@ -77,6 +79,12 @@ export default function ClassDetailPage() {
   const [removingStudent, setRemovingStudent] = useState<string | null>(null);
   const [removingTeacher, setRemovingTeacher] = useState<string | null>(null);
   const [deleteClassOpen, setDeleteClassOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  // Both halves, because a merge does both: it retires a section and moves
+  // every child in it. The server asks for the same pair, and `hasPermission`
+  // applies the same `<resource>.manage` implication the server does — an
+  // administrator holds `student.manage`, not `student.update` literally.
+  const canMerge = hasAllPermissions(["class.manage", "student.update"]);
   const [removeStudentId, setRemoveStudentId] = useState<string | null>(null);
   const [removeTeacherId, setRemoveTeacherId] = useState<string | null>(null);
 
@@ -184,6 +192,7 @@ export default function ClassDetailPage() {
   // every class created through the structured form, which is how this page
   // came to be titled "— A".
   const classTitle = cls.display_name ?? cls.name;
+  const merged = cls.merged_into;
   const studentCount = cls.students?.length ?? 0;
   const teacherCount = cls.teachers?.length ?? 0;
 
@@ -235,6 +244,52 @@ export default function ClassDetailPage() {
         onDelete={() => setDeleteClassOpen(true)}
         isDeleting={deleteMutation.isPending}
       />
+
+      {/* A merged section is reachable only by a direct link — it has left
+          every list — so it has to explain itself on arrival. The banner is
+          light-only, like the other advisory banners (calendar, setup): the
+          app does not follow the OS colour scheme, so a media-based `dark:`
+          variant renders a dark block on a light page. */}
+      {merged ? (
+        <div className="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Merge className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-1">
+            <p>
+              This section was merged into{" "}
+              <Link
+                href={`/classes/${merged.into_class_id}`}
+                className="font-medium underline underline-offset-2"
+              >
+                {merged.into_display_name ?? "another section"}
+              </Link>
+              {merged.merged_on ? ` on ${merged.merged_on}` : ""}
+              {merged.merged_by_name ? ` by ${merged.merged_by_name}` : ""}. It
+              takes no new students.
+            </p>
+            {merged.reason && (
+              <p className="text-xs">Reason: {merged.reason}</p>
+            )}
+            <p className="text-xs">
+              Its attendance, marks and reports stay here — they happened in
+              this section.
+            </p>
+          </div>
+        </div>
+      ) : (
+        canMerge && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setMergeOpen(true)}
+            >
+              <Merge className="size-4" />
+              Merge into another section
+            </Button>
+          </div>
+        )
+      )}
 
       <QuickStats items={statsItems} />
 
@@ -428,6 +483,15 @@ export default function ClassDetailPage() {
         classId={id}
         onAssigned={refreshClass}
       />
+
+      {canMerge && !merged && (
+        <MergeSectionModal
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+          section={cls}
+          onMerged={(intoClassId) => router.push(`/classes/${intoClassId}`)}
+        />
+      )}
 
       <ConfirmDialog
         open={deleteClassOpen}

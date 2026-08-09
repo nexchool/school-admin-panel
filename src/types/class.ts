@@ -111,9 +111,31 @@ export interface ClassStudent {
   roll_number?: number;
 }
 
+/**
+ * Where a section's future went. Present only on a section that was merged
+ * into another — the list leaves those out unless asked for, so a screen that
+ * has one is looking at history and should render it as retired.
+ */
+export interface SectionMerge {
+  into_class_id: string;
+  into_display_name?: string;
+  merged_on?: string;
+  reason?: string;
+  /** Absent for merges recorded before the actor was kept, or a deleted account. */
+  merged_by_name?: string;
+}
+
+export interface SectionMergeResult {
+  merged_section_id: string;
+  into_section_id: string;
+  students_moved: number;
+  merged_on: string;
+}
+
 export interface ClassDetail extends ClassItem {
   students: ClassStudent[];
   teachers: ClassTeacherAssignment[];
+  merged_into?: SectionMerge;
 }
 
 export interface CreateClassInput {

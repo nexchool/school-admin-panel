@@ -28,6 +28,7 @@ import type {
   ClassStudent,
   ClassTeacherAssignment,
   CreateClassInput,
+  SectionMergeResult,
   SubjectLoad,
   CreateSubjectLoadInput,
 } from "@/types/class";
@@ -91,10 +92,20 @@ const CLASS_STATS = `
   }
 `;
 
+/** Two sections become one. The absorbed section is retired, never deleted. */
+const MERGE_SECTIONS = `
+  mutation MergeSections($sourceId: ID!, $intoId: ID!, $reason: String) {
+    mergeSections(sourceId: $sourceId, intoId: $intoId, reason: $reason) {
+      mergedSectionId intoSectionId studentsMoved mergedOn
+    }
+  }
+`;
+
 const CLASS_DETAIL = `
   query ClassDetail($id: ID!) {
     class(id: $id) {
       ${CLASS_FIELDS}
+      mergedInto { intoClassId intoDisplayName mergedOn reason mergedByName }
       students { id admissionNumber fullName rollNumber }
       teachers {
         teacherId teacherName employeeNumber subjectId subjectName
@@ -131,7 +142,16 @@ type ClassNode = {
   status: string | null;
 };
 
+type SectionMergeNode = {
+  intoClassId: string;
+  intoDisplayName: string | null;
+  mergedOn: string | null;
+  reason: string | null;
+  mergedByName: string | null;
+};
+
 type ClassDetailNode = ClassNode & {
+  mergedInto: SectionMergeNode | null;
   students: {
     id: string;
     admissionNumber: string;
@@ -183,6 +203,15 @@ function toClassItem(node: ClassNode): ClassItem {
 function toClassDetail(node: ClassDetailNode): ClassDetail {
   return {
     ...toClassItem(node),
+    merged_into: node.mergedInto
+      ? {
+          into_class_id: node.mergedInto.intoClassId,
+          into_display_name: node.mergedInto.intoDisplayName ?? undefined,
+          merged_on: node.mergedInto.mergedOn ?? undefined,
+          reason: node.mergedInto.reason ?? undefined,
+          merged_by_name: node.mergedInto.mergedByName ?? undefined,
+        }
+      : undefined,
     students: node.students.map(
       (child): ClassStudent => ({
         id: child.id,
@@ -390,6 +419,34 @@ export const classesService = {
 
   deleteClass: async (id: string): Promise<void> => {
     await apiDelete(`/api/classes/${id}`);
+  },
+
+  /**
+   * Move every child out of one section into another and retire the first.
+   *
+   * Not a delete. The absorbed section keeps its attendance, its marks and its
+   * reports, because they happened there — it simply stops being offered as a
+   * place to put anyone. Refused across academic years: that is promotion.
+   */
+  mergeSections: async (
+    sourceId: string,
+    intoId: string,
+    reason?: string,
+  ): Promise<SectionMergeResult> => {
+    const data = await gql<{
+      mergeSections: {
+        mergedSectionId: string;
+        intoSectionId: string;
+        studentsMoved: number;
+        mergedOn: string;
+      };
+    }>(MERGE_SECTIONS, { sourceId, intoId, reason: reason ?? null });
+    return {
+      merged_section_id: data.mergeSections.mergedSectionId,
+      into_section_id: data.mergeSections.intoSectionId,
+      students_moved: data.mergeSections.studentsMoved,
+      merged_on: data.mergeSections.mergedOn,
+    };
   },
 
   getUnassignedStudents: async (
