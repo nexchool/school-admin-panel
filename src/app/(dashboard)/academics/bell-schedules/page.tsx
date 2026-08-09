@@ -166,7 +166,7 @@ export default function BellSchedulesPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/academics">
+          <Link href="/academics/academic-years">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="size-4" />
             </Button>

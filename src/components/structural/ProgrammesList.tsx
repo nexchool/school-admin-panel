@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks";
-import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import {
   useCreateProgramme,
   useDeleteProgramme,
@@ -102,15 +100,7 @@ export function ProgrammesList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        {isSchoolSetupEnabled() && (
-          <Button asChild variant="outline" size="sm" className="gap-1">
-            <Link href="/school-setup">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to setup
-            </Link>
-          </Button>
-        )}
+      <div className="flex items-center justify-end gap-3">
         {canManage ? (
           <Button type="button" onClick={() => setOpen(true)} className="gap-2">
             <Plus className="h-4 w-4" /> Add programme

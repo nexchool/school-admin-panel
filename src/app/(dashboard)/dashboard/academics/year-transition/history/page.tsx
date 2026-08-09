@@ -107,7 +107,7 @@ export default function PromotionHistoryPage() {
           You need student read or update permissions to view promotion history.
         </p>
         <Button asChild variant="outline">
-          <Link href="/academics">Back to academics</Link>
+          <Link href="/academics/academic-years">Back to academics</Link>
         </Button>
       </div>
     );

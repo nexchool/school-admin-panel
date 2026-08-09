@@ -789,7 +789,7 @@ export default function YearTransitionPage() {
           transition.
         </p>
         <Button asChild variant="outline">
-          <Link href="/academics">Back to academics</Link>
+          <Link href="/academics/academic-years">Back to academics</Link>
         </Button>
       </div>
     );
@@ -800,7 +800,7 @@ export default function YearTransitionPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Button variant="ghost" size="sm" className="mb-2 -ml-2" asChild>
-            <Link href="/academics">
+            <Link href="/academics/academic-years">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Academics
             </Link>

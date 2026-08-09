@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
   Download,
   GraduationCap,
   Loader2,
-  Plus,
   Search,
   Users,
   UsersRound,
@@ -33,7 +31,6 @@ import {
 } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { StatCard } from "@/components/ui/stat-card";
-import { useAuth } from "@/hooks";
 import { useClassesList, useClassesStats } from "@/hooks/useClasses";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
@@ -42,7 +39,6 @@ import { useProgrammes } from "@/hooks/useProgrammes";
 import { useGrades } from "@/hooks/useGrades";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import { toastError } from "@/lib/errorToast";
 import { classesService } from "@/services/classesService";
 import { cn } from "@/lib/utils";
@@ -62,8 +58,9 @@ const ANY = "__all__";
 export default function ClassesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { hasPermission } = useAuth();
-  const canCreate = hasPermission("class.create");
+  // No create affordance here: admin-web has no way to create a class. The only
+  // one was a link to the removed School Setup wizard, so `class.create` was
+  // read and never used. Registered as debt 40.
 
   const { academicYearId } = useActiveAcademicYear();
   const { unitId } = useActiveUnit();
@@ -316,14 +313,6 @@ export default function ClassesPage() {
             )}
             Export
           </Button>
-          {canCreate && isSchoolSetupEnabled() && (
-            <Button asChild className="gap-2">
-              <Link href="/school-setup">
-                <Plus className="size-4" />
-                Add classes
-              </Link>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -472,20 +461,15 @@ export default function ClassesPage() {
         </CardContent>
       </Card>
 
-      {!isLoading && total === 0 && !hasFilters && isSchoolSetupEnabled() && (
+      {!isLoading && total === 0 && !hasFilters && (
         <Card>
           <CardHeader>
             <CardTitle>No classes yet</CardTitle>
             <CardDescription>
-              Use School Setup to add your first batch of classes via the guided
-              builder.
+              Classes are created during onboarding by your Nexchool operator.
+              Contact support to add the first batch for this academic year.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/school-setup">Open School Setup</Link>
-            </Button>
-          </CardContent>
         </Card>
       )}
     </div>

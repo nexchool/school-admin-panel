@@ -1,14 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Link from "next/link";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks";
 import { useSetupStatus } from "@/hooks/useSchoolSetup";
 import { setupBannerFor } from "./setupBanner";
-import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 
 export function SetupGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -86,19 +84,9 @@ export function SetupGate({ children }: { children: React.ReactNode }) {
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>
                 School setup is incomplete. Some features may be unavailable
-                {isSchoolSetupEnabled()
-                  ? " until you finish setup."
-                  : " until setup is completed by your administrator."}
+                until setup is completed by your administrator.
               </span>
             </div>
-            {isSchoolSetupEnabled() && (
-              <Link
-                href="/school-setup"
-                className="shrink-0 font-medium underline underline-offset-2 hover:no-underline"
-              >
-                Continue setup →
-              </Link>
-            )}
           </div>
         )}
         {children}

@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,6 @@ import {
 } from "@/components/ui/select";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useAuth } from "@/hooks";
-import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import { useCreateTerm, useDeleteTerm, useTerms } from "@/hooks/useTerms";
 import { ApiException } from "@/services/api";
 
@@ -101,17 +99,6 @@ export function TermsList() {
 
   return (
     <div className="space-y-4">
-      {isSchoolSetupEnabled() && (
-        <div className="flex items-center justify-between gap-3">
-          <Button asChild variant="outline" size="sm" className="gap-1">
-            <Link href="/school-setup">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to setup
-            </Link>
-          </Button>
-        </div>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>Academic terms</CardTitle>

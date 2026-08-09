@@ -399,7 +399,7 @@ export default function BellScheduleDetailPage() {
           <div className="space-y-1">
             {/* Breadcrumb */}
             <p className="text-xs text-muted-foreground">
-              <Link href="/academics" className="hover:underline">Academics</Link>
+              <Link href="/academics/academic-years" className="hover:underline">Academics</Link>
               {" / "}
               <Link href="/academics/bell-schedules" className="hover:underline">Bell schedules</Link>
             </p>
