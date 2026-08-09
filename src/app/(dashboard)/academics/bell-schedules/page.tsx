@@ -74,20 +74,6 @@ interface AcademicSettings {
 const BELL_KEY = ["academics", "bell-schedules"] as const;
 const SETTINGS_KEY = ["academics", "settings"] as const;
 
-// ── Period kind color helpers ─────────────────────────────────────────────────
-
-const KIND_COLORS: Record<string, string> = {
-  lesson: "bg-primary/10 text-primary border-primary/20",
-  break: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
-  lunch: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
-  assembly: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800",
-  other: "bg-muted text-muted-foreground border-border",
-};
-
-export function periodKindClass(kind: string): string {
-  return KIND_COLORS[kind] ?? KIND_COLORS.other;
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BellSchedulesPage() {
