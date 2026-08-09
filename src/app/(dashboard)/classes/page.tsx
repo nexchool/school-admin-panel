@@ -7,6 +7,7 @@ import {
   Download,
   GraduationCap,
   Loader2,
+  Plus,
   Search,
   Users,
   UsersRound,
@@ -32,6 +33,8 @@ import {
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { StatCard } from "@/components/ui/stat-card";
 import { useClassesList, useClassesStats } from "@/hooks/useClasses";
+import { useAuth } from "@/hooks";
+import { CreateSectionModal } from "@/components/classes/CreateSectionModal";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
@@ -58,9 +61,9 @@ const ANY = "__all__";
 export default function ClassesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // No create affordance here: admin-web has no way to create a class. The only
-  // one was a link to the removed School Setup wizard, so `class.create` was
-  // read and never used. Registered as debt 40.
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("class.create");
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { academicYearId } = useActiveAcademicYear();
   const { unitId } = useActiveUnit();
@@ -313,6 +316,12 @@ export default function ClassesPage() {
             )}
             Export
           </Button>
+          {canCreate && (
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              Add section
+            </Button>
+          )}
         </div>
       </div>
 
@@ -466,11 +475,28 @@ export default function ClassesPage() {
           <CardHeader>
             <CardTitle>No classes yet</CardTitle>
             <CardDescription>
-              Classes are created during onboarding by your Nexchool operator.
-              Contact support to add the first batch for this academic year.
+              {canCreate
+                ? "Add the first section for this academic year. A section belongs to one grade, on one programme, at one campus."
+                : "No sections have been set up for this academic year yet."}
             </CardDescription>
           </CardHeader>
+          {canCreate && (
+            <CardContent>
+              <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                <Plus className="size-4" />
+                Add section
+              </Button>
+            </CardContent>
+          )}
         </Card>
+      )}
+
+      {canCreate && (
+        <CreateSectionModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={(classId) => router.push(`/classes/${classId}`)}
+        />
       )}
     </div>
   );
