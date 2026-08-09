@@ -1,5 +1,7 @@
 "use client";
 
+import { gql } from "@/services/graphql";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +38,16 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/errorToast";
+
+const BELL_SCHEDULES = `
+  query BellSchedules {
+    bellSchedules {
+      defaultBellScheduleId
+      items { id name isDefault academicYearId }
+    }
+  }
+`;
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -89,7 +101,30 @@ export default function BellSchedulesPage() {
 
   const { data: listData, isLoading } = useTenantQuery({
     queryKey: BELL_KEY,
-    queryFn: () => apiGet<BellScheduleListResponse>("/api/academics/bell-schedules"),
+    queryFn: async (): Promise<BellScheduleListResponse> => {
+      const data = await gql<{
+        bellSchedules: {
+          defaultBellScheduleId: string | null;
+          items: {
+            id: string;
+            name: string;
+            isDefault: boolean;
+            academicYearId: string | null;
+          }[];
+        };
+      }>(BELL_SCHEDULES);
+      return {
+        items: data.bellSchedules.items.map(
+          (row): BellScheduleListItem => ({
+            id: row.id,
+            name: row.name,
+            is_default: row.isDefault,
+            academic_year_id: row.academicYearId,
+          }),
+        ),
+        tenant_default_bell_schedule_id: data.bellSchedules.defaultBellScheduleId,
+      };
+    },
   });
   const schedules = listData?.items ?? [];
 

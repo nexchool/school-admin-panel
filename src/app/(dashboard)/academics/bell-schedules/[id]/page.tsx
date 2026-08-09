@@ -1,5 +1,7 @@
 "use client";
 
+import { gql } from "@/services/graphql";
+
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -45,6 +47,18 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/errorToast";
+
+const BELL_SCHEDULE = `
+  query BellSchedule($id: ID!) {
+    bellSchedule(id: $id) {
+      id name academicYearId timetableVersionsLinked
+      periods {
+        id bellScheduleId periodNumber periodKind startsAt endsAt label sortOrder
+      }
+    }
+  }
+`;
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -161,7 +175,47 @@ export default function BellScheduleDetailPage() {
   // so handleResponse unwraps to the schedule object directly.
   const { data: schedule, isLoading } = useTenantQuery({
     queryKey: bellKey(id),
-    queryFn: () => apiGet<BellScheduleDetail>(`/api/academics/bell-schedules/${id}`),
+    queryFn: async (): Promise<BellScheduleDetail> => {
+      const data = await gql<{
+        bellSchedule: {
+          id: string;
+          name: string;
+          academicYearId: string | null;
+          timetableVersionsLinked: number;
+          periods: {
+            id: string;
+            bellScheduleId: string | null;
+            periodNumber: number | null;
+            periodKind: string | null;
+            startsAt: string | null;
+            endsAt: string | null;
+            label: string | null;
+            sortOrder: number | null;
+          }[];
+        } | null;
+      }>(BELL_SCHEDULE, { id });
+      if (!data.bellSchedule) {
+        throw new Error("That bell schedule no longer exists.");
+      }
+      return {
+        id: data.bellSchedule.id,
+        name: data.bellSchedule.name,
+        academic_year_id: data.bellSchedule.academicYearId,
+        timetable_versions_linked: data.bellSchedule.timetableVersionsLinked,
+        periods: data.bellSchedule.periods.map(
+          (row): BellPeriod => ({
+            id: row.id,
+            bell_schedule_id: row.bellScheduleId ?? "",
+            period_number: row.periodNumber ?? 0,
+            period_kind: row.periodKind ?? "lesson",
+            starts_at: row.startsAt,
+            ends_at: row.endsAt,
+            label: row.label,
+            sort_order: row.sortOrder ?? 0,
+          }),
+        ),
+      };
+    },
     enabled: !!id,
   });
 
