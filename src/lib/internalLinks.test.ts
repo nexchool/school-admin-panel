@@ -25,9 +25,34 @@ import { describe, expect, it } from "vitest";
 const SRC = path.resolve(__dirname, "..");
 const APP = path.join(SRC, "app");
 
+/**
+ * A page whose whole job is to redirect somewhere else.
+ *
+ * The `/finance/*` tree is seven of these, kept so links and bookmarks from
+ * before the routes moved still land somewhere sensible. They are a
+ * compatibility layer for the outside world, not routes this app should link
+ * to — an internal link pointing at one costs a round trip and quietly keeps
+ * the old path alive past the point anyone meant to retire it.
+ *
+ * Detected as: imports `redirect` from next/navigation, and renders nothing.
+ * A page that redirects conditionally and otherwise renders has JSX, so it is
+ * a real route and not caught here.
+ */
+function isRedirectStub(source: string): boolean {
+  const importsRedirect = /import\s*\{[^}]*\bredirect\b[^}]*\}\s*from\s*["']next\/navigation["']/.test(
+    source
+  );
+  const rendersSomething = /return\s*\(?\s*</.test(source);
+  return importsRedirect && !rendersSomething;
+}
+
 /** Route patterns Next.js will serve, as regexes. */
-function routePatterns(): { pattern: RegExp; route: string }[] {
-  const routes: string[] = [];
+function routePatterns(): {
+  pattern: RegExp;
+  route: string;
+  retired: boolean;
+}[] {
+  const routes: { route: string; retired: boolean }[] = [];
 
   const walk = (dir: string, segment: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -37,14 +62,18 @@ function routePatterns(): { pattern: RegExp; route: string }[] {
         const isGroup = entry.name.startsWith("(") && entry.name.endsWith(")");
         walk(full, isGroup ? segment : `${segment}/${entry.name}`);
       } else if (entry.name === "page.tsx" || entry.name === "page.ts") {
-        routes.push(segment || "/");
+        routes.push({
+          route: segment || "/",
+          retired: isRedirectStub(fs.readFileSync(full, "utf8")),
+        });
       }
     }
   };
   walk(APP, "");
 
-  return routes.map((route) => ({
+  return routes.map(({ route, retired }) => ({
     route,
+    retired,
     pattern: new RegExp(
       `^${route
         .replace(/\[\.\.\.[^\]]+\]/g, ".*") // catch-all [...slug]
@@ -98,5 +127,26 @@ describe("internal links", () => {
       .map(([href, files]) => `${href}  <- ${[...files].sort().join(", ")}`);
 
     expect(broken).toEqual([]);
+  });
+
+  it("no internal href points at a retired redirect route", () => {
+    // Those routes exist for the outside world — an old bookmark, a link in an
+    // email sent before the move. Inside the app, link to where the page
+    // actually lives.
+    const retired = patterns.filter((p) => p.retired);
+    const hops = [...hrefs.entries()]
+      .filter(([href]) => retired.some(({ pattern }) => pattern.test(href)))
+      .map(([href, files]) => `${href}  <- ${[...files].sort().join(", ")}`);
+
+    expect(hops).toEqual([]);
+  });
+
+  it("recognises the finance compatibility layer as retired", () => {
+    // Guards the detector: if `isRedirectStub` stopped matching, the test above
+    // would pass by finding nothing retired rather than nothing linking to it.
+    const retired = patterns.filter((p) => p.retired).map((p) => p.route);
+    expect(retired).toContain("/finance/student-fees");
+    expect(retired).toContain("/finance/invoices");
+    expect(retired).not.toContain("/dashboard/finance/student-fees");
   });
 });

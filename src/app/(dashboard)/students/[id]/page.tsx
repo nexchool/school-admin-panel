@@ -684,7 +684,9 @@ function FeesPanel({ student }: { student: Student }) {
       title="Fees"
       description="Fee assignment summary"
       icon={Wallet}
-      actions={<CrossLink href="/finance/student-fees" label="Open fees" />}
+      actions={
+        <CrossLink href="/dashboard/finance/student-fees" label="Open fees" />
+      }
     >
       {isLoading ? (
         <PanelLoading />
