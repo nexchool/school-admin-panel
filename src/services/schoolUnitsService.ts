@@ -1,4 +1,4 @@
-import { apiDelete, apiPatch, apiPost } from "@/services/api";
+import { academicStructureService } from "@/services/academicStructureService";
 
 export type ActiveStatus = "active" | "inactive";
 
@@ -20,10 +20,16 @@ export interface SchoolUnit {
   updated_at: string | null;
 }
 
+/**
+ * The sites a school teaches at — a campus, in the words the v2 canon uses.
+ *
+ * Reads and writes both live in `academicStructureService`; this stays as the
+ * name the hooks already import.
+ */
 export const schoolUnitsService = {
   create: (data: Partial<SchoolUnit>) =>
-    apiPost<SchoolUnit>("/api/school-units/", data),
+    academicStructureService.addCampus(data),
   update: (id: string, data: Partial<SchoolUnit>) =>
-    apiPatch<SchoolUnit>(`/api/school-units/${id}`, data),
-  remove: (id: string) => apiDelete<void>(`/api/school-units/${id}`),
+    academicStructureService.updateCampus(id, data),
+  remove: (id: string) => academicStructureService.removeCampus(id),
 };

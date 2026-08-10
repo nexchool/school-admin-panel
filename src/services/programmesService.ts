@@ -1,4 +1,4 @@
-import { apiDelete, apiPatch, apiPost } from "@/services/api";
+import { academicStructureService } from "@/services/academicStructureService";
 import type { ActiveStatus } from "@/services/schoolUnitsService";
 
 export interface AcademicProgramme {
@@ -11,10 +11,16 @@ export interface AcademicProgramme {
   status: ActiveStatus;
 }
 
+/**
+ * The courses of education a school offers.
+ *
+ * Reads and writes both live in `academicStructureService`; this stays as the
+ * name the hooks already import.
+ */
 export const programmesService = {
   create: (data: Partial<AcademicProgramme>) =>
-    apiPost<AcademicProgramme>("/api/programmes/", data),
+    academicStructureService.addProgramme(data),
   update: (id: string, data: Partial<AcademicProgramme>) =>
-    apiPatch<AcademicProgramme>(`/api/programmes/${id}`, data),
-  remove: (id: string) => apiDelete<void>(`/api/programmes/${id}`),
+    academicStructureService.updateProgramme(id, data),
+  remove: (id: string) => academicStructureService.removeProgramme(id),
 };

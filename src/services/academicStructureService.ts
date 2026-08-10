@@ -178,6 +178,118 @@ function toSubject(node: SubjectNode): Subject {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Changing the structure
+// ---------------------------------------------------------------------------
+//
+// The write half of the four reads above, kept in the same file because they
+// share the mappers: a campus that comes back from `addCampus` is the same
+// shape `campuses` returns, and having one place that knows that shape is the
+// whole reason the reads stopped using type assertions.
+//
+// Two things differ from the REST calls these replace. GraphQL names fields in
+// camelCase while the client DTOs are snake_case, so each write needs a mapper
+// in the other direction — `toCampusInput` and friends below. And a partial
+// update sends only the keys the caller set: the server treats an absent field
+// as "leave it alone", so passing `undefined` through is meaningful rather than
+// sloppy, and `dropUnset` is what makes it deliberate.
+
+function dropUnset<T extends Record<string, unknown>>(input: T): T {
+  return Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  ) as T;
+}
+
+function toCampusInput(data: Partial<SchoolUnit>) {
+  return dropUnset({
+    name: data.name,
+    code: data.code,
+    status: data.status,
+    address: data.address,
+    phone: data.phone,
+    diseNo: data.dise_no,
+    indexNo: data.index_no,
+    recognitionNo: data.recognition_no,
+    grNumberScheme: data.gr_number_scheme,
+    logoUrl: data.logo_url,
+    principalSignatureUrl: data.principal_signature_url,
+  });
+}
+
+function toProgrammeInput(data: Partial<AcademicProgramme>) {
+  return dropUnset({
+    name: data.name,
+    board: data.board,
+    code: data.code,
+    medium: data.medium,
+    mediumId: data.medium_id,
+    status: data.status,
+  });
+}
+
+function toMediumInput(data: Partial<MediumDto>) {
+  return dropUnset({
+    name: data.name,
+    code: data.code,
+    isActive: data.is_active,
+  });
+}
+
+const CAMPUS_FIELDS = `
+  id name code status phone address
+  diseNo indexNo recognitionNo grNumberScheme
+  logoUrl principalSignatureUrl
+`;
+const PROGRAMME_FIELDS = `id name board code status medium mediumId`;
+
+const ADD_CAMPUS = `
+  mutation AddCampus($input: CampusInput!) {
+    addCampus(input: $input) { ${CAMPUS_FIELDS} }
+  }
+`;
+const UPDATE_CAMPUS = `
+  mutation UpdateCampus($id: ID!, $changes: CampusChanges!) {
+    updateCampus(id: $id, changes: $changes) { ${CAMPUS_FIELDS} }
+  }
+`;
+const REMOVE_CAMPUS = `mutation RemoveCampus($id: ID!) { removeCampus(id: $id) }`;
+
+const ADD_PROGRAMME = `
+  mutation AddProgramme($input: ProgrammeInput!) {
+    addProgramme(input: $input) { ${PROGRAMME_FIELDS} }
+  }
+`;
+const UPDATE_PROGRAMME = `
+  mutation UpdateProgramme($id: ID!, $changes: ProgrammeChanges!) {
+    updateProgramme(id: $id, changes: $changes) { ${PROGRAMME_FIELDS} }
+  }
+`;
+const REMOVE_PROGRAMME = `mutation RemoveProgramme($id: ID!) { removeProgramme(id: $id) }`;
+
+const ADD_GRADE = `
+  mutation AddGrade($input: GradeInput!) {
+    addGrade(input: $input) { id name sequence }
+  }
+`;
+const UPDATE_GRADE = `
+  mutation UpdateGrade($id: ID!, $changes: GradeChanges!) {
+    updateGrade(id: $id, changes: $changes) { id name sequence }
+  }
+`;
+const REMOVE_GRADE = `mutation RemoveGrade($id: ID!) { removeGrade(id: $id) }`;
+
+const ADD_MEDIUM = `
+  mutation AddMedium($input: MediumInput!) {
+    addMedium(input: $input) { id name code isActive }
+  }
+`;
+const UPDATE_MEDIUM = `
+  mutation UpdateMedium($id: ID!, $changes: MediumChanges!) {
+    updateMedium(id: $id, changes: $changes) { id name code isActive }
+  }
+`;
+const REMOVE_MEDIUM = `mutation RemoveMedium($id: ID!) { removeMedium(id: $id) }`;
+
 export const academicStructureService = {
   campuses: async (status?: string): Promise<SchoolUnit[]> => {
     const data = await gql<{ campuses: CampusNode[] }>(CAMPUSES, { status });
@@ -218,5 +330,103 @@ export const academicStructureService = {
       { activeOnly },
     );
     return data.academicYears.map(toAcademicYear);
+  },
+
+  // -- writes ---------------------------------------------------------------
+
+  addCampus: async (data: Partial<SchoolUnit>): Promise<SchoolUnit> => {
+    const result = await gql<{ addCampus: CampusNode }>(ADD_CAMPUS, {
+      // The schema requires a name and a code, and omitting one would produce a
+      // raw schema error rather than the server's own "name is required".
+      // Sending the empty string lets the service answer, so a missing field
+      // reads the same as it did over REST.
+      input: { ...toCampusInput(data), name: data.name ?? "", code: data.code ?? "" },
+    });
+    return toSchoolUnit(result.addCampus);
+  },
+
+  updateCampus: async (
+    id: string,
+    data: Partial<SchoolUnit>,
+  ): Promise<SchoolUnit> => {
+    const result = await gql<{ updateCampus: CampusNode }>(UPDATE_CAMPUS, {
+      id,
+      changes: toCampusInput(data),
+    });
+    return toSchoolUnit(result.updateCampus);
+  },
+
+  removeCampus: async (id: string): Promise<void> => {
+    await gql<{ removeCampus: boolean }>(REMOVE_CAMPUS, { id });
+  },
+
+  addProgramme: async (
+    data: Partial<AcademicProgramme>,
+  ): Promise<AcademicProgramme> => {
+    const result = await gql<{ addProgramme: ProgrammeNode }>(ADD_PROGRAMME, {
+      input: {
+        ...toProgrammeInput(data),
+        name: data.name ?? "",
+        board: data.board ?? "",
+        code: data.code ?? "",
+      },
+    });
+    return toProgramme(result.addProgramme);
+  },
+
+  updateProgramme: async (
+    id: string,
+    data: Partial<AcademicProgramme>,
+  ): Promise<AcademicProgramme> => {
+    const result = await gql<{ updateProgramme: ProgrammeNode }>(
+      UPDATE_PROGRAMME,
+      { id, changes: toProgrammeInput(data) },
+    );
+    return toProgramme(result.updateProgramme);
+  },
+
+  removeProgramme: async (id: string): Promise<void> => {
+    await gql<{ removeProgramme: boolean }>(REMOVE_PROGRAMME, { id });
+  },
+
+  addGrade: async (data: Partial<Grade>): Promise<Grade> => {
+    const result = await gql<{ addGrade: Grade }>(ADD_GRADE, {
+      input: dropUnset({ name: data.name ?? "", sequence: data.sequence }),
+    });
+    return result.addGrade;
+  },
+
+  updateGrade: async (id: string, data: Partial<Grade>): Promise<Grade> => {
+    const result = await gql<{ updateGrade: Grade }>(UPDATE_GRADE, {
+      id,
+      changes: dropUnset({ name: data.name, sequence: data.sequence }),
+    });
+    return result.updateGrade;
+  },
+
+  removeGrade: async (id: string): Promise<void> => {
+    await gql<{ removeGrade: boolean }>(REMOVE_GRADE, { id });
+  },
+
+  addMedium: async (data: Partial<MediumDto>): Promise<MediumDto> => {
+    const result = await gql<{ addMedium: MediumNode }>(ADD_MEDIUM, {
+      input: { ...toMediumInput(data), name: data.name ?? "" },
+    });
+    return toMedium(result.addMedium);
+  },
+
+  updateMedium: async (
+    id: string,
+    data: Partial<MediumDto>,
+  ): Promise<MediumDto> => {
+    const result = await gql<{ updateMedium: MediumNode }>(UPDATE_MEDIUM, {
+      id,
+      changes: toMediumInput(data),
+    });
+    return toMedium(result.updateMedium);
+  },
+
+  removeMedium: async (id: string): Promise<void> => {
+    await gql<{ removeMedium: boolean }>(REMOVE_MEDIUM, { id });
   },
 };
