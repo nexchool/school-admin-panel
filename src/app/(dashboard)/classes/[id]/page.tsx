@@ -50,6 +50,7 @@ import {
   Merge,
 } from "lucide-react";
 import { toastError } from "@/lib/errorToast";
+import { classLabel, gradeLabel } from "@/lib/gradeLevel";
 
 type ClassDetailTab = "students" | "teachers" | "subjects" | "timetable";
 
@@ -196,10 +197,20 @@ export default function ClassDetailPage() {
     );
   }
 
-  // Composed server-side. `name` is a nullable legacy label and is empty for
-  // every class created through the structured form, which is how this page
-  // came to be titled "— A".
-  const classTitle = cls.display_name ?? cls.name;
+  // Composed from grade and section. `name` is a nullable legacy label, empty
+  // for every class created through the structured form, which is how this
+  // page came to be titled "— A"; `display_name` is the server's own
+  // composition and the fallback when a row has no grade.
+  const gradePart = cls.grade_name ? gradeLabel(cls.grade_name) : null;
+  const classTitle =
+    gradePart && cls.section
+      ? `${gradePart} · Section ${cls.section}`
+      : classLabel(cls);
+  // Where this class sits: programme, year, campus — the three that tell one
+  // "Grade 1 · A" apart from the other.
+  const classContext = [cls.programme_name, cls.academic_year, cls.school_unit_name]
+    .filter(Boolean)
+    .join(" · ");
   const merged = cls.merged_into;
   const studentCount = cls.students?.length ?? 0;
   const teacherCount = cls.teachers?.length ?? 0;
@@ -244,7 +255,7 @@ export default function ClassDetailPage() {
       <EntityHeader
         icon={GraduationCap}
         title={classTitle}
-        subtitle={cls.academic_year ?? undefined}
+        subtitle={classContext || undefined}
         badges={badges}
         backHref="/classes"
         backLabel="Back to Classes"

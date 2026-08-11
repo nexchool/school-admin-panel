@@ -50,6 +50,7 @@ import type {
   ClassesListFilters,
   ClassesSortBy,
 } from "@/types/class";
+import { classLabel } from "@/lib/gradeLevel";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
@@ -224,7 +225,7 @@ export default function ClassesPage() {
     () => [
       {
         key: "grade",
-        header: "Class / Grade",
+        header: "Class",
         sortable: true,
         cell: (row) => (
           <div className="flex items-center gap-3">
@@ -319,7 +320,7 @@ export default function ClassesPage() {
           {canCreate && (
             <Button onClick={() => setCreateOpen(true)} className="gap-2">
               <Plus className="size-4" />
-              Add section
+              Create class
             </Button>
           )}
         </div>
@@ -476,15 +477,15 @@ export default function ClassesPage() {
             <CardTitle>No classes yet</CardTitle>
             <CardDescription>
               {canCreate
-                ? "Add the first section for this academic year. A section belongs to one grade, on one programme, at one campus."
-                : "No sections have been set up for this academic year yet."}
+                ? "Create the first class for this academic year. A class is one grade, on one programme, at one campus."
+                : "No classes have been set up for this academic year yet."}
             </CardDescription>
           </CardHeader>
           {canCreate && (
             <CardContent>
               <Button onClick={() => setCreateOpen(true)} className="gap-2">
                 <Plus className="size-4" />
-                Add section
+                Create class
               </Button>
             </CardContent>
           )}
@@ -500,15 +501,6 @@ export default function ClassesPage() {
       )}
     </div>
   );
-}
-
-/** "Grade 1 A", falling back through the legacy display fields. */
-function classLabel(row: ClassItem): string {
-  const grade =
-    row.grade_name ??
-    row.name ??
-    (row.grade_level != null ? `Grade ${row.grade_level}` : "—");
-  return row.section ? `${grade} ${row.section}` : grade;
 }
 
 function StatusPill({ status }: { status?: string }) {

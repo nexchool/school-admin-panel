@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Layers, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,7 +21,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks";
+import { useClasses } from "@/hooks/useClasses";
 import { useDeleteGrade, useGrades, useUpdateGrade } from "@/hooks/useGrades";
+import { gradeLabel } from "@/lib/gradeLevel";
 import { ApiException } from "@/services/api";
 import type { Grade } from "@/services/gradesService";
 
@@ -36,6 +39,19 @@ export function GradesList() {
   const canManage = hasPermission("grade.manage");
 
   const { data = [], isLoading, isError, refetch } = useGrades();
+  // The classes already loaded for the pickers, counted per grade. No new
+  // query: this is the same list the section form reads, scoped by the header
+  // to the campus and year the administrator is looking at — so the number
+  // answers "how many classes does this grade run right now", not "ever".
+  const { data: classes = [] } = useClasses();
+  const classCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of classes) {
+      if (!row.grade_id) continue;
+      counts.set(row.grade_id, (counts.get(row.grade_id) ?? 0) + 1);
+    }
+    return counts;
+  }, [classes]);
   const updateMut = useUpdateGrade();
   const deleteMut = useDeleteGrade();
 
@@ -103,7 +119,27 @@ export function GradesList() {
     {
       key: "name",
       header: "Grade",
-      cell: (row) => <span className="font-medium">{row.name}</span>,
+      cell: (row) => (
+        <span className="font-medium">{gradeLabel(row.name)}</span>
+      ),
+    },
+    {
+      key: "classes",
+      header: "Classes",
+      className: "w-[110px]",
+      cell: (row) => {
+        const count = classCounts.get(row.id) ?? 0;
+        return count === 0 ? (
+          <span className="text-muted-foreground">None yet</span>
+        ) : (
+          <Link
+            href={`/grades/${row.id}`}
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            {count}
+          </Link>
+        );
+      },
     },
     ...(canManage
       ? [
@@ -118,7 +154,7 @@ export function GradesList() {
                   size="icon"
                   className="h-8 w-8"
                   title="Rename grade"
-                  aria-label={`Rename ${row.name}`}
+                  aria-label={`Rename ${gradeLabel(row.name)}`}
                   onClick={() => openRename(row)}
                 >
                   <Pencil className="h-4 w-4" />
@@ -128,7 +164,7 @@ export function GradesList() {
                   size="icon"
                   className="h-8 w-8 text-destructive hover:text-destructive"
                   title="Remove grade"
-                  aria-label={`Remove ${row.name}`}
+                  aria-label={`Remove ${gradeLabel(row.name)}`}
                   onClick={() => setDeleting(row)}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -221,7 +257,7 @@ export function GradesList() {
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title={`Remove grade ${deleting?.name ?? ""}?`}
+        title={`Remove ${deleting ? gradeLabel(deleting.name) : "grade"}?`}
         description="It leaves the catalogue and stops being offered to new classes. The removal is refused while any class is still in this grade."
         confirmLabel="Remove"
         variant="destructive"

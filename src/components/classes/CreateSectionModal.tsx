@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
-import { gradeAtSameLevel } from "@/lib/gradeLevel";
+import { classLabel, gradeAtSameLevel, gradeLabel } from "@/lib/gradeLevel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,10 +33,24 @@ import { useSchoolUnits } from "@/hooks/useSchoolUnits";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 
+/**
+ * Grade and programme already decided by where the user opened this from.
+ * Supplying it turns the dialog from "create a class" into "add a section" —
+ * see the note on the component.
+ */
+export interface SectionContext {
+  gradeId: string;
+  gradeName: string;
+  programmeId: string;
+  programmeName: string;
+}
+
 interface CreateSectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (classId: string) => void;
+  /** Omit from the global Classes page; pass from a grade + programme view. */
+  context?: SectionContext;
 }
 
 /**
@@ -58,7 +72,14 @@ export function CreateSectionModal({
   open,
   onOpenChange,
   onCreated,
+  context,
 }: CreateSectionModalProps) {
+  // Both modes create the same Class row. What changes is how much the person
+  // has to restate: from the Classes page they are choosing a whole class and
+  // answer everything, while from inside Grade 1 · GSEB English the grade and
+  // programme are already the answer and asking again invites a mismatch
+  // between the page they are on and the row they create.
+  const isSectionOfKnownClass = !!context;
   const { academicYearId } = useActiveAcademicYear();
   const { unitId } = useActiveUnit();
 
@@ -107,17 +128,18 @@ export function CreateSectionModal({
   // the same level — two names for one year of school, which then splits
   // promotion and every report by grade. The names differ, so nothing refuses
   // it; saying so before the click is the only thing that helps.
-  const sameLevel = useMemo(
-    () => (isNewGrade ? gradeAtSameLevel(typedName, sortedGrades) : undefined),
-    [isNewGrade, typedName, sortedGrades],
-  );
+  const sameLevel = isNewGrade
+    ? gradeAtSameLevel(typedName, sortedGrades)
+    : undefined;
+
+  const effectiveProgramme = context?.programmeId ?? programmeId;
 
   const trimmedSection = section.trim().toUpperCase();
   const complete = Boolean(
     effectiveYear &&
       effectiveCampus &&
-      programmeId &&
-      (existingGrade || matchedByName || typedName) &&
+      effectiveProgramme &&
+      (context || existingGrade || matchedByName || typedName) &&
       trimmedSection,
   );
 
@@ -138,7 +160,7 @@ export function CreateSectionModal({
     // A grade typed rather than picked is created first, and only then is the
     // section opened on it. Sequence is left to the server, which reads the
     // number out of the name — "Std 6" belongs at 6, not at the front.
-    let gradeId = existingGrade?.id ?? matchedByName?.id ?? "";
+    let gradeId = context?.gradeId ?? existingGrade?.id ?? matchedByName?.id ?? "";
     if (!gradeId) {
       try {
         const created = await createGrade.mutateAsync({ name: typedName });
@@ -162,7 +184,7 @@ export function CreateSectionModal({
         section: trimmedSection,
         academic_year_id: effectiveYear,
         school_unit_id: effectiveCampus,
-        programme_id: programmeId,
+        programme_id: effectiveProgramme,
         grade_id: gradeId,
         medium_id: mediumId || null,
       },
@@ -175,16 +197,20 @@ export function CreateSectionModal({
     );
   };
 
-  const gradeName = existingGrade?.name ?? matchedByName?.name ?? typedName;
+  const gradeName =
+    context?.gradeName ?? existingGrade?.name ?? matchedByName?.name ?? typedName;
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : close())}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add a section</DialogTitle>
+          <DialogTitle>
+            {isSectionOfKnownClass ? "Add a section" : "Create class"}
+          </DialogTitle>
           <DialogDescription>
-            A section belongs to one grade, on one programme, at one campus, for
-            one academic year.
+            {isSectionOfKnownClass
+              ? `Another section of ${gradeLabel(context!.gradeName)} on ${context!.programmeName}.`
+              : "A class is one grade, on one programme, at one campus, for one academic year."}
           </DialogDescription>
         </DialogHeader>
 
@@ -223,57 +249,69 @@ export function CreateSectionModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="section-programme">Programme</Label>
-            <Select value={programmeId} onValueChange={setProgrammeId}>
-              <SelectTrigger id="section-programme">
-                <SelectValue placeholder="Select programme" />
-              </SelectTrigger>
-              <SelectContent>
-                {programmes.map((programme) => (
-                  <SelectItem key={programme.id} value={programme.id}>
-                    {programme.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {programmes.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                No programmes yet — add one under Settings before opening a
-                section.
-              </p>
-            )}
-          </div>
+          {isSectionOfKnownClass ? null : (
+            <div className="space-y-2">
+              <Label htmlFor="section-programme">Programme</Label>
+              <Select value={programmeId} onValueChange={setProgrammeId}>
+                <SelectTrigger id="section-programme">
+                  <SelectValue placeholder="Select programme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {programmes.map((programme) => (
+                    <SelectItem key={programme.id} value={programme.id}>
+                      {programme.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {programmes.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No programmes yet — add one under Settings before opening a
+                  section.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-[2fr_1fr] gap-3">
             <div className="space-y-2">
               <Label htmlFor="section-grade">Grade</Label>
-              {/* Typeable, not just selectable: a school opening its first
-                  Std 6 section should not have to leave, add a grade, and come
-                  back. A name that matches one already in the list picks it —
-                  the catalogue stays one row per level. */}
-              <Combobox
-                id="section-grade"
-                options={gradeOptions}
-                value={gradeChoice}
-                onChange={setGradeChoice}
-                allowCustom
-                placeholder="Select or type a grade"
-                searchPlaceholder="Search or type a new grade…"
-                emptyText="Press enter to add this grade"
-              />
-              {isNewGrade ? (
-                sameLevel ? (
-                  <p className="text-xs text-amber-700 dark:text-amber-500">
-                    You already teach “{sameLevel.name}” at this level. Pick it
-                    unless “{typedName}” is genuinely a different year.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    “{typedName}” is new — it will be added to your grades.
-                  </p>
-                )
-              ) : null}
+              {isSectionOfKnownClass ? (
+                // Shown, not asked. The grade is why this dialog is open; a
+                // picker here would let the row disagree with the page.
+                <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm">
+                  {gradeLabel(context!.gradeName)}
+                </div>
+              ) : (
+                <>
+                  {/* Typeable, not just selectable: a school opening its first
+                      Std 6 section should not have to leave, add a grade, and
+                      come back. A name that matches one already in the list
+                      picks it — the catalogue stays one row per level. */}
+                  <Combobox
+                    id="section-grade"
+                    options={gradeOptions}
+                    value={gradeChoice}
+                    onChange={setGradeChoice}
+                    allowCustom
+                    placeholder="Select or type a grade"
+                    searchPlaceholder="Search or type a new grade…"
+                    emptyText="Press enter to add this grade"
+                  />
+                  {isNewGrade ? (
+                    sameLevel ? (
+                      <p className="text-xs text-amber-700 dark:text-amber-500">
+                        You already teach “{sameLevel.name}” at this level. Pick
+                        it unless “{typedName}” is genuinely a different year.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        “{typedName}” is new — it will be added to your grades.
+                      </p>
+                    )
+                  ) : null}
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -309,7 +347,7 @@ export function CreateSectionModal({
             <p className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
               This will be listed as{" "}
               <span className="font-medium">
-                {gradeName} {trimmedSection}
+                {classLabel({ grade_name: gradeName, section: trimmedSection })}
               </span>
               .
             </p>
@@ -325,7 +363,7 @@ export function CreateSectionModal({
               className="gap-2"
             >
               {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Add section
+              {isSectionOfKnownClass ? "Add section" : "Create class"}
             </Button>
           </DialogFooter>
         </form>
