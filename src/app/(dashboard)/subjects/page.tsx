@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { SubjectFormModal } from "@/components/subjects/SubjectFormModal";
 import { AssignClassesModal } from "@/components/subjects/AssignClassesModal";
@@ -362,29 +356,16 @@ export default function SubjectsPage() {
         subject={assignSubject}
       />
 
-      <Dialog open={!!deleteSubject} onOpenChange={(o) => !o && setDeleteSubject(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete subject</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Delete &quot;{deleteSubject?.name}&quot;? Subjects still assigned to a
-            class can&apos;t be deleted — remove them from those classes first.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteSubject(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteSubject}
+        onOpenChange={(open) => !open && setDeleteSubject(null)}
+        title={`Delete ${deleteSubject?.name ?? "subject"}?`}
+        description="A subject still assigned to a class cannot be deleted — take it off those classes first."
+        confirmLabel="Delete"
+        variant="destructive"
+        loading={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

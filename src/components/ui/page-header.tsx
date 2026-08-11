@@ -43,10 +43,12 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        // Wraps rather than squashes: a long title and a wide action button
-        // together overflow a narrow window, and a stacked header reads fine
-        // where a clipped one does not.
-        "flex flex-wrap items-start justify-between gap-4",
+        // Stacks on a phone, sits side by side from `sm` up. Not `flex-wrap`:
+        // that measures the description's natural width, so one long sentence
+        // is enough to push the action onto its own line on a wide screen —
+        // which is exactly what it did on Programmes. Letting the text column
+        // shrink instead keeps the button where the eye expects it.
+        "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
         className
       )}
     >
