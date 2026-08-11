@@ -77,6 +77,14 @@ export function Combobox({
 
   return (
     <Popover
+      // Every use of this sits inside a form dialog, and Radix's own guidance
+      // for a popover nested in a modal dialog is to mark it modal: the dialog
+      // puts `pointer-events: none` on <body> and this content is portalled to
+      // <body>, so it lands outside the interactive layer. Clicking an option
+      // still worked — the content re-enables pointer events — but scrolling a
+      // long list did not, which is the shape of the bug reported against the
+      // grade picker and applies equally to the ~200-entry nationality list.
+      modal
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
