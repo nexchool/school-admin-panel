@@ -98,7 +98,12 @@ function internalHrefs(): Map<string, Set<string>> {
       const text = fs.readFileSync(full, "utf8");
       // Only literal hrefs. A template literal is a runtime value this static
       // check cannot resolve, and guessing at one would produce false failures.
-      for (const match of text.matchAll(/href=\{?"(\/[^"?#{}]*)"/g)) {
+      //
+      // Both spellings: `href="/x"` on a JSX element, and `href: "/x"` in an
+      // object. The second matters more than it looks — the sidebar is a list
+      // of objects, so until this matched, the one file whose links are the
+      // app's whole navigation was the one file this test never read.
+      for (const match of text.matchAll(/href[=:]\s*\{?"(\/[^"?#{}]*)"/g)) {
         const href = match[1].replace(/\/$/, "") || "/";
         const where = path.relative(SRC, full);
         found.set(href, (found.get(href) ?? new Set()).add(where));
@@ -139,6 +144,61 @@ describe("internal links", () => {
       .map(([href, files]) => `${href}  <- ${[...files].sort().join(", ")}`);
 
     expect(hops).toEqual([]);
+  });
+
+  /**
+   * Routes a user is meant to arrive at without following a link from inside
+   * the app. Everything else must be linked from somewhere, or nobody can get
+   * to it — the failure this list exists to keep honest.
+   *
+   * Each entry says how a user actually arrives, because "nothing links to it"
+   * and "nothing *should* link to it" look identical from here, and only the
+   * second one is allowed.
+   */
+  const ARRIVED_AT_DIRECTLY: Record<string, string> = {
+    "/": "the app's entry point",
+    "/login": "typed, or redirected to when signed out",
+    "/forgot-password": "linked from the login form",
+    "/reset-password": "opened from a link in an email",
+    "/set-password": "router.replace after a login that forces a reset",
+    "/school-not-found": "redirect target when a subdomain resolves to nothing",
+    "/enter": "the panel's one-click login-as-tenant lands here, from another app",
+    "/dashboard": "where login lands",
+    "/academics/calendar/setup":
+      "linked from the calendar, but as `/…/setup?year=${id}` — a template " +
+      "literal this static check cannot resolve",
+    "/academics/subjects":
+      "a client-side shim that router.replace()s to /subjects; it redirects " +
+      "in an effect rather than with next/navigation's redirect(), so the " +
+      "stub detector above does not see it",
+  };
+
+  it("every page can be reached from somewhere in the app", () => {
+    // The reverse of the first test, and the one that was missing. A page with
+    // no link into it is not a 404 and not a build error — it is a screen that
+    // simply is not in the product. Grades and Programmes were both finished
+    // and had no link anywhere in the app.
+    //
+    // Know what this does not catch: a page linked from *somewhere* passes,
+    // however buried that link is. Bell Schedules had exactly one — a word in
+    // a sentence on the Settings page — so it counted as reached here while
+    // being, in practice, missing from the product. Only a person clicking
+    // around found that. This test is the floor, not the ceiling.
+    const unreachable = patterns
+      .filter((p) => !p.retired)
+      .filter((p) => !p.route.includes("[")) // detail pages are linked from their list
+      .map((p) => p.route)
+      .filter((route) => !hrefs.has(route))
+      .filter((route) => !(route in ARRIVED_AT_DIRECTLY));
+
+    expect(unreachable).toEqual([]);
+  });
+
+  it("the reachability allowlist has no stale entries", () => {
+    // An allowlist that outlives its reason silently permits the next orphan.
+    const routes = new Set(patterns.map((p) => p.route));
+    const gone = Object.keys(ARRIVED_AT_DIRECTLY).filter((r) => !routes.has(r));
+    expect(gone).toEqual([]);
   });
 
   it("recognises the finance compatibility layer as retired", () => {

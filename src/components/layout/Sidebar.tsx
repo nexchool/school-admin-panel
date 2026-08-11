@@ -55,10 +55,16 @@ const ACADEMICS_GROUP: NavGroup = {
   label: "Academics",
   icon: School,
   children: [
+    // Ordered the way a school is built up: where it teaches, what it offers,
+    // the year that is running, and then what happens inside a day.
     { href: "/school-units", label: "Branches", permissions: ROUTE_PERMISSIONS["/school-units"] },
+    { href: "/programmes", label: "Programmes", permissions: ROUTE_PERMISSIONS["/programmes"] },
+    { href: "/grades", label: "Grades", permissions: ROUTE_PERMISSIONS["/grades"] },
     { href: "/academics/academic-years", label: "Academic Years", permissions: ROUTE_PERMISSIONS["/academics"] },
+    { href: "/academics/terms", label: "Terms", permissions: ROUTE_PERMISSIONS["/academics/terms"] },
     { href: "/academics/calendar", label: "Academic Calendar", feature: "academic_calendar", permissions: ROUTE_PERMISSIONS["/academics/calendar"] },
     { href: "/timetable", label: "Timetable", feature: "timetable", permissions: ROUTE_PERMISSIONS["/timetable"] },
+    { href: "/academics/bell-schedules", label: "Bell Schedules", feature: "timetable", permissions: ROUTE_PERMISSIONS["/academics/bell-schedules"] },
     { href: "/subjects", label: "Subjects", permissions: ROUTE_PERMISSIONS["/subjects"] },
     { href: "/departments", label: "Departments", permissions: ROUTE_PERMISSIONS["/departments"] },
   ],
