@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -29,7 +29,11 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { FieldError } from "@/components/ui/field-error";
 import { RequiredMark } from "@/components/ui/required-mark";
-import type { Student, CreateStudentInput } from "@/types/student";
+import type {
+  CreateStudentInput,
+  FamilyMember,
+  Student,
+} from "@/types/student";
 import type { ClassItem } from "@/services/classesService";
 import { StructuredClassPicker } from "@/components/students/StructuredClassPicker";
 import { cn } from "@/lib/utils";
@@ -41,7 +45,9 @@ import {
   DEFAULT_MOTHER_TONGUE,
 } from "@/lib/data/referenceData";
 import {
-  STUDENT_STATUS_OPTIONS,
+  EDITABLE_STUDENT_STATUS_OPTIONS,
+  isWorkflowStatus,
+  studentStatusLabel,
   STUDENT_STATUS_VALUES,
 } from "@/constants/studentStatus";
 import {
@@ -100,6 +106,25 @@ const studentSchema = z.object({
   mother_email: optionalEmail,
   mother_occupation: optionalString,
   mother_annual_income: optionalNonNegativeNumber("Mother's annual income"),
+
+  // Anyone else the school holds responsible — a grandparent, an uncle, a
+  // court-appointed guardian. Father and mother have their own blocks above
+  // because that is how an admission form asks; these are the long tail.
+  other_guardians: z
+    .array(
+      z.object({
+        person_id: z.string().optional(),
+        name: optionalString,
+        relationship: optionalString,
+        phone: optionalPhoneLoose,
+        email: optionalEmail,
+        occupation: optionalString,
+      }),
+    )
+    .default([]),
+  // Which adult the school rings first: "father", "mother", or the index of an
+  // entry in other_guardians.
+  primary_contact: z.string().default("father"),
 
   guardian_address: optionalString,
   guardian_occupation: optionalString,
@@ -298,6 +323,102 @@ interface StudentFormProps {
   submitLabel?: string;
 }
 
+
+/**
+ * Split the household the API sends into the shape this form shows: a father
+ * block, a mother block, and everyone else.
+ *
+ * Falls back to the flat father_/mother_ fields for a student recorded before
+ * the household was captured, so an older record still opens with its parents
+ * filled in rather than blank.
+ */
+function householdToForm(student: Student) {
+  const household = student.family ?? [];
+  const firstWithRole = (role: string) =>
+    household.find((member) => member.relationship === role);
+
+  const father = firstWithRole("father");
+  const mother = firstWithRole("mother");
+  const others = household.filter(
+    (member) => member !== father && member !== mother,
+  );
+
+  const contact = household.find((member) => member.is_primary_contact);
+  let primary_contact = "father";
+  if (contact) {
+    if (contact === mother) primary_contact = "mother";
+    else if (contact !== father) {
+      const at = others.indexOf(contact);
+      if (at >= 0) primary_contact = `other:${at}`;
+    }
+  }
+
+  return {
+    father_name: father?.name ?? student.father_name ?? "",
+    father_phone: father?.phone ?? student.father_phone ?? "",
+    father_email: father?.email ?? student.father_email ?? "",
+    father_occupation: father?.occupation ?? student.father_occupation ?? "",
+    mother_name: mother?.name ?? student.mother_name ?? "",
+    mother_phone: mother?.phone ?? student.mother_phone ?? "",
+    mother_email: mother?.email ?? student.mother_email ?? "",
+    mother_occupation: mother?.occupation ?? student.mother_occupation ?? "",
+    other_guardians: others.map((member) => ({
+      person_id: member.person_id,
+      name: member.name,
+      relationship: member.relationship,
+      phone: member.phone ?? "",
+      email: member.email ?? "",
+      occupation: member.occupation ?? "",
+    })),
+    primary_contact,
+  };
+}
+
+/** Collect the form's blocks back into the household the API expects. */
+function formToHousehold(values: StudentFormValues): FamilyMember[] {
+  const household: FamilyMember[] = [];
+
+  if (values.father_name?.trim()) {
+    household.push({
+      name: values.father_name.trim(),
+      relationship: "father",
+      phone: values.father_phone || null,
+      email: values.father_email || null,
+      occupation: values.father_occupation || null,
+      is_primary_contact: values.primary_contact === "father",
+    });
+  }
+  if (values.mother_name?.trim()) {
+    household.push({
+      name: values.mother_name.trim(),
+      relationship: "mother",
+      phone: values.mother_phone || null,
+      email: values.mother_email || null,
+      occupation: values.mother_occupation || null,
+      is_primary_contact: values.primary_contact === "mother",
+    });
+  }
+  (values.other_guardians ?? []).forEach((guardian, index) => {
+    if (!guardian.name?.trim()) return;
+    household.push({
+      person_id: guardian.person_id,
+      name: guardian.name.trim(),
+      relationship: guardian.relationship?.trim() || "guardian",
+      phone: guardian.phone || null,
+      email: guardian.email || null,
+      occupation: guardian.occupation || null,
+      is_primary_contact: values.primary_contact === `other:${index}`,
+    });
+  });
+
+  // Somebody has to be the one the school rings. If the chosen adult was
+  // cleared, fall to the first the household still has.
+  if (household.length && !household.some((m) => m.is_primary_contact)) {
+    household[0].is_primary_contact = true;
+  }
+  return household;
+}
+
 export function StudentForm({
   initialData,
   classes,
@@ -344,6 +465,7 @@ export function StudentForm({
           disability_details: initialData.disability_details ?? "",
           identification_marks: initialData.identification_marks ?? "",
 
+          ...householdToForm(initialData),
           father_name: initialData.father_name ?? "",
           father_phone: initialData.father_phone ?? "",
           father_email: initialData.father_email ?? "",
@@ -424,6 +546,8 @@ export function StudentForm({
           disability_details: "",
           identification_marks: "",
 
+          other_guardians: [],
+          primary_contact: "father",
           father_name: "",
           father_phone: "",
           father_email: "",
@@ -481,6 +605,17 @@ export function StudentForm({
         },
   });
 
+  // Named so the contact chooser shows who it is choosing between, and read
+  // once rather than per row.
+  const watchedFatherName = form.watch("father_name");
+  const watchedMotherName = form.watch("mother_name");
+  const watchedOtherGuardians = form.watch("other_guardians");
+
+  const otherGuardians = useFieldArray({
+    control: form.control,
+    name: "other_guardians",
+  });
+
   const handleSubmit = form.handleSubmit(
     async (values) => {
       const payload: CreateStudentInput = {
@@ -489,6 +624,10 @@ export function StudentForm({
         guardian_relationship: values.guardian_relationship,
         guardian_phone: values.guardian_phone,
       };
+      // The household, whole: the server treats an adult the form no longer
+      // lists as one who has left it.
+      payload.family = formToHousehold(values);
+
       if (values.email) payload.email = values.email;
       if (values.guardian_email) payload.guardian_email = values.guardian_email;
       if (values.class_id) payload.class_id = values.class_id;
@@ -557,6 +696,10 @@ export function StudentForm({
         const v = values[k];
         if (v === undefined || v === null) continue;
         if (typeof v === "string" && v.trim() === "") continue;
+        // A student who has left carries a status no edit may set, and the
+        // server refuses the whole payload if one is sent — even unchanged.
+        // Sending it would block every other correction to their record.
+        if (k === "student_status" && isWorkflowStatus(v as string)) continue;
         // @ts-expect-error - payload is open to extended optional keys
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above
         payload[k] = v as any;
@@ -922,6 +1065,133 @@ export function StudentForm({
                   {...form.register("guardian_address")}
                   placeholder="Enter address"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-border/60 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Other guardians</p>
+                  <p className="text-xs text-muted-foreground">
+                    Anyone else responsible for this student — a grandparent, an
+                    uncle, a court-appointed guardian.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    otherGuardians.append({
+                      name: "",
+                      relationship: "guardian",
+                      phone: "",
+                      email: "",
+                      occupation: "",
+                    })
+                  }
+                >
+                  Add guardian
+                </Button>
+              </div>
+
+              {otherGuardians.fields.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  None recorded.
+                </p>
+              ) : (
+                otherGuardians.fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="grid gap-4 border-t border-border/60 pt-3 sm:grid-cols-2"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor={`other_guardians.${index}.name`}>Name</Label>
+                      <Input
+                        id={`other_guardians.${index}.name`}
+                        {...form.register(`other_guardians.${index}.name`)}
+                        placeholder="e.g. Bhavesh Patel"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`other_guardians.${index}.relationship`}>
+                        Relationship
+                      </Label>
+                      <Input
+                        id={`other_guardians.${index}.relationship`}
+                        {...form.register(`other_guardians.${index}.relationship`)}
+                        placeholder="e.g. Grandfather"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`other_guardians.${index}.phone`}>Phone</Label>
+                      <Input
+                        id={`other_guardians.${index}.phone`}
+                        {...form.register(`other_guardians.${index}.phone`)}
+                        placeholder="e.g. 9876543210"
+                      />
+                      <FieldError
+                        message={
+                          form.formState.errors.other_guardians?.[index]?.phone
+                            ?.message
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`other_guardians.${index}.occupation`}>
+                        Occupation
+                      </Label>
+                      <Input
+                        id={`other_guardians.${index}.occupation`}
+                        {...form.register(`other_guardians.${index}.occupation`)}
+                        placeholder="Enter occupation"
+                      />
+                    </div>
+                    <div className="sm:col-span-2 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => otherGuardians.remove(index)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-border/60 p-4">
+              <p className="text-sm font-medium">Who should the school call?</p>
+              <p className="text-xs text-muted-foreground">
+                The first person contacted about attendance, fees and
+                emergencies.
+              </p>
+              <div className="flex flex-wrap gap-4 pt-1">
+                {[
+                  { value: "father", label: watchedFatherName || "Father" },
+                  { value: "mother", label: watchedMotherName || "Mother" },
+                  ...otherGuardians.fields.map((field, index) => ({
+                    value: `other:${index}`,
+                    label:
+                      watchedOtherGuardians?.[index]?.name ||
+                      `Guardian ${index + 1}`,
+                  })),
+                ].map((choice) => (
+                  <label
+                    key={choice.value}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="radio"
+                      value={choice.value}
+                      {...form.register("primary_contact")}
+                      className="h-4 w-4"
+                    />
+                    {choice.label}
+                  </label>
+                ))}
               </div>
             </div>
           </div>
@@ -1440,7 +1710,18 @@ export function StudentForm({
                         {legacyStatus} (legacy)
                       </SelectItem>
                     )}
-                    {STUDENT_STATUS_OPTIONS.map((o) => (
+                    {/* A student who has left holds a status no edit can set;
+                        show it so the box is not empty, disabled so it cannot
+                        be re-picked. Bringing them back is re-enrollment. */}
+                    {isWorkflowStatus(initialData?.student_status) && (
+                      <SelectItem
+                        value={initialData!.student_status!}
+                        disabled
+                      >
+                        {studentStatusLabel(initialData?.student_status)}
+                      </SelectItem>
+                    )}
+                    {EDITABLE_STUDENT_STATUS_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
                         {o.label}
                       </SelectItem>

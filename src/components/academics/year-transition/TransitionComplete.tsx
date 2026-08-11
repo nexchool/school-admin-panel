@@ -209,7 +209,7 @@ export function TransitionComplete({
             </li>
             <li>
               <Link
-                href="/dashboard/transport/enrollments"
+                href="/dashboard/transport/students"
                 className="text-primary underline-offset-4 hover:underline"
               >
                 Review transport enrollments

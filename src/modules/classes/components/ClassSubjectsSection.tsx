@@ -32,7 +32,6 @@ import {
   useRemoveSubjectTeacher,
   useUpdateClassSubject,
 } from "@/hooks/useClassSubjects";
-import { subjectsService } from "@/services/subjectsService";
 import { classSubjectsService } from "@/services/classSubjectsService";
 import type { ClassSubjectTableRow } from "@/types/classSubject";
 import type { Subject } from "@/types/subject";
@@ -42,6 +41,7 @@ import { EditClassSubjectModal } from "./EditClassSubjectModal";
 import { AssignTeacherModal } from "./AssignTeacherModal";
 import { BookOpen, Plus } from "lucide-react";
 import { toastError } from "@/lib/errorToast";
+import { academicStructureService } from "@/services/academicStructureService";
 
 export interface ClassSubjectsSectionProps {
   classId: string;
@@ -74,7 +74,7 @@ export function ClassSubjectsSection({ classId, onRefresh }: ClassSubjectsSectio
   // be shared across tenants (query-conventions.md).
   const catalogQuery = useTenantQuery({
     queryKey: ["subjects", "catalog", "include-inactive"],
-    queryFn: () => subjectsService.getSubjects({ includeInactive: true }),
+    queryFn: () => academicStructureService.subjects(true),
     enabled: canView && !!classId,
   });
 

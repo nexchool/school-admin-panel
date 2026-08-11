@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
@@ -33,8 +32,9 @@ import {
 } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { StatCard } from "@/components/ui/stat-card";
-import { useAuth } from "@/hooks";
 import { useClassesList, useClassesStats } from "@/hooks/useClasses";
+import { useAuth } from "@/hooks";
+import { CreateSectionModal } from "@/components/classes/CreateSectionModal";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
@@ -42,7 +42,6 @@ import { useProgrammes } from "@/hooks/useProgrammes";
 import { useGrades } from "@/hooks/useGrades";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { isSchoolSetupEnabled } from "@/lib/featureFlags";
 import { toastError } from "@/lib/errorToast";
 import { classesService } from "@/services/classesService";
 import { cn } from "@/lib/utils";
@@ -51,6 +50,7 @@ import type {
   ClassesListFilters,
   ClassesSortBy,
 } from "@/types/class";
+import { classLabel } from "@/lib/gradeLevel";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
@@ -64,6 +64,7 @@ export default function ClassesPage() {
   const searchParams = useSearchParams();
   const { hasPermission } = useAuth();
   const canCreate = hasPermission("class.create");
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { academicYearId } = useActiveAcademicYear();
   const { unitId } = useActiveUnit();
@@ -224,7 +225,7 @@ export default function ClassesPage() {
     () => [
       {
         key: "grade",
-        header: "Class / Grade",
+        header: "Class",
         sortable: true,
         cell: (row) => (
           <div className="flex items-center gap-3">
@@ -316,12 +317,10 @@ export default function ClassesPage() {
             )}
             Export
           </Button>
-          {canCreate && isSchoolSetupEnabled() && (
-            <Button asChild className="gap-2">
-              <Link href="/school-setup">
-                <Plus className="size-4" />
-                Add classes
-              </Link>
+          {canCreate && (
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              Create class
             </Button>
           )}
         </div>
@@ -472,33 +471,36 @@ export default function ClassesPage() {
         </CardContent>
       </Card>
 
-      {!isLoading && total === 0 && !hasFilters && isSchoolSetupEnabled() && (
+      {!isLoading && total === 0 && !hasFilters && (
         <Card>
           <CardHeader>
             <CardTitle>No classes yet</CardTitle>
             <CardDescription>
-              Use School Setup to add your first batch of classes via the guided
-              builder.
+              {canCreate
+                ? "Create the first class for this academic year. A class is one grade, on one programme, at one campus."
+                : "No classes have been set up for this academic year yet."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/school-setup">Open School Setup</Link>
-            </Button>
-          </CardContent>
+          {canCreate && (
+            <CardContent>
+              <Button onClick={() => setCreateOpen(true)} className="gap-2">
+                <Plus className="size-4" />
+                Create class
+              </Button>
+            </CardContent>
+          )}
         </Card>
+      )}
+
+      {canCreate && (
+        <CreateSectionModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={(classId) => router.push(`/classes/${classId}`)}
+        />
       )}
     </div>
   );
-}
-
-/** "Grade 1 A", falling back through the legacy display fields. */
-function classLabel(row: ClassItem): string {
-  const grade =
-    row.grade_name ??
-    row.name ??
-    (row.grade_level != null ? `Grade ${row.grade_level}` : "—");
-  return row.section ? `${grade} ${row.section}` : grade;
 }
 
 function StatusPill({ status }: { status?: string }) {

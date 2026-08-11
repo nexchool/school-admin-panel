@@ -63,7 +63,11 @@ import type {
   StudentsSortBy,
 } from "@/services/studentsService";
 import type { Student } from "@/types/student";
-import { STUDENT_STATUS_OPTIONS } from "@/constants/studentStatus";
+import {
+  EDITABLE_STUDENT_STATUS_OPTIONS,
+  STUDENT_STATUS_OPTIONS,
+  studentStatusLabel,
+} from "@/constants/studentStatus";
 import {
   FileUp,
   Plus,
@@ -104,13 +108,6 @@ const GENDER_OPTIONS = [
   { value: "Male", label: "Male" },
   { value: "Female", label: "Female" },
   { value: "Other", label: "Other" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-  { value: "transferred", label: "Transferred" },
-  { value: "alumni", label: "Alumni" },
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
@@ -189,19 +186,25 @@ function statusPill(status?: string) {
   const key = status.toLowerCase();
   const map: Record<string, string> = {
     active: "bg-emerald-600 text-white",
+    graduated: "bg-violet-600 text-white",
+    // Still here, on their way out.
+    leaving: "bg-amber-600 text-white",
+    suspended: "bg-red-600 text-white",
+    // Gone.
+    withdrawn: "bg-slate-600 text-white",
+    transferred: "bg-slate-600 text-white",
+    dropped_out: "bg-slate-600 text-white",
     inactive: "bg-slate-500 text-white",
-    transferred: "bg-amber-600 text-white",
-    alumni: "bg-violet-600 text-white",
   };
   const tone = map[key] ?? "bg-slate-500 text-white";
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize",
+        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
         tone
       )}
     >
-      {status}
+      {studentStatusLabel(status)}
     </span>
   );
 }
@@ -954,7 +957,7 @@ export default function StudentsPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__all__">Any</SelectItem>
-                          {STATUS_OPTIONS.map((s) => (
+                          {STUDENT_STATUS_OPTIONS.map((s) => (
                             <SelectItem key={s.value} value={s.value}>
                               {s.label}
                             </SelectItem>
@@ -1122,7 +1125,7 @@ export default function StudentsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Set status to</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      {STUDENT_STATUS_OPTIONS.map((o) => (
+                      {EDITABLE_STUDENT_STATUS_OPTIONS.map((o) => (
                         <DropdownMenuItem
                           key={o.value}
                           onClick={() => handleBulkStatus(o.value)}

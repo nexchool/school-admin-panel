@@ -31,6 +31,23 @@ export const TRANSPORT_NAV_PERMS = [
 export const ROUTE_PERMISSIONS = {
   "/academics": ["academics.read", "academics.manage"],
   "/academics/calendar": ["academic_calendar.read", "academic_calendar.manage"],
+  // Terms answer to their own authority, not the calendar's — a person may
+  // hold one without the other, which is why this is not folded into
+  // "/academics".
+  "/academics/terms": ["academic_term.read", "academic_term.manage"],
+  // Exactly the set `GET /api/academics/bell-schedules` accepts. Listing
+  // `timetable.read` here as well would read sensibly and put a link in front
+  // of somebody the route then refuses.
+  "/academics/bell-schedules": [
+    "academics.read",
+    "academics.manage",
+    "timetable.manage",
+  ],
+  // The structural catalogues a class is composed from. Each keeps its own
+  // authority for the same reason their mutations do: a school may let
+  // somebody name a grade without letting them open a campus.
+  "/grades": ["grade.read", "grade.manage"],
+  "/programmes": ["programme.read", "programme.manage"],
   "/settings": ["academics.read", "academics.manage"],
   "/students": [
     "student.read.all",
@@ -51,6 +68,11 @@ export const ROUTE_PERMISSIONS = {
   "/subjects": ["subject.read", "subject.manage"],
   "/departments": ["department.read", "department.manage"],
   "/timetable": ["timetable.read", "timetable.manage"],
+  // Deciding on a correction is the register-owner's job, not a marker's.
+  "/attendance/corrections": ["attendance.manage"],
+  // Combining records rewrites which human the school's data refers to, so it
+  // carries its own key rather than riding on a general admin permission.
+  "/settings/duplicates": ["person.merge"],
   "/attendance": [
     "attendance.read.all",
     "attendance.read.class",

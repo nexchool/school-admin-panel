@@ -1,5 +1,5 @@
+import { gql } from "@/services/graphql";
 import {
-  apiGet,
   apiPost,
   apiPostForm,
   apiPut,
@@ -61,52 +61,159 @@ export interface TeachersListResult {
   designations: string[];
 }
 
+const TEACHER_FIELDS = `
+  id name employeeId email phone address designation department departmentId
+  dateOfJoining status qualification specialization experienceYears
+  profilePicture userId
+`;
+
+const TEACHERS = `
+  query Teachers(
+    $first: Int!, $offset: Int, $orderBy: TeacherOrder!,
+    $direction: TeacherOrderDirection!, $where: TeacherFilter
+  ) {
+    teachers(
+      first: $first, offset: $offset, orderBy: $orderBy,
+      direction: $direction, where: $where
+    ) {
+      totalCount
+      departments { id name }
+      designations
+      nodes { ${TEACHER_FIELDS} }
+    }
+  }
+`;
+
+const TEACHER = `
+  query Teacher($id: ID!) {
+    teacher(id: $id) {
+      ${TEACHER_FIELDS}
+      subjects { id name code }
+    }
+  }
+`;
+
+type TeacherNode = {
+  id: string;
+  name: string | null;
+  employeeId: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  designation: string | null;
+  department: string | null;
+  departmentId: string | null;
+  dateOfJoining: string | null;
+  status: string | null;
+  qualification: string | null;
+  specialization: string | null;
+  experienceYears: number | null;
+  profilePicture: string | null;
+  userId: string | null;
+};
+
+/** Returns `Teacher` directly — no cast through `unknown`, so the compiler
+ *  checks every declared field is filled. A cast here is what let an
+ *  incomplete calendar mapper reach the browser and throw on mount. */
+function toTeacher(node: TeacherNode): Teacher {
+  return {
+    id: node.id,
+    user_id: node.userId ?? undefined,
+    name: node.name ?? "",
+    email: node.email ?? undefined,
+    profile_picture: node.profilePicture ?? undefined,
+    employee_id: node.employeeId ?? "",
+    designation: node.designation ?? undefined,
+    department: node.department ?? undefined,
+    department_id: node.departmentId,
+    qualification: node.qualification ?? undefined,
+    specialization: node.specialization ?? undefined,
+    experience_years: node.experienceYears ?? undefined,
+    phone: node.phone ?? undefined,
+    address: node.address ?? undefined,
+    date_of_joining: node.dateOfJoining ?? undefined,
+    status: node.status ?? "",
+  };
+}
+
+/** Mirrors `TeacherOrder` in the schema. */
+const ORDER_FIELD: Record<string, string> = {
+  employee_id: "EMPLOYEE_ID",
+  name: "NAME",
+  designation: "DESIGNATION",
+  department: "DEPARTMENT",
+  date_of_joining: "DATE_OF_JOINING",
+};
+
+/** The server's page cap. */
+const MAX_PER_PAGE = 100;
+
 export const teachersService = {
   getTeachers: async (
     params?: TeachersListParams
   ): Promise<TeachersListResult> => {
-    let url = "/api/teachers/";
-    if (params) {
-      const qp = new URLSearchParams();
-      if (params.search) qp.set("search", params.search);
-      if (params.search_field) qp.set("search_field", params.search_field);
-      if (params.sort_by) qp.set("sort_by", params.sort_by);
-      if (params.sort_dir) qp.set("sort_dir", params.sort_dir);
-      if (params.page !== undefined) qp.set("page", String(params.page));
-      if (params.per_page !== undefined) qp.set("per_page", String(params.per_page));
-      if (params.status) qp.set("status", params.status);
-      if (params.department_id) qp.set("department_id", params.department_id);
-      if (params.designation) qp.set("designation", params.designation);
-      if (params.date_of_joining_from) qp.set("date_of_joining_from", params.date_of_joining_from);
-      if (params.date_of_joining_to) qp.set("date_of_joining_to", params.date_of_joining_to);
-      const qs = qp.toString();
-      if (qs) url += `?${qs}`;
+    const page = params?.page ?? 1;
+    const perPage = Math.min(params?.per_page ?? 20, MAX_PER_PAGE);
+
+    const where: Record<string, unknown> = {};
+    if (params?.search) {
+      where.search = params.search;
+      where.searchField = (params.search_field ?? "all").toUpperCase();
     }
-    const data = await apiGet<Partial<TeachersListResult> | Teacher[]>(url);
-    if (Array.isArray(data)) {
-      return {
-        items: data,
-        total: data.length,
-        page: 1,
-        per_page: data.length,
-        total_pages: 1,
-        departments: [],
-        designations: [],
+    if (params?.status) where.status = params.status;
+    if (params?.department_id) where.departmentId = params.department_id;
+    if (params?.designation) where.designation = params.designation;
+    if (params?.date_of_joining_from) {
+      where.joinedOnOrAfter = params.date_of_joining_from;
+    }
+    if (params?.date_of_joining_to) {
+      where.joinedOnOrBefore = params.date_of_joining_to;
+    }
+
+    const data = await gql<{
+      teachers: {
+        totalCount: number;
+        departments: { id: string; name: string }[];
+        designations: string[];
+        nodes: TeacherNode[];
       };
-    }
+    }>(TEACHERS, {
+      first: perPage,
+      offset: (page - 1) * perPage,
+      orderBy: ORDER_FIELD[params?.sort_by ?? "employee_id"] ?? "EMPLOYEE_ID",
+      direction: (params?.sort_dir ?? "asc").toUpperCase(),
+      where,
+    });
+
+    const total = data.teachers.totalCount;
     return {
-      items: data?.items ?? [],
-      total: data?.total ?? 0,
-      page: data?.page ?? 1,
-      per_page: data?.per_page ?? 0,
-      total_pages: data?.total_pages ?? 1,
-      departments: data?.departments ?? [],
-      designations: data?.designations ?? [],
+      items: data.teachers.nodes.map(toTeacher),
+      total,
+      page,
+      per_page: perPage,
+      total_pages: Math.max(1, Math.ceil(total / perPage)),
+      departments: data.teachers.departments,
+      designations: data.teachers.designations,
     };
   },
 
   getTeacher: async (id: string): Promise<Teacher> => {
-    return apiGet<Teacher>(`/api/teachers/${id}`);
+    const data = await gql<{
+      teacher: (TeacherNode & {
+        subjects: { id: string; name: string; code: string | null }[];
+      }) | null;
+    }>(TEACHER, { id });
+    if (!data.teacher) {
+      throw new Error("That teacher is no longer on record.");
+    }
+    return {
+      ...toTeacher(data.teacher),
+      subjects: data.teacher.subjects.map((s) => ({
+        id: s.id,
+        name: s.name,
+        code: s.code ?? undefined,
+      })),
+    };
   },
 
   createTeacher: async (

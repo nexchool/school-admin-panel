@@ -61,7 +61,7 @@ export function FeeStructureFormModal({
     })) ?? [{ name: "", amount: "", is_optional: false }]
   );
   const [availableClasses, setAvailableClasses] = useState<
-    { id: string; name: string; section?: string }[]
+    { id: string; name: string; section?: string; display_name?: string }[]
   >([]);
   const { mutate: createStructure, isPending: creating } = useCreateFeeStructure();
   const { mutate: updateStructure, isPending: updating } = useUpdateFeeStructure();
@@ -238,7 +238,7 @@ export function FeeStructureFormModal({
                   size="sm"
                   onClick={() => toggleClass(c.id)}
                 >
-                  {c.name}
+                  {c.display_name ?? c.name}
                 </Button>
               ))}
               {availableClasses.length === 0 && academicYearId && (

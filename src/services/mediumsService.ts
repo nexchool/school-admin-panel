@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
+import { academicStructureService } from "@/services/academicStructureService";
 
 export interface MediumDto {
   id: string;
@@ -16,20 +16,19 @@ export interface CreateMediumInput {
   is_active?: boolean;
 }
 
+/**
+ * The languages a school teaches in.
+ *
+ * Reads and writes both live in `academicStructureService`; this stays as the
+ * name the hooks already import.
+ */
 export const mediumsService = {
-  list: async (): Promise<MediumDto[]> => {
-    const res = await apiGet<MediumDto[]>("/api/mediums/");
-    return Array.isArray(res) ? res : [];
-  },
-
   create: (input: CreateMediumInput): Promise<MediumDto> =>
-    apiPost<MediumDto>("/api/mediums/", input),
+    academicStructureService.addMedium(input),
 
-  patch: (
-    id: string,
-    input: Partial<CreateMediumInput>,
-  ): Promise<MediumDto> => apiPatch<MediumDto>(`/api/mediums/${id}`, input),
+  patch: (id: string, input: Partial<CreateMediumInput>): Promise<MediumDto> =>
+    academicStructureService.updateMedium(id, input),
 
   remove: (id: string): Promise<void> =>
-    apiDelete<void>(`/api/mediums/${id}`),
+    academicStructureService.removeMedium(id),
 };

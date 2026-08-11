@@ -1,5 +1,7 @@
 "use client";
 
+import { gql } from "@/services/graphql";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +17,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +26,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft,
   Bell,
   Plus,
   Trash2,
@@ -36,6 +38,16 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks";
 import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/errorToast";
+
+const BELL_SCHEDULES = `
+  query BellSchedules {
+    bellSchedules {
+      defaultBellScheduleId
+      items { id name isDefault academicYearId }
+    }
+  }
+`;
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,20 +74,6 @@ interface AcademicSettings {
 const BELL_KEY = ["academics", "bell-schedules"] as const;
 const SETTINGS_KEY = ["academics", "settings"] as const;
 
-// ── Period kind color helpers ─────────────────────────────────────────────────
-
-const KIND_COLORS: Record<string, string> = {
-  lesson: "bg-primary/10 text-primary border-primary/20",
-  break: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
-  lunch: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
-  assembly: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800",
-  other: "bg-muted text-muted-foreground border-border",
-};
-
-export function periodKindClass(kind: string): string {
-  return KIND_COLORS[kind] ?? KIND_COLORS.other;
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BellSchedulesPage() {
@@ -89,7 +87,30 @@ export default function BellSchedulesPage() {
 
   const { data: listData, isLoading } = useTenantQuery({
     queryKey: BELL_KEY,
-    queryFn: () => apiGet<BellScheduleListResponse>("/api/academics/bell-schedules"),
+    queryFn: async (): Promise<BellScheduleListResponse> => {
+      const data = await gql<{
+        bellSchedules: {
+          defaultBellScheduleId: string | null;
+          items: {
+            id: string;
+            name: string;
+            isDefault: boolean;
+            academicYearId: string | null;
+          }[];
+        };
+      }>(BELL_SCHEDULES);
+      return {
+        items: data.bellSchedules.items.map(
+          (row): BellScheduleListItem => ({
+            id: row.id,
+            name: row.name,
+            is_default: row.isDefault,
+            academic_year_id: row.academicYearId,
+          }),
+        ),
+        tenant_default_bell_schedule_id: data.bellSchedules.defaultBellScheduleId,
+      };
+    },
   });
   const schedules = listData?.items ?? [];
 
@@ -128,28 +149,18 @@ export default function BellSchedulesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/academics">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="size-4" />
+      <PageHeader
+        title="Bell Schedules"
+        description="When the periods of a school day begin and end. Each class timetable runs on one of these."
+        actions={
+          canManage ? (
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              New schedule
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Bell schedules</h1>
-            <p className="text-sm text-muted-foreground">
-              Define daily period timings. Each class timetable uses one bell schedule.
-            </p>
-          </div>
-        </div>
-        {canManage && (
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            New schedule
-          </Button>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
       {/* Info callout */}
       <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

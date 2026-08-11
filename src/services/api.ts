@@ -1,5 +1,6 @@
 import { getApiUrl } from "@/lib/constants";
 import { isPublicAuthApiUrl } from "@/lib/auth-api";
+import { noteFeatureStamp } from "@/lib/featureStamp";
 import { notifyForbidden } from "@/lib/forbiddenHandler";
 import { getCurrentSubdomain } from "@/lib/subdomain";
 import {
@@ -21,7 +22,26 @@ export class ApiException extends Error {
   }
 }
 
-const apiRequest = async (
+/**
+ * End the session locally and send the user to sign in again.
+ *
+ * Shared by REST (an HTTP 401) and GraphQL (an `UNAUTHENTICATED` error on a
+ * 200 response), because a rejected identity means the same thing whichever
+ * transport noticed it. The caller still throws afterwards so per-call
+ * handling runs unchanged.
+ */
+export const endSession = async (): Promise<void> => {
+  const { clearAuth } = await import("@/lib/storage");
+  await clearAuth();
+  // Only redirect if we're not already on /login — otherwise queries fired by
+  // the public login page (e.g. ActiveScopeProvider's units / years /
+  // setup-status pre-fetches) would trigger an infinite reload loop.
+  if (!window.location.pathname.startsWith("/login")) {
+    window.location.replace("/login");
+  }
+};
+
+export const apiRequest = async (
   endpoint: string,
   options: RequestInit = {},
   skipJsonContentType = false
@@ -69,6 +89,12 @@ const apiRequest = async (
     if (newAccessToken) {
       await setAccessToken(newAccessToken);
     }
+
+    // Every /api/* response says which module set it was answered under. A
+    // change means the super-admin switched something; the auth layer re-reads
+    // the profile so the sidebar stops offering a module the school no longer
+    // has — without waiting for a logout.
+    noteFeatureStamp(response.headers.get("X-Feature-Stamp"));
 
     return response;
   } catch (err: unknown) {
@@ -123,16 +149,7 @@ const handleResponse = async <T>(response: Response): Promise<T> => {
 
   if (response.status === 401 && typeof window !== "undefined") {
     if (!isPublicAuthApiUrl(responseUrl)) {
-      const { clearAuth } = await import("@/lib/storage");
-      await clearAuth();
-      // Only redirect if we're not already on /login — otherwise queries
-      // fired by the public login page (e.g. ActiveScopeProvider's units /
-      // years / setup-status pre-fetches) would trigger an infinite reload
-      // loop when they 401.
-      const alreadyOnLogin = window.location.pathname.startsWith("/login");
-      if (!alreadyOnLogin) {
-        window.location.replace("/login");
-      }
+      await endSession();
       throw new ApiException(
         "Your session has expired or you are not signed in. Please log in again.",
         401,

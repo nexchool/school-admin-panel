@@ -1,3 +1,4 @@
+import { gql } from "@/services/graphql";
 import {
   apiDelete,
   apiGet,
@@ -178,16 +179,141 @@ export interface PublishResult {
   summary: CalendarSummary;
 }
 
+const CALENDAR = `
+  query AcademicCalendar($yearId: ID!) {
+    academicCalendar(academicYearId: $yearId) {
+      id academicYearId academicYearName status currentStep totalSteps
+      publishedAt publishedBy archivedAt archivedBy
+      weeklyHolidaysConfig { days secondSaturday fourthSaturday }
+      preferences {
+        defaultView defaultMonth weekStart dateFormat timeFormat
+        defaultEventColor
+      }
+    }
+  }
+`;
+
+const SUMMARY = `
+  query CalendarSummary($calendarId: ID!) {
+    calendarSummary(calendarId: $calendarId) {
+      academicYear totalDays workingDays publicHolidayDays weeklyHolidayDays
+      vacationDays examDays eventCount examWindowCount semesterCount
+      eventsByType { eventType count }
+      weeklyHolidaysConfig { days secondSaturday fourthSaturday }
+    }
+  }
+`;
+
+const DAYS = `
+  query CalendarDays($calendarId: ID!) {
+    calendarDays(calendarId: $calendarId) {
+      date dayType hasEvent hasExam semesterStart semesterEnd
+      holidays { id name holidayType }
+    }
+  }
+`;
+
+const EVENTS = `
+  query CalendarEvents($yearId: ID!) {
+    calendarEvents(academicYearId: $yearId) {
+      id name eventType description startDate endDate isHoliday academicYearId
+    }
+  }
+`;
+
+const EXAM_WINDOWS = `
+  query ExamWindows($yearId: ID!) {
+    examWindows(academicYearId: $yearId) {
+      id name examType startDate endDate academicYearId
+    }
+  }
+`;
+
+/** Every read below maps node → client explicitly. The schema is camelCase
+ *  and these types are snake_case; asserting one onto the other is what
+ *  rendered "Invalid Date" on another screen. */
+type CalendarNode = {
+  id: string;
+  academicYearId: string;
+  academicYearName: string | null;
+  status: string;
+  currentStep: number | null;
+  totalSteps: number | null;
+  publishedAt: string | null;
+  publishedBy: string | null;
+  archivedAt: string | null;
+  archivedBy: string | null;
+  weeklyHolidaysConfig: {
+    days: number[];
+    secondSaturday: boolean;
+    fourthSaturday: boolean;
+  } | null;
+  preferences: {
+    defaultView: string;
+    defaultMonth: string | null;
+    weekStart: string;
+    dateFormat: string;
+    timeFormat: string;
+    defaultEventColor: string;
+  } | null;
+};
+
+/**
+ * Every field the client type declares is filled here.
+ *
+ * The first version of this mapper dropped `preferences`, and the page threw
+ * "Cannot read properties of undefined (reading 'default_view')" as it
+ * mounted — `tsc` said nothing because the result was cast through `unknown`.
+ * A cast that silences the compiler silences the only thing checking that a
+ * mapper is complete.
+ */
+function toCalendar(node: CalendarNode): AcademicCalendar {
+  return {
+    id: node.id,
+    academic_year_id: node.academicYearId,
+    academic_year: node.academicYearName
+      ? ({ id: node.academicYearId, name: node.academicYearName } as AcademicYear)
+      : null,
+    status: node.status as CalendarStatus,
+    current_step: node.currentStep ?? 1,
+    total_steps: node.totalSteps ?? 0,
+    weekly_holidays_config: {
+      days: node.weeklyHolidaysConfig?.days ?? [],
+      second_saturday: node.weeklyHolidaysConfig?.secondSaturday ?? false,
+      fourth_saturday: node.weeklyHolidaysConfig?.fourthSaturday ?? false,
+    } as WeeklyHolidaysConfig,
+    preferences: {
+      default_view: (node.preferences?.defaultView ??
+        "month") as CalendarPreferences["default_view"],
+      default_month: node.preferences?.defaultMonth ?? null,
+      week_start: (node.preferences?.weekStart ??
+        "monday") as CalendarPreferences["week_start"],
+      date_format: (node.preferences?.dateFormat ??
+        "dd_mmm_yyyy") as CalendarPreferences["date_format"],
+      time_format: (node.preferences?.timeFormat ??
+        "24h") as CalendarPreferences["time_format"],
+      default_event_color: (node.preferences?.defaultEventColor ??
+        "amber") as CalendarPreferences["default_event_color"],
+    },
+    published_summary: null,
+    published_at: node.publishedAt,
+    published_by: node.publishedBy,
+    archived_at: node.archivedAt,
+    archived_by: node.archivedBy,
+  };
+}
+
 const BASE = "/api/academics/calendar";
 
 export const academicCalendarService = {
   getCalendar: async (academicYearId: string): Promise<AcademicCalendar | null> => {
-    // The shared envelope unwrap turns `data: null` into `{}` — normalize back
-    // to null so "no calendar yet" is distinguishable from a real row.
-    const result = await apiGet<AcademicCalendar | Record<string, never>>(
-      `${BASE}?academic_year_id=${encodeURIComponent(academicYearId)}`,
+    // "No calendar yet" is null here, not an empty object — the schema says
+    // the field is nullable, so the old unwrap-`{}`-back-to-null dance is gone.
+    const data = await gql<{ academicCalendar: CalendarNode | null }>(
+      CALENDAR,
+      { yearId: academicYearId },
     );
-    return result && "id" in result ? (result as AcademicCalendar) : null;
+    return data.academicCalendar ? toCalendar(data.academicCalendar) : null;
   },
   createDraft: (academicYearId: string) =>
     apiPost<AcademicCalendar>(BASE, { academic_year_id: academicYearId }),
@@ -198,8 +324,72 @@ export const academicCalendarService = {
       weekly_holidays_config?: WeeklyHolidaysConfig;
     },
   ) => apiPatch<AcademicCalendar>(`${BASE}/${id}`, data),
-  getSummary: (id: string) => apiGet<CalendarSummary>(`${BASE}/${id}/summary`),
-  getDays: (id: string) => apiGet<CalendarDay[]>(`${BASE}/${id}/days`),
+  getSummary: async (id: string): Promise<CalendarSummary> => {
+    const data = await gql<{ calendarSummary: Record<string, unknown> | null }>(
+      SUMMARY,
+      { calendarId: id },
+    );
+    const s = data.calendarSummary;
+    if (!s) throw new Error("That calendar no longer exists.");
+    const byType = (s.eventsByType as { eventType: string; count: number }[]) ?? [];
+    const weekly = s.weeklyHolidaysConfig as
+      | { days: number[]; secondSaturday: boolean; fourthSaturday: boolean }
+      | null;
+    return {
+      academic_year: s.academicYear,
+      total_days: s.totalDays,
+      working_days: s.workingDays,
+      public_holiday_days: s.publicHolidayDays,
+      weekly_holiday_days: s.weeklyHolidayDays,
+      vacation_days: s.vacationDays,
+      exam_days: s.examDays,
+      event_count: s.eventCount,
+      exam_window_count: s.examWindowCount,
+      semester_count: s.semesterCount,
+      // The schema answers with a list because event types are the school's
+      // to invent; the screens read a map.
+      events_by_type: Object.fromEntries(
+        byType.map((entry) => [entry.eventType, entry.count]),
+      ),
+      weekly_holidays_config: weekly
+        ? {
+            days: weekly.days,
+            second_saturday: weekly.secondSaturday,
+            fourth_saturday: weekly.fourthSaturday,
+          }
+        : undefined,
+    } as unknown as CalendarSummary;
+  },
+
+  getDays: async (id: string): Promise<CalendarDay[]> => {
+    const data = await gql<{
+      calendarDays: {
+        date: string;
+        dayType: string;
+        hasEvent: boolean;
+        hasExam: boolean;
+        semesterStart: boolean;
+        semesterEnd: boolean;
+        holidays: { id: string; name: string; holidayType: string | null }[];
+      }[];
+    }>(DAYS, { calendarId: id });
+    return data.calendarDays.map(
+      (day) =>
+        ({
+          date: day.date,
+          day_type: day.dayType,
+          has_event: day.hasEvent,
+          has_exam: day.hasExam,
+          semester_start: day.semesterStart,
+          semester_end: day.semesterEnd,
+          holidays: day.holidays.map((h) => ({
+            id: h.id,
+            name: h.name,
+            holiday_type: h.holidayType,
+          })),
+        }) as unknown as CalendarDay,
+    );
+  },
   publish: (id: string) => apiPost<PublishResult>(`${BASE}/${id}/publish`, {}),
 
   /**
@@ -241,10 +431,23 @@ export const academicCalendarService = {
     return apiPostForm<CalendarImportReport>(`${BASE}/${id}/import`, fd);
   },
 
-  listExamWindows: (academicYearId: string) =>
-    apiGet<ExamWindow[]>(
-      `${BASE}/exam-windows?academic_year_id=${encodeURIComponent(academicYearId)}`,
-    ),
+  listExamWindows: async (academicYearId: string): Promise<ExamWindow[]> => {
+    const data = await gql<{ examWindows: Record<string, unknown>[] }>(
+      EXAM_WINDOWS,
+      { yearId: academicYearId },
+    );
+    return data.examWindows.map(
+      (w) =>
+        ({
+          id: w.id,
+          name: w.name,
+          exam_type: w.examType,
+          start_date: w.startDate,
+          end_date: w.endDate,
+          academic_year_id: w.academicYearId,
+        }) as unknown as ExamWindow,
+    );
+  },
   createExamWindow: (data: Partial<ExamWindow>) =>
     apiPost<ExamWindow>(`${BASE}/exam-windows`, data),
   updateExamWindow: (id: string, data: Partial<ExamWindow>) =>
@@ -252,10 +455,25 @@ export const academicCalendarService = {
   deleteExamWindow: (id: string) =>
     apiDelete<void>(`${BASE}/exam-windows/${id}`),
 
-  listEvents: (academicYearId: string) =>
-    apiGet<SchoolEvent[]>(
-      `${BASE}/events?academic_year_id=${encodeURIComponent(academicYearId)}`,
-    ),
+  listEvents: async (academicYearId: string): Promise<SchoolEvent[]> => {
+    const data = await gql<{ calendarEvents: Record<string, unknown>[] }>(
+      EVENTS,
+      { yearId: academicYearId },
+    );
+    return data.calendarEvents.map(
+      (e) =>
+        ({
+          id: e.id,
+          name: e.name,
+          event_type: e.eventType,
+          description: e.description,
+          start_date: e.startDate,
+          end_date: e.endDate,
+          is_holiday: e.isHoliday,
+          academic_year_id: e.academicYearId,
+        }) as unknown as SchoolEvent,
+    );
+  },
   createEvent: (data: Partial<SchoolEvent>) =>
     apiPost<SchoolEvent>(`${BASE}/events`, data),
   updateEvent: (id: string, data: Partial<SchoolEvent>) =>

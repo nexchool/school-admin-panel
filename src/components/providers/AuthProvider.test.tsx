@@ -5,6 +5,10 @@ import { useEffect, type ReactNode } from "react";
 
 import { AuthProvider, useAuth } from "./AuthProvider";
 import {
+  noteFeatureStamp,
+  __resetFeatureStampForTests,
+} from "@/lib/featureStamp";
+import {
   notifyForbidden,
   __resetForbiddenHandlerForTests,
 } from "@/lib/forbiddenHandler";
@@ -91,6 +95,7 @@ beforeEach(() => {
   getProfileMock.mockReset();
   logoutMock.mockReset();
   __resetForbiddenHandlerForTests();
+  __resetFeatureStampForTests();
 });
 
 describe("AuthProvider allowedUnitIds plumbing", () => {
@@ -238,5 +243,57 @@ describe("AuthProvider 403 self-correct", () => {
     });
 
     expect(getProfileMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("AuthProvider picks up a module being switched off", () => {
+  const PROFILE = {
+    user: { id: 1, email: "a@b.com" },
+    roles: [],
+    permissions: [],
+    enabled_features: ["students", "transport"],
+  };
+
+  it("re-reads the profile on reload rather than trusting what login saved", async () => {
+    // The reported bug: a super-admin switches Transport off, and the school's
+    // admin keeps the Transport link until they log out and back in. A reload
+    // did nothing, because it only restored the copy saved at login.
+    localStorage.setItem("access_token", "at");
+    localStorage.setItem("refresh_token", "rt");
+    localStorage.setItem("user_data", JSON.stringify({ id: 1, email: "a@b.com" }));
+    localStorage.setItem("enabled_features", JSON.stringify(["students", "transport"]));
+    getProfileMock.mockResolvedValue({ ...PROFILE, enabled_features: ["students"] });
+
+    const holder = renderWithCapture();
+
+    await waitFor(() => expect(getProfileMock).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(holder.current!.isFeatureEnabled("transport")).toBe(false)
+    );
+  });
+
+  it("re-reads the profile when a response says the modules changed", async () => {
+    // The other half: the admin does not even have to reload. The next
+    // request they make carries a different stamp and the nav updates.
+    loginMock.mockResolvedValue({ ...LOGIN_BASE });
+    getProfileMock.mockResolvedValue(PROFILE);
+
+    const holder = renderWithCapture();
+    await waitFor(() => expect(holder.current).not.toBeNull());
+
+    await act(async () => {
+      await holder.current!.login("a@b.com", "password123");
+    });
+    const baseline = getProfileMock.mock.calls.length;
+
+    await act(async () => {
+      noteFeatureStamp("first-stamp");   // baseline, not a change
+      noteFeatureStamp("second-stamp");  // the super-admin changed something
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(getProfileMock.mock.calls.length).toBe(baseline + 1)
+    );
   });
 });

@@ -119,7 +119,7 @@ export function AudiencePicker({ value, onChange, error }: Props) {
                     onChange={() => toggleClass(c.id)}
                     className="size-4"
                   />
-                  <span>{c.name}</span>
+                  <span>{c.display_name ?? c.name}</span>
                 </label>
               );
             })

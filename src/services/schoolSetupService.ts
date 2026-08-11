@@ -10,6 +10,7 @@
  */
 
 import { apiGet, apiGetBlob, apiPost, apiPostForm } from "@/services/api";
+import { gql } from "@/services/graphql";
 
 // ── Status types ─────────────────────────────────────────────────────
 
@@ -202,10 +203,71 @@ export interface SeedApplyResult {
   status: SetupStatus;
 }
 
+const SETUP_STATUS = `
+  query SetupStatus {
+    setupStatus {
+      modules { key ready count optional blockers activeAcademicYearId }
+      overall { ready isSetupComplete needsReconfirm regressedModules }
+    }
+  }
+`;
+
+type SetupModuleNode = {
+  key: string;
+  ready: boolean;
+  count: number;
+  optional: boolean;
+  blockers: string[];
+  activeAcademicYearId: string | null;
+};
+
+type SetupStatusNode = {
+  modules: SetupModuleNode[];
+  overall: {
+    ready: boolean;
+    isSetupComplete: boolean;
+    needsReconfirm: boolean;
+    regressedModules: string[];
+  };
+};
+
+/**
+ * The schema answers with a list of modules; these screens read a map keyed by
+ * module name. The schema is a list because a record would need a new field —
+ * and a schema change — every time a module is added; the map stays here
+ * because that is what the screens were written against.
+ */
+function toSetupStatus(node: SetupStatusNode): SetupStatus {
+  const byKey = Object.fromEntries(
+    node.modules.map((m) => [
+      m.key,
+      {
+        ready: m.ready,
+        count: m.count,
+        optional: m.optional,
+        blockers: m.blockers,
+        ...(m.activeAcademicYearId ? { active_id: m.activeAcademicYearId } : {}),
+      },
+    ]),
+  );
+  return {
+    ...byKey,
+    overall: {
+      ready: node.overall.ready,
+      is_setup_complete: node.overall.isSetupComplete,
+      needs_reconfirm: node.overall.needsReconfirm,
+      regressed_modules: node.overall.regressedModules,
+    },
+  } as unknown as SetupStatus;
+}
+
 // ── Setup aggregator ─────────────────────────────────────────────────
 
 const setup = {
-  status: () => apiGet<SetupStatus>("/api/school-setup/status"),
+  status: async (): Promise<SetupStatus> => {
+    const data = await gql<{ setupStatus: SetupStatusNode }>(SETUP_STATUS);
+    return toSetupStatus(data.setupStatus);
+  },
   complete: () =>
     apiPost<{ is_setup_complete: boolean }>("/api/school-setup/complete"),
   duplicateStructure: (payload: DuplicatePayload) =>

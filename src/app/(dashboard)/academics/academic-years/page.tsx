@@ -7,6 +7,7 @@ import {
   academicYearsService,
   type AcademicYear,
 } from "@/services/academicYearsService";
+import { academicStructureService } from "@/services/academicStructureService";
 import { academicYearsKeys } from "@/hooks/useAcademicYears";
 import { useAuth } from "@/hooks";
 import { ApiException } from "@/services/api";
@@ -18,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +53,7 @@ export default function AcademicYearsPage() {
 
   const { data: years = [], isLoading } = useTenantQuery({
     queryKey: academicYearsKeys.list(false),
-    queryFn: () => academicYearsService.getAcademicYears(false),
+    queryFn: () => academicStructureService.academicYears(false),
   });
   const activeYear = years.find((y) => y.is_active !== false);
 
@@ -174,19 +176,19 @@ export default function AcademicYearsPage() {
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Academic Years</h1>
-          <p className="text-sm text-muted-foreground">Academics › Academic Years</p>
-        </div>
-        {canManage && (
-          <Button type="button" onClick={openCreate} className="shrink-0">
-            <Plus className="mr-1 h-4 w-4" />
-            New academic year
-          </Button>
-        )}
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Academic Years"
+        description="The years your school runs. One is active at a time — it is what every class, timetable and register is filed under."
+        actions={
+          canManage ? (
+            <Button type="button" onClick={openCreate}>
+              <Plus className="mr-1 h-4 w-4" />
+              New academic year
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Card>

@@ -95,10 +95,12 @@ export interface TeacherLeave {
 
 // --- Teacher Workload ---
 export interface TeacherWorkload {
-  id: string;
-  teacher_id: string;
-  max_periods_per_day: number;
-  max_periods_per_week: number;
+  /** Null until a school sets a rule for this teacher — "no ceiling" is not
+   *  a ceiling of zero, and the row does not exist until somebody says so. */
+  id: string | null;
+  teacher_id: string | null;
+  max_periods_per_day: number | null;
+  max_periods_per_week: number | null;
   created_at?: string;
   updated_at?: string;
 }

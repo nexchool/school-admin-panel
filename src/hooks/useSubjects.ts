@@ -16,6 +16,7 @@ import type {
 } from "@/types/subject";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
+import { academicStructureService } from "@/services/academicStructureService";
 
 export const subjectsKeys = {
   all: ["subjects"] as const,
@@ -29,7 +30,7 @@ export function useSubjects() {
   const { tenantId } = useAuth();
   return useQuery({
     queryKey: [...subjectsKeys.list(), tenantId],
-    queryFn: () => subjectsService.getSubjects(),
+    queryFn: () => academicStructureService.subjects(),
     enabled: !!tenantId,
   });
 }

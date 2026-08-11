@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Building, BookOpen, Plus, Pencil, Trash2, GraduationCap, CheckCircle2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,30 +192,24 @@ export default function DepartmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            Departments
-            <Building className="size-5 text-primary" />
-          </h1>
-          <p className="text-muted-foreground">
-            Academic divisions used to organize teachers and classes — for example
-            Primary, Secondary or Higher Secondary.
-          </p>
-        </div>
-        {canManage && (
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setIsCreateOpen(true);
-            }}
-            className="gap-2"
-          >
-            <Plus className="size-4" />
-            New Department
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Departments"
+        description="The academic divisions teachers and classes are organised into — Primary, Secondary, Higher Secondary."
+        actions={
+          canManage ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setIsCreateOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Plus className="size-4" />
+              New department
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

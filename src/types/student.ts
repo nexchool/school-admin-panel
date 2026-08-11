@@ -1,3 +1,14 @@
+export interface FamilyMember {
+  person_id?: string;
+  name: string;
+  /** father | mother | guardian | grandfather | uncle | … */
+  relationship: string;
+  phone?: string | null;
+  email?: string | null;
+  occupation?: string | null;
+  is_primary_contact?: boolean;
+}
+
 export interface Student {
   id: string;
   user_id?: string;
@@ -20,6 +31,13 @@ export interface Student {
   guardian_relationship?: string;
   guardian_phone?: string;
   guardian_email?: string;
+  /**
+   * The household: every adult the school has recorded as responsible for this
+   * student, each with their relationship, and which one the school calls.
+   * The flat father_/mother_/guardian_ fields above are the same information
+   * in the older shape and are still served for the mobile app.
+   */
+  family?: FamilyMember[];
   // Health / Physical
   blood_group?: string;
   height_cm?: number;
@@ -117,6 +135,7 @@ export interface CreateStudentInput {
   roll_number?: number;
   address?: string;
   guardian_email?: string;
+  family?: FamilyMember[];
 
   // Health / Physical
   blood_group?: string;

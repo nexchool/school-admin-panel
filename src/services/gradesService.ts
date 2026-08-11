@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/services/api";
+import { academicStructureService } from "@/services/academicStructureService";
 
 export interface Grade {
   id: string;
@@ -6,10 +6,15 @@ export interface Grade {
   sequence: number;
 }
 
+/**
+ * The year-groups a school teaches.
+ *
+ * Reads and writes both live in `academicStructureService`, which owns the
+ * GraphQL shape of a grade; this stays as the name the hooks already import.
+ */
 export const gradesService = {
-  list: () => apiGet<Grade[]>("/api/grades/"),
-  create: (data: Partial<Grade>) => apiPost<Grade>("/api/grades/", data),
+  create: (data: Partial<Grade>) => academicStructureService.addGrade(data),
   update: (id: string, data: Partial<Grade>) =>
-    apiPatch<Grade>(`/api/grades/${id}`, data),
-  remove: (id: string) => apiDelete<void>(`/api/grades/${id}`),
+    academicStructureService.updateGrade(id, data),
+  remove: (id: string) => academicStructureService.removeGrade(id),
 };

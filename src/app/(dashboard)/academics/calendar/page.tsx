@@ -21,6 +21,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -301,7 +302,7 @@ export default function AcademicCalendarPage() {
   if (!academicYearId || !calendar) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold">Academic Calendar</h1>
+        <PageHeader title="Academic Calendar" />
         <Card className="mx-auto mt-10 max-w-lg">
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
             <CalendarPlus className="h-12 w-12 text-muted-foreground" />
@@ -356,18 +357,18 @@ export default function AcademicCalendarPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">Academic Calendar</h1>
+      <PageHeader
+        className="print:hidden"
+        title={
+          <span className="flex items-center gap-2">
+            Academic Calendar
             {calendar.status === "draft" && <Badge variant="secondary">Draft</Badge>}
             {calendar.status === "archived" && <Badge variant="outline">Archived</Badge>}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {year?.name} · Academics › Academic Calendar
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+          </span>
+        }
+        description={year?.name}
+        actions={
+          <>
           {canEdit && (
             <Button onClick={() => setAddEventOpen(true)}>
               <Plus className="mr-1 h-4 w-4" /> Add Event
@@ -474,8 +475,9 @@ export default function AcademicCalendarPage() {
             </DropdownMenuContent>
           </DropdownMenu>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {calendar.status === "draft" && (
         <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 print:hidden">

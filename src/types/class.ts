@@ -1,5 +1,3 @@
-import type { Student } from "./student";
-
 export type ClassStatus = "active" | "archived";
 
 /** Fields the classes list may be sorted by. Mirrors `SORTABLE_COLUMNS` in
@@ -71,6 +69,10 @@ export interface ClassItem {
    *  no status column of its own. Absent on endpoints other than the list. */
   status?: ClassStatus;
   grade_level?: number | null;
+  /** What the school calls this class — grade + section, composed server-side.
+   *  `name` is a nullable legacy label and is empty for every class created
+   *  through the structured form, so screens must not compose their own. */
+  display_name?: string;
   // Multi-school structural fields. Optional during the soft-migration
   // window — older rows may not yet have them populated.
   school_unit_id?: string | null;
@@ -96,9 +98,44 @@ export interface ClassTeacherAssignment {
   is_class_teacher: boolean;
 }
 
+/** A child as the class detail page lists them.
+ *
+ *  Deliberately not the full `Student`: this page renders a name, an
+ *  admission number and a link. Typing it as `Student` meant casting a
+ *  four-field object into a thirty-field type, which type-checks and then
+ *  hands any new caller a mostly-undefined student. */
+export interface ClassStudent {
+  id: string;
+  name: string;
+  admission_number: string;
+  roll_number?: number;
+}
+
+/**
+ * Where a section's future went. Present only on a section that was merged
+ * into another — the list leaves those out unless asked for, so a screen that
+ * has one is looking at history and should render it as retired.
+ */
+export interface SectionMerge {
+  into_class_id: string;
+  into_display_name?: string;
+  merged_on?: string;
+  reason?: string;
+  /** Absent for merges recorded before the actor was kept, or a deleted account. */
+  merged_by_name?: string;
+}
+
+export interface SectionMergeResult {
+  merged_section_id: string;
+  into_section_id: string;
+  students_moved: number;
+  merged_on: string;
+}
+
 export interface ClassDetail extends ClassItem {
-  students: Student[];
+  students: ClassStudent[];
   teachers: ClassTeacherAssignment[];
+  merged_into?: SectionMerge;
 }
 
 export interface CreateClassInput {

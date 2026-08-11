@@ -273,6 +273,7 @@ export default function StudentFeesPage() {
           id: c.id,
           name: c.name,
           section: c.section,
+          display_name: c.display_name,
         }))}
       />
 

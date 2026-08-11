@@ -23,6 +23,7 @@ import type { Subject } from "@/types/subject";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
+import { academicStructureService } from "@/services/academicStructureService";
 
 interface ClassAssignTeacherModalProps {
   open: boolean;
@@ -48,7 +49,7 @@ export function ClassAssignTeacherModal({
       setLoading(true);
       Promise.all([
         classesService.getUnassignedTeachers(classId),
-        subjectsService.getSubjects(),
+        academicStructureService.subjects(),
       ])
         .then(([t, s]) => {
           setTeachers(t);

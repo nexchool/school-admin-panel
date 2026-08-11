@@ -8,6 +8,7 @@ import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
+import { studentsKeys } from "@/hooks/useStudents";
 import type { ClassesListFilters, CreateClassInput } from "@/types/class";
 
 type ListFilters = {
@@ -134,6 +135,43 @@ export function useUpdateClass() {
       },
     },
     { success: "Class updated", error: "Couldn't update the class", retry: true },
+  );
+}
+
+/**
+ * Two sections become one.
+ *
+ * Invalidates more than the two sections involved: the children moved, so
+ * every student list and every class roster is now wrong, and the absorbed
+ * section has left every picker. Prefix invalidation on `classesKeys.all`
+ * covers the class side; students are cleared by their own prefix.
+ */
+export function useMergeSections() {
+  const queryClient = useQueryClient();
+  return useAppMutation(
+    {
+      mutationFn: ({
+        sourceId,
+        intoId,
+        reason,
+      }: { sourceId: string; intoId: string; reason?: string }) =>
+        classesService.mergeSections(sourceId, intoId, reason),
+      onSuccess: (_result, variables) => {
+        queryClient.invalidateQueries({ queryKey: classesKeys.all });
+        queryClient.invalidateQueries({
+          queryKey: classesKeys.detail(variables.sourceId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: classesKeys.detail(variables.intoId),
+        });
+        queryClient.invalidateQueries({ queryKey: studentsKeys.all });
+      },
+    },
+    {
+      success: "Sections merged",
+      error: "Couldn't merge the sections",
+      retry: false,
+    },
   );
 }
 

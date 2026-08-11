@@ -55,10 +55,16 @@ const ACADEMICS_GROUP: NavGroup = {
   label: "Academics",
   icon: School,
   children: [
-    { href: "/school-units", label: "Branches", feature: "class_management", permissions: ROUTE_PERMISSIONS["/school-units"] },
+    // Ordered the way a school is built up: where it teaches, what it offers,
+    // the year that is running, and then what happens inside a day.
+    { href: "/school-units", label: "Branches", permissions: ROUTE_PERMISSIONS["/school-units"] },
+    { href: "/programmes", label: "Programmes", permissions: ROUTE_PERMISSIONS["/programmes"] },
+    { href: "/grades", label: "Grades", permissions: ROUTE_PERMISSIONS["/grades"] },
     { href: "/academics/academic-years", label: "Academic Years", permissions: ROUTE_PERMISSIONS["/academics"] },
+    { href: "/academics/terms", label: "Terms", permissions: ROUTE_PERMISSIONS["/academics/terms"] },
     { href: "/academics/calendar", label: "Academic Calendar", feature: "academic_calendar", permissions: ROUTE_PERMISSIONS["/academics/calendar"] },
     { href: "/timetable", label: "Timetable", feature: "timetable", permissions: ROUTE_PERMISSIONS["/timetable"] },
+    { href: "/academics/bell-schedules", label: "Bell Schedules", feature: "timetable", permissions: ROUTE_PERMISSIONS["/academics/bell-schedules"] },
     { href: "/subjects", label: "Subjects", permissions: ROUTE_PERMISSIONS["/subjects"] },
     { href: "/departments", label: "Departments", permissions: ROUTE_PERMISSIONS["/departments"] },
   ],
@@ -74,6 +80,7 @@ const SIDEBAR_NAV_CORE: NavEntry[] = [
   { href: "/teachers", label: "Teachers", icon: Users, permissions: ROUTE_PERMISSIONS["/teachers"] },
   { href: "/classes", label: "Classes", icon: BookOpen, permissions: ROUTE_PERMISSIONS["/classes"] },
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance", permissions: ROUTE_PERMISSIONS["/attendance"] },
+  { href: "/attendance/corrections", label: "Corrections", icon: ClipboardCheck, feature: "attendance", permissions: ROUTE_PERMISSIONS["/attendance/corrections"] },
   { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management", permissions: ROUTE_PERMISSIONS["/dashboard/finance"] },
   { href: "/announcements", label: "Announcements", icon: Megaphone, permissions: ROUTE_PERMISSIONS["/announcements"] },
   { href: "/hostel", label: "Hostel", icon: Building2, feature: "hostel", permissions: ROUTE_PERMISSIONS["/hostel"] },
@@ -82,6 +89,7 @@ const SIDEBAR_NAV_CORE: NavEntry[] = [
   { href: "/settings", label: "Settings", icon: Settings, permissions: ROUTE_PERMISSIONS["/settings"] },
   { href: "/subscription", label: "Subscription", icon: CreditCard },
   { href: "/profile", label: "Profile", icon: User },
+  { href: "/settings/duplicates", label: "Duplicate Records", icon: Users, permissions: ROUTE_PERMISSIONS["/settings/duplicates"] },
   { href: "/audit-log", label: "Audit Log", icon: ClipboardList, permissions: ROUTE_PERMISSIONS["/audit-log"] },
 ];
 

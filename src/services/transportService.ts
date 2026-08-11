@@ -181,6 +181,10 @@ export interface EnrollmentTransportHints {
 export type TransportEnrollmentDerivedStatus = "active" | "route_inactive" | "schedule_missing";
 
 export interface TransportEnrollment {
+  /** The class as the row displays it, sent with the row so the screen
+   *  need not fetch every student in the school to label twenty. */
+  class_name?: string | null;
+  guardian_phone?: string | null;
   id: string;
   student_id: string;
   bus_id: string;
@@ -211,6 +215,12 @@ export interface TransportDashboard {
   total_buses: number;
   active_buses: number;
   total_students_on_transport: number;
+  /** Distinct children riding, as opposed to seats filled — they differ if
+   *  anyone rides two buses. */
+  students_with_active_enrollment?: number;
+  /** Children the school marked for transport who are not on a bus. Counted
+   *  on the server; the dashboard used to fetch every student to work it out. */
+  students_opted_without_enrollment?: number;
   buses_near_capacity_count: number;
   occupancy_per_bus: {
     bus_id: string;
@@ -282,6 +292,14 @@ async function downloadBlob(filename: string, endpoint: string): Promise<void> {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export interface TransportEnrollmentsPage {
+  items: TransportEnrollment[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
 }
 
 export const transportService = {
@@ -506,8 +524,55 @@ export const transportService = {
     status?: string;
   }) => apiPost("/api/transport/bus-assignments", body),
 
+  /**
+   * Every enrollment. Used by the screens that count and chart them, which
+   * genuinely need the whole set — a page would give them wrong totals.
+   */
   listEnrollments: (academicYearId?: string) =>
     apiGet<TransportEnrollment[]>(`/api/transport/enrollments${qs({ academic_year_id: academicYearId })}`),
+
+  /**
+   * One page of enrollments, searched on the server.
+   *
+   * Searching has to happen server-side once the list is paged: filtering in
+   * the browser can only find a child who is already on the fetched page, and
+   * a student who is simply on page four reads as one who does not exist.
+   *
+   * Tolerates the plain array the endpoint still returns when no page is
+   * requested, so this keeps working whichever shape comes back.
+   */
+  listEnrollmentsPage: async (params: {
+    academicYearId?: string;
+    page?: number;
+    pageSize?: number;
+    search?: string;
+  }): Promise<TransportEnrollmentsPage> => {
+    const data = await apiGet<Partial<TransportEnrollmentsPage> | TransportEnrollment[]>(
+      `/api/transport/enrollments${qs({
+        academic_year_id: params.academicYearId,
+        page: params.page ? String(params.page) : undefined,
+        pageSize: params.pageSize ? String(params.pageSize) : undefined,
+        search: params.search || undefined,
+      })}`,
+    );
+
+    if (Array.isArray(data)) {
+      return {
+        items: data,
+        total: data.length,
+        page: 1,
+        per_page: data.length,
+        total_pages: 1,
+      };
+    }
+    return {
+      items: data?.items ?? [],
+      total: data?.total ?? 0,
+      page: data?.page ?? 1,
+      per_page: data?.per_page ?? 0,
+      total_pages: data?.total_pages ?? 1,
+    };
+  },
   enroll: (body: {
     student_id: string;
     bus_id: string;

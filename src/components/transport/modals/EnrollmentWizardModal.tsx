@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/select";
 import {
   transportService,
-  type TransportBus,
   type TransportFeeCycle,
   type TransportRoute,
 } from "@/services/transportService";
 import { StopSearchSelect } from "@/components/transport/StopSearchSelect";
-import type { Student } from "@/types/student";
+import { useStudentSearch } from "@/hooks/useStudents";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/errorToast";
@@ -44,12 +44,11 @@ const FEE_CYCLES: { value: TransportFeeCycle; label: string }[] = [
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  students: Student[];
   routes: TransportRoute[];
   onDone: () => void;
 };
 
-export function EnrollmentWizardModal({ open, onOpenChange, students, routes, onDone }: Props) {
+export function EnrollmentWizardModal({ open, onOpenChange, routes, onDone }: Props) {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -63,6 +62,20 @@ export function EnrollmentWizardModal({ open, onOpenChange, students, routes, on
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const [feePlans, setFeePlans] = useState<{ route_id: string; amount: number }[]>([]);
+
+  // The students are searched for rather than listed. A school with fifteen
+  // thousand children cannot be put in a dropdown, and fetching them all to
+  // choose one was a request that got slower every year.
+  const [studentSearch, setStudentSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(studentSearch, 300);
+  const studentsQuery = useStudentSearch(
+    { search: debouncedSearch.trim() || undefined },
+    { enabled: open }
+  );
+  const students = useMemo(
+    () => studentsQuery.data?.items ?? [],
+    [studentsQuery.data]
+  );
 
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === studentId),
@@ -203,10 +216,20 @@ export function EnrollmentWizardModal({ open, onOpenChange, students, routes, on
         {step === 0 && (
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Student</Label>
+              <Label htmlFor="enrollment-student-search">Student</Label>
+              <Input
+                id="enrollment-student-search"
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="Search by name or admission number"
+              />
               <Select value={studentId} onValueChange={setStudentId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose student" />
+                  <SelectValue
+                    placeholder={
+                      studentsQuery.isLoading ? "Loading…" : "Choose student"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {students.map((s) => (
@@ -216,6 +239,11 @@ export function EnrollmentWizardModal({ open, onOpenChange, students, routes, on
                   ))}
                 </SelectContent>
               </Select>
+              {!studentsQuery.isLoading && students.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No student matches that search.
+                </p>
+              )}
             </div>
             {selectedStudent && (
               <div className="space-y-1 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">

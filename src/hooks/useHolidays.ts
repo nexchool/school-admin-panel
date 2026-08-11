@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet } from "@/services/api";
 import {
   holidayService,
   type CreateHolidayPayload,
@@ -29,16 +28,11 @@ export function useHolidays(params?: {
   return useQuery<Holiday[]>({
     queryKey: [...holidayKeys.list(params), tenantId],
     enabled: !!tenantId,
-    queryFn: async () => {
-      const q = new URLSearchParams();
-      if (params?.academic_year_id) q.set("academic_year_id", params.academic_year_id);
-      if (params?.include_recurring === false) q.set("include_recurring", "false");
-      const suffix = q.toString() ? `?${q.toString()}` : "";
-      const url = `/api/holidays/${suffix}`;
-      const data = await apiGet<Holiday[] | { data: Holiday[] }>(url);
-      const arr = Array.isArray(data) ? data : (data as { data: Holiday[] })?.data;
-      return Array.isArray(arr) ? arr : [];
-    },
+    // Goes through the service rather than fetching here. This hook used to
+    // hold its own copy of the request, with a different set of filters from
+    // the service's — two readers of one endpoint, which is how a filter comes
+    // to work on one screen and not another.
+    queryFn: () => holidayService.getHolidays(params),
   });
 }
 

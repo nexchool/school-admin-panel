@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAppMutation } from "@/hooks/useAppMutation";
 import { schoolSetupKeys } from "@/hooks/useSchoolSetup";
+import { academicStructureService } from "@/services/academicStructureService";
 import {
   schoolUnitsService,
   type SchoolUnit,
@@ -24,7 +25,7 @@ export function useSchoolUnits(options?: { enabled?: boolean }) {
   const { tenantId } = useAuth();
   return useQuery<SchoolUnit[]>({
     queryKey: [...schoolUnitsKeys.list(), tenantId],
-    queryFn: () => schoolUnitsService.list(),
+    queryFn: () => academicStructureService.campuses(),
     enabled: !!tenantId && (options?.enabled ?? true),
   });
 }

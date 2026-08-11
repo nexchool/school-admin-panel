@@ -40,6 +40,7 @@ import {
   setSessionCookie,
 } from "@/lib/storage";
 import { getCurrentSubdomain } from "@/lib/subdomain";
+import { registerFeatureChangeHandler, resetFeatureStamp } from "@/lib/featureStamp";
 import { registerForbiddenHandler } from "@/lib/forbiddenHandler";
 import {
   login as loginService,
@@ -250,6 +251,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [user, refreshUser]);
 
+  // Same self-correction for the school's modules rather than the user's
+  // permissions. The API stamps every response with the enabled set it
+  // answered under; when that changes — a super-admin switched Transport off —
+  // we re-read the profile so the sidebar and the route guards drop the module
+  // straight away, instead of on the next login.
+  useEffect(() => {
+    return registerFeatureChangeHandler(() => {
+      if (!user) return;
+      void refreshUser();
+    });
+  }, [user, refreshUser]);
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -298,6 +311,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setForcePasswordResetState(storedForcePasswordReset ?? false);
           // null (never persisted) → unrestricted.
           setAllowedUnitIdsState(storedAllowedUnitIds);
+
+          // Paint from storage first so a reload is instant, then confirm it
+          // against the server. Without this, everything the super-admin
+          // changed while the tab was closed — a module switched off, a role
+          // narrowed — stayed invisible until the next login, because a reload
+          // only ever re-read the copy saved at login time.
+          void refreshUser();
         }
       } catch (err) {
         console.error("Auth check error:", err);
@@ -307,7 +327,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     checkAuth();
-  }, []);
+  }, [refreshUser]);
 
   const login = useCallback(
     async (
@@ -376,6 +396,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Flush all cached query data so a subsequent login (possibly a different
     // tenant) never sees stale data from the previous session.
     queryClient.clear();
+    // The next tenant has its own module set; carrying this one's stamp over
+    // would read as a change and refresh a profile that was already fresh.
+    resetFeatureStamp();
     setUser(null);
     setPermissionsState([]);
     setEnabledFeaturesState([]);
@@ -413,10 +436,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isFeatureEnabled = useCallback(
     (featureKey: string): boolean => {
+      // A platform admin is not bound to any one school's module set — the
+      // server sends them an empty list on purpose. Saying so explicitly keeps
+      // it apart from the case below, which is a different situation entirely.
+      if (isPlatformAdmin) return true;
+      // Empty means "not known yet" — the profile has not landed. Every real
+      // tenant user gets at least the core keys back. Showing the nav and
+      // letting the server refuse is better than blanking the sidebar for a
+      // frame on every boot.
       if (!enabledFeatures?.length) return true;
       return enabledFeatures.includes(featureKey);
     },
-    [enabledFeatures]
+    [enabledFeatures, isPlatformAdmin]
   );
 
   return (

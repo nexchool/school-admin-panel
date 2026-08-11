@@ -33,6 +33,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
+import { academicStructureService } from "@/services/academicStructureService";
 
 interface ClassSubjectLoadSectionProps {
   classId: string;
@@ -59,7 +60,7 @@ export function ClassSubjectLoadSection({
     try {
       const [l, s] = await Promise.all([
         classesService.getSubjectLoads(classId),
-        subjectsService.getSubjects(),
+        academicStructureService.subjects(),
       ]);
       setLoads(l);
       setSubjects(s);

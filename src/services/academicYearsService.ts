@@ -24,13 +24,6 @@ export const academicYearsService = {
     return res as AcademicsOverview;
   },
 
-  getAcademicYears: async (activeOnly = false): Promise<AcademicYear[]> => {
-    const url = activeOnly
-      ? "/api/academics/academic-years?active_only=true"
-      : "/api/academics/academic-years";
-    const res = await apiGet<{ academic_years: AcademicYear[] }>(url);
-    return res?.academic_years ?? [];
-  },
 
   createAcademicYear: async (payload: {
     name: string;

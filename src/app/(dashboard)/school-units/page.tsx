@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Building2, CheckCircle2, PauseCircle, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,24 +207,18 @@ export default function SchoolUnitsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            Branches
-            <Building2 className="size-5 text-primary" />
-          </h1>
-          <p className="text-muted-foreground">
-            The campuses your organisation operates. Classes, students and staff
-            are all organised under a branch.
-          </p>
-        </div>
-        {canManage && (
-          <Button onClick={openCreate} className="gap-2">
-            <Plus className="size-4" />
-            New Branch
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Branches"
+        description="The campuses your organisation teaches at. Classes, students and staff are all organised under one."
+        actions={
+          canManage ? (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="size-4" />
+              New branch
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard

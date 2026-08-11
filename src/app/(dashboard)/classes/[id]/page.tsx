@@ -24,6 +24,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ClassFormModal } from "@/components/classes/ClassFormModal";
 import { ClassAssignStudentModal } from "@/components/classes/ClassAssignStudentModal";
 import { ClassAssignTeacherModal } from "@/components/classes/ClassAssignTeacherModal";
+import { MergeSectionModal } from "@/components/classes/MergeSectionModal";
 import { ClassSubjectsSection } from "@/modules/classes/components/ClassSubjectsSection";
 import { ClassTimetableReadOnly } from "@/components/timetable/ClassTimetableReadOnly";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -46,8 +47,10 @@ import {
   BookOpen,
   User,
   Hash,
+  Merge,
 } from "lucide-react";
 import { toastError } from "@/lib/errorToast";
+import { classLabel, gradeLabel } from "@/lib/gradeLevel";
 
 type ClassDetailTab = "students" | "teachers" | "subjects" | "timetable";
 
@@ -55,7 +58,8 @@ export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasAnyPermission, isFeatureEnabled } = useAuth();
+  const { hasPermission, hasAnyPermission, hasAllPermissions, isFeatureEnabled } =
+    useAuth();
   const timetableEnabled = isFeatureEnabled("timetable");
   const id = params?.id as string | undefined;
   const showSubjectsTab = hasAnyPermission([
@@ -77,6 +81,19 @@ export default function ClassDetailPage() {
   const [removingStudent, setRemovingStudent] = useState<string | null>(null);
   const [removingTeacher, setRemovingTeacher] = useState<string | null>(null);
   const [deleteClassOpen, setDeleteClassOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  // A teacher holds class.read and student.read.class, so this page renders for
+  // them — but Edit, Delete, Add and Remove all answer 403. An action nobody
+  // can perform should not be on screen; the server was already refusing, the
+  // screen was the part that lied.
+  const canManageClass = hasPermission("class.manage");
+  const canManageStudents = hasPermission("student.update");
+  const canManageTeachers = hasPermission("class_teacher.manage");
+  // Both halves, because a merge does both: it retires a section and moves
+  // every child in it. The server asks for the same pair, and `hasPermission`
+  // applies the same `<resource>.manage` implication the server does — an
+  // administrator holds `student.manage`, not `student.update` literally.
+  const canMerge = hasAllPermissions(["class.manage", "student.update"]);
   const [removeStudentId, setRemoveStudentId] = useState<string | null>(null);
   const [removeTeacherId, setRemoveTeacherId] = useState<string | null>(null);
 
@@ -180,7 +197,21 @@ export default function ClassDetailPage() {
     );
   }
 
-  const classTitle = cls.section ? `${cls.name} — ${cls.section}` : cls.name;
+  // Composed from grade and section. `name` is a nullable legacy label, empty
+  // for every class created through the structured form, which is how this
+  // page came to be titled "— A"; `display_name` is the server's own
+  // composition and the fallback when a row has no grade.
+  const gradePart = cls.grade_name ? gradeLabel(cls.grade_name) : null;
+  const classTitle =
+    gradePart && cls.section
+      ? `${gradePart} · Section ${cls.section}`
+      : classLabel(cls);
+  // Where this class sits: programme, year, campus — the three that tell one
+  // "Grade 1 · A" apart from the other.
+  const classContext = [cls.programme_name, cls.academic_year, cls.school_unit_name]
+    .filter(Boolean)
+    .join(" · ");
+  const merged = cls.merged_into;
   const studentCount = cls.students?.length ?? 0;
   const teacherCount = cls.teachers?.length ?? 0;
 
@@ -224,14 +255,60 @@ export default function ClassDetailPage() {
       <EntityHeader
         icon={GraduationCap}
         title={classTitle}
-        subtitle={cls.academic_year ?? undefined}
+        subtitle={classContext || undefined}
         badges={badges}
         backHref="/classes"
         backLabel="Back to Classes"
-        onEdit={handleEditOpen}
-        onDelete={() => setDeleteClassOpen(true)}
+        onEdit={canManageClass ? handleEditOpen : undefined}
+        onDelete={canManageClass ? () => setDeleteClassOpen(true) : undefined}
         isDeleting={deleteMutation.isPending}
       />
+
+      {/* A merged section is reachable only by a direct link — it has left
+          every list — so it has to explain itself on arrival. The banner is
+          light-only, like the other advisory banners (calendar, setup): the
+          app does not follow the OS colour scheme, so a media-based `dark:`
+          variant renders a dark block on a light page. */}
+      {merged ? (
+        <div className="flex gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Merge className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="space-y-1">
+            <p>
+              This section was merged into{" "}
+              <Link
+                href={`/classes/${merged.into_class_id}`}
+                className="font-medium underline underline-offset-2"
+              >
+                {merged.into_display_name ?? "another section"}
+              </Link>
+              {merged.merged_on ? ` on ${merged.merged_on}` : ""}
+              {merged.merged_by_name ? ` by ${merged.merged_by_name}` : ""}. It
+              takes no new students.
+            </p>
+            {merged.reason && (
+              <p className="text-xs">Reason: {merged.reason}</p>
+            )}
+            <p className="text-xs">
+              Its attendance, marks and reports stay here — they happened in
+              this section.
+            </p>
+          </div>
+        </div>
+      ) : (
+        canMerge && (
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setMergeOpen(true)}
+            >
+              <Merge className="size-4" />
+              Merge into another section
+            </Button>
+          </div>
+        )
+      )}
 
       <QuickStats items={statsItems} />
 
@@ -251,14 +328,16 @@ export default function ClassDetailPage() {
                     {studentCount} student{studentCount === 1 ? "" : "s"} enrolled
                   </CardDescription>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setStudentPickerOpen(true)}
-                  className="gap-1"
-                >
-                  <Plus className="size-4" />
-                  Add
-                </Button>
+                {canManageStudents && (
+                  <Button
+                    size="sm"
+                    onClick={() => setStudentPickerOpen(true)}
+                    className="gap-1"
+                  >
+                    <Plus className="size-4" />
+                    Add
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 {cls.students && cls.students.length > 0 ? (
@@ -280,6 +359,7 @@ export default function ClassDetailPage() {
                             {s.admission_number}
                           </p>
                         </button>
+                        {canManageStudents && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -293,6 +373,7 @@ export default function ClassDetailPage() {
                             <UserMinus className="size-4" />
                           )}
                         </Button>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -315,14 +396,16 @@ export default function ClassDetailPage() {
                     Subject teachers assigned to this class
                   </CardDescription>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setTeacherPickerOpen(true)}
-                  className="gap-1"
-                >
-                  <Plus className="size-4" />
-                  Add
-                </Button>
+                {canManageTeachers && (
+                  <Button
+                    size="sm"
+                    onClick={() => setTeacherPickerOpen(true)}
+                    className="gap-1"
+                  >
+                    <Plus className="size-4" />
+                    Add
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 {cls.teachers && cls.teachers.length > 0 ? (
@@ -343,7 +426,8 @@ export default function ClassDetailPage() {
                             {t.teacher_name}
                           </p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {t.subject_name ?? "Subject"}
+                            {t.subject_name ??
+                              (t.is_class_teacher ? "Class Teacher" : "Subject")}
                             {t.teacher_employee_id &&
                               ` • ${t.teacher_employee_id}`}
                           </p>
@@ -424,6 +508,15 @@ export default function ClassDetailPage() {
         classId={id}
         onAssigned={refreshClass}
       />
+
+      {canMerge && !merged && (
+        <MergeSectionModal
+          open={mergeOpen}
+          onOpenChange={setMergeOpen}
+          section={cls}
+          onMerged={(intoClassId) => router.push(`/classes/${intoClassId}`)}
+        />
+      )}
 
       <ConfirmDialog
         open={deleteClassOpen}

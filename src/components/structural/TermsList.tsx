@@ -1,20 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
+import { CalendarRange, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Select,
   SelectContent,
@@ -22,11 +17,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { StatCard } from "@/components/ui/stat-card";
+import { TermFormModal } from "@/components/structural/TermFormModal";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useAuth } from "@/hooks";
-import { isSchoolSetupEnabled } from "@/lib/featureFlags";
-import { useCreateTerm, useDeleteTerm, useTerms } from "@/hooks/useTerms";
+import { useDeleteTerm, useTerms } from "@/hooks/useTerms";
 import { ApiException } from "@/services/api";
+import type { AcademicTerm } from "@/services/academicTermsService";
+
+function formatDate(iso: string) {
+  try {
+    return new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 export function TermsList() {
   const { hasPermission } = useAuth();
@@ -37,100 +46,177 @@ export function TermsList() {
   const defaultYear = years.find((y) => y.is_active !== false) ?? years[0];
   const yearId = yearIdRaw || (defaultYear ? defaultYear.id : "");
 
-  const { data: terms = [], isLoading, isError, refetch } = useTerms(yearId || undefined);
-  const createMut = useCreateTerm();
+  const {
+    data: terms = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useTerms(yearId || undefined);
   const deleteMut = useDeleteTerm();
+
+  const [editing, setEditing] = useState<AcademicTerm | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deleting, setDeleting] = useState<AcademicTerm | null>(null);
 
   const sortedTerms = useMemo(
     () => [...terms].sort((a, b) => a.sequence - b.sequence),
     [terms],
   );
 
-  const [name, setName] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  // The span a school actually teaches over, which is what somebody checking
+  // this page wants to see — not the sum of the terms, which double-counts
+  // nothing but reads like it might.
+  const covered = useMemo(() => {
+    if (sortedTerms.length === 0) return 0;
+    const starts = sortedTerms.map((t) => t.start_date.slice(0, 10)).sort();
+    const ends = sortedTerms.map((t) => t.end_date.slice(0, 10)).sort();
+    const first = new Date(`${starts[0]}T12:00:00`).getTime();
+    const last = new Date(`${ends[ends.length - 1]}T12:00:00`).getTime();
+    return Math.max(0, Math.round((last - first) / 86_400_000) + 1);
+  }, [sortedTerms]);
 
-  const onAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!yearId) return toast.error("Pick an academic year.");
-    if (!name.trim()) return toast.error("Term name is required.");
-    if (!start || !end) return toast.error("Both dates are required.");
-    if (end < start) return toast.error("End date must be on or after start.");
-
-    createMut.mutate(
-      {
-        academic_year_id: yearId,
-        name: name.trim(),
-        start_date: start,
-        end_date: end,
-        sequence: sortedTerms.length + 1,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Term added.");
-          setName("");
-          setStart("");
-          setEnd("");
-        },
-        onError: (e) =>
-          toast.error(
-            e instanceof ApiException
-              ? e.message
-              : e instanceof Error
-                ? e.message
-                : "Could not add term.",
-          ),
-      },
-    );
+  const openCreate = () => {
+    setEditing(null);
+    setIsFormOpen(true);
   };
 
-  const onDelete = (id: string, label: string) => {
-    if (!window.confirm(`Delete term “${label}”?`)) return;
-    deleteMut.mutate(id, {
-      onSuccess: () => toast.success("Term deleted."),
+  const openEdit = (row: AcademicTerm) => {
+    setEditing(row);
+    setIsFormOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deleting) return;
+    deleteMut.mutate(deleting.id, {
+      onSuccess: () => {
+        toast.success("Term removed.");
+        setDeleting(null);
+      },
       onError: (e) =>
         toast.error(
-          e instanceof ApiException
+          e instanceof ApiException || e instanceof Error
             ? e.message
-            : e instanceof Error
-              ? e.message
-              : "Delete failed.",
+            : "Could not remove the term.",
         ),
     });
   };
 
-  return (
-    <div className="space-y-4">
-      {isSchoolSetupEnabled() && (
-        <div className="flex items-center justify-between gap-3">
-          <Button asChild variant="outline" size="sm" className="gap-1">
-            <Link href="/school-setup">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to setup
-            </Link>
-          </Button>
-        </div>
-      )}
+  const columns: DataTableColumn<AcademicTerm>[] = [
+    {
+      key: "name",
+      header: "Term",
+      cell: (row) => <span className="font-medium">{row.name}</span>,
+    },
+    {
+      key: "start_date",
+      header: "Starts",
+      cell: (row) => (
+        <span className="text-muted-foreground">{formatDate(row.start_date)}</span>
+      ),
+    },
+    {
+      key: "end_date",
+      header: "Ends",
+      cell: (row) => (
+        <span className="text-muted-foreground">{formatDate(row.end_date)}</span>
+      ),
+    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            header: "",
+            className: "w-[110px] text-right",
+            cell: (row: AcademicTerm) => (
+              <div className="flex justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  title="Edit term"
+                  aria-label={`Edit ${row.name}`}
+                  onClick={() => openEdit(row)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  title="Remove term"
+                  aria-label={`Remove ${row.name}`}
+                  onClick={() => setDeleting(row)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ),
+          } satisfies DataTableColumn<AcademicTerm>,
+        ]
+      : []),
+  ];
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Academic terms</CardTitle>
-          <CardDescription>
-            Optional: split each academic year into terms (Term 1, Term 2, …).
-            You can skip this step.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {years.length === 0 ? (
+  const noYears = years.length === 0;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Terms"
+        description="How a year is divided — Term 1, Term 2, a semester. A school that does not divide its year can leave this empty."
+        actions={
+          canManage && !noYears ? (
+            <Button onClick={openCreate} className="gap-2">
+              <Plus className="size-4" />
+              New term
+            </Button>
+          ) : null
+        }
+      />
+
+      {noYears ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add an academic year first</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Add an academic year before creating terms.
+              A term is a stretch of one academic year, so there has to be a year
+              for it to sit inside before you can add one.
             </p>
-          ) : (
-            <>
-              <div className="space-y-1">
-                <Label>Academic year</Label>
+          </CardHeader>
+        </Card>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              icon={CalendarRange}
+              label="Terms This Year"
+              value={sortedTerms.length}
+              sub="In the selected academic year"
+              tone="primary"
+              loading={isLoading}
+            />
+            <StatCard
+              icon={CalendarRange}
+              label="Days Covered"
+              value={covered}
+              sub="First start to last end"
+              tone="info"
+              loading={isLoading}
+            />
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {isLoading
+                  ? "Terms"
+                  : `${sortedTerms.length} term${sortedTerms.length === 1 ? "" : "s"}`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="max-w-xs space-y-2">
+                <Label htmlFor="terms-year">Academic year</Label>
                 <Select value={yearId} onValueChange={setYearId}>
-                  <SelectTrigger>
+                  <SelectTrigger id="terms-year">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -143,99 +229,39 @@ export function TermsList() {
                 </Select>
               </div>
 
-              {canManage ? (
-                <form
-                  onSubmit={onAdd}
-                  className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-end"
-                >
-                  <div className="space-y-1">
-                    <Label htmlFor="term-name">Name</Label>
-                    <Input
-                      id="term-name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Term 1"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="term-start">Start</Label>
-                    <Input
-                      id="term-start"
-                      type="date"
-                      value={start}
-                      onChange={(e) => setStart(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="term-end">End</Label>
-                    <Input
-                      id="term-end"
-                      type="date"
-                      value={end}
-                      onChange={(e) => setEnd(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={createMut.isPending}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add
-                  </Button>
-                </form>
-              ) : null}
+              <DataTable
+                columns={columns}
+                data={sortedTerms}
+                getRowId={(row) => row.id}
+                isLoading={isLoading}
+                isError={isError}
+                onRetry={() => refetch()}
+                errorMessage="Couldn't load terms. Check your connection and retry."
+                emptyMessage="No terms for the selected year."
+              />
+            </CardContent>
+          </Card>
+        </>
+      )}
 
-              {isLoading ? (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading…
-                </p>
-              ) : isError ? (
-                <div className="flex flex-col items-start gap-2 text-sm">
-                  <p className="text-destructive">Couldn&apos;t load terms. Please retry.</p>
-                  <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
-                    Retry
-                  </Button>
-                </div>
-              ) : sortedTerms.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No terms for the selected year.
-                </p>
-              ) : (
-                <ul className="divide-y rounded-md border">
-                  {sortedTerms.map((t) => (
-                    <li
-                      key={t.id}
-                      className="flex items-center justify-between gap-3 px-4 py-2"
-                    >
-                      <div>
-                        <p className="font-medium">{t.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t.start_date} → {t.end_date}
-                        </p>
-                      </div>
-                      {canManage ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => onDelete(t.id, t.name)}
-                          disabled={deleteMut.isPending}
-                          aria-label={`Delete term ${t.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+      <TermFormModal
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        term={editing}
+        academicYearId={yearId}
+        nextSequence={sortedTerms.length + 1}
+      />
+
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title={`Remove ${deleting?.name ?? "term"}?`}
+        description="The year keeps its dates; only this division of it goes."
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={deleteMut.isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
