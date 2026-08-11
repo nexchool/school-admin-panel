@@ -5,13 +5,8 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -99,24 +94,21 @@ export function ProgrammesList() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end gap-3">
-        {canManage ? (
-          <Button type="button" onClick={() => setOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Add programme
-          </Button>
-        ) : null}
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Programmes"
+        description="The boards your school teaches to. Give a medium only where you run the same board in more than one language — GSEB Gujarati alongside GSEB English."
+        actions={
+          canManage ? (
+            <Button type="button" onClick={() => setOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> Add programme
+            </Button>
+          ) : null
+        }
+      />
 
       <Card>
-        <CardHeader>
-          <CardTitle>Programmes (boards)</CardTitle>
-          <CardDescription>
-            Add each board you offer. Use medium only when you need to
-            distinguish language tracks (e.g. GSEB Gujarati vs GSEB English).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isLoading ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />

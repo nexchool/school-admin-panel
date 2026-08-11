@@ -5,13 +5,8 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -98,16 +93,13 @@ export function TermsList() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <PageHeader
+        title="Terms"
+        description="Split a year into the terms your school works in — Term 1, Term 2, a semester. Optional: a school that does not divide its year can leave this empty."
+      />
       <Card>
-        <CardHeader>
-          <CardTitle>Academic terms</CardTitle>
-          <CardDescription>
-            Optional: split each academic year into terms (Term 1, Term 2, …).
-            You can skip this step.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {years.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Add an academic year before creating terms.

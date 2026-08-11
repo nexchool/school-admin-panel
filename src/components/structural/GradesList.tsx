@@ -5,14 +5,9 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/hooks";
 import {
   useCreateGrade,
@@ -113,16 +108,13 @@ export function GradesList() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <PageHeader
+        title="Grades"
+        description="The standards your school teaches. Their order here is what sorts them everywhere else, and what promotion follows."
+      />
       <Card>
-        <CardHeader>
-          <CardTitle>Grades</CardTitle>
-          <CardDescription>
-            Define the standards your school offers. The order here is used for
-            sorting and promotion later.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {canManage ? (
             <>
               <div className="flex flex-wrap items-center gap-2">

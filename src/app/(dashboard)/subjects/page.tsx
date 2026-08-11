@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Pencil, Trash2, Link2 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -266,26 +267,24 @@ export default function SubjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Subjects</h1>
-          <p className="text-sm text-muted-foreground">
-            Master catalogue of subjects — create, edit, and assign them to classes.
-          </p>
-        </div>
-        {canManage && (
-          <Button
-            onClick={() => {
-              setEditSubject(null);
-              setFormOpen(true);
-            }}
-            className="gap-2"
-          >
-            <Plus className="size-4" />
-            Add subject
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Subjects"
+        description="Everything your school teaches. Create a subject once here, then assign it to the classes that take it."
+        actions={
+          canManage ? (
+            <Button
+              onClick={() => {
+                setEditSubject(null);
+                setFormOpen(true);
+              }}
+              className="gap-2"
+            >
+              <Plus className="size-4" />
+              Add subject
+            </Button>
+          ) : null
+        }
+      />
 
       <Card>
         <CardHeader>

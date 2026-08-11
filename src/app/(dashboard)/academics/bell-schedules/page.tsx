@@ -17,6 +17,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft,
   Bell,
   Plus,
   Trash2,
@@ -149,28 +149,18 @@ export default function BellSchedulesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/academics/academic-years">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="size-4" />
+      <PageHeader
+        title="Bell Schedules"
+        description="When the periods of a school day begin and end. Each class timetable runs on one of these."
+        actions={
+          canManage ? (
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="size-4" />
+              New schedule
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Bell schedules</h1>
-            <p className="text-sm text-muted-foreground">
-              Define daily period timings. Each class timetable uses one bell schedule.
-            </p>
-          </div>
-        </div>
-        {canManage && (
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="size-4" />
-            New schedule
-          </Button>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
       {/* Info callout */}
       <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">

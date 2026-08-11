@@ -7,6 +7,8 @@ import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useTimetableVersions } from "@/hooks/useTimetable";
 import type { ClassItem } from "@/types/class";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { Loader2, Calendar, ChevronRight, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 // Per-class status row — loads versions lazily only when rendered
@@ -81,12 +83,10 @@ export default function TimetablePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight">Timetables</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage timetable versions for each class. Draft, generate, edit, and publish.
-        </p>
-      </div>
+      <PageHeader
+        title="Timetables"
+        description="Every class's week. Draft a version, generate or edit it, then publish the one the school runs on."
+      />
 
       {/* Academic year filter */}
       {academicYears.length > 1 && (
@@ -121,7 +121,7 @@ export default function TimetablePage() {
       )}
 
       {/* Table */}
-      <div className="rounded-xl border border-border bg-card">
+      <Card>
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -151,7 +151,7 @@ export default function TimetablePage() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
