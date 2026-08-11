@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   Dialog,
@@ -12,6 +13,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import { gradeAtSameLevel } from "@/lib/gradeLevel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useCreateClass } from "@/hooks/useClasses";
-import { useGrades } from "@/hooks/useGrades";
+import { useCreateGrade, useGrades } from "@/hooks/useGrades";
 import { useMediums } from "@/hooks/useSubjectContexts";
 import { useProgrammes } from "@/hooks/useProgrammes";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
@@ -66,11 +69,12 @@ export function CreateSectionModal({
   const { data: mediums = [] } = useMediums();
 
   const create = useCreateClass();
+  const createGrade = useCreateGrade();
 
   const [yearId, setYearId] = useState("");
   const [campusId, setCampusId] = useState("");
   const [programmeId, setProgrammeId] = useState("");
-  const [gradeId, setGradeId] = useState("");
+  const [gradeChoice, setGradeChoice] = useState("");
   const [mediumId, setMediumId] = useState("");
   const [section, setSection] = useState("");
 
@@ -84,24 +88,71 @@ export function CreateSectionModal({
     [grades],
   );
 
+  const gradeOptions = useMemo(
+    () => sortedGrades.map((g) => ({ value: g.id, label: g.name })),
+    [sortedGrades],
+  );
+  // The combobox hands back either an existing grade's id or, when the user
+  // typed something new, the raw text. Which of the two it is decides whether
+  // submitting has to create a grade first.
+  const existingGrade = sortedGrades.find((g) => g.id === gradeChoice);
+  const typedName = gradeChoice.trim();
+  const matchedByName = sortedGrades.find(
+    (g) => g.name.toLowerCase() === typedName.toLowerCase(),
+  );
+  const isNewGrade = Boolean(!existingGrade && typedName && !matchedByName);
+
+  // A grade's place in the ladder comes from the number in its name, so
+  // typing "Std 6" where a grade "6" already exists creates a second grade at
+  // the same level — two names for one year of school, which then splits
+  // promotion and every report by grade. The names differ, so nothing refuses
+  // it; saying so before the click is the only thing that helps.
+  const sameLevel = useMemo(
+    () => (isNewGrade ? gradeAtSameLevel(typedName, sortedGrades) : undefined),
+    [isNewGrade, typedName, sortedGrades],
+  );
+
   const trimmedSection = section.trim().toUpperCase();
   const complete = Boolean(
-    effectiveYear && effectiveCampus && programmeId && gradeId && trimmedSection,
+    effectiveYear &&
+      effectiveCampus &&
+      programmeId &&
+      (existingGrade || matchedByName || typedName) &&
+      trimmedSection,
   );
 
   const close = () => {
     setYearId("");
     setCampusId("");
     setProgrammeId("");
-    setGradeId("");
+    setGradeChoice("");
     setMediumId("");
     setSection("");
     onOpenChange(false);
   };
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!complete) return;
+
+    // A grade typed rather than picked is created first, and only then is the
+    // section opened on it. Sequence is left to the server, which reads the
+    // number out of the name — "Std 6" belongs at 6, not at the front.
+    let gradeId = existingGrade?.id ?? matchedByName?.id ?? "";
+    if (!gradeId) {
+      try {
+        const created = await createGrade.mutateAsync({ name: typedName });
+        gradeId = created.id;
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : `Could not add the grade “${typedName}”.`,
+        );
+        return;
+      }
+    }
+
     create.mutate(
       {
         // Deliberately empty: a section is named by its grade and letter, and
@@ -124,7 +175,7 @@ export function CreateSectionModal({
     );
   };
 
-  const gradeName = sortedGrades.find((g) => g.id === gradeId)?.name;
+  const gradeName = existingGrade?.name ?? matchedByName?.name ?? typedName;
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : close())}>
@@ -197,18 +248,32 @@ export function CreateSectionModal({
           <div className="grid grid-cols-[2fr_1fr] gap-3">
             <div className="space-y-2">
               <Label htmlFor="section-grade">Grade</Label>
-              <Select value={gradeId} onValueChange={setGradeId}>
-                <SelectTrigger id="section-grade">
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sortedGrades.map((grade) => (
-                    <SelectItem key={grade.id} value={grade.id}>
-                      {grade.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Typeable, not just selectable: a school opening its first
+                  Std 6 section should not have to leave, add a grade, and come
+                  back. A name that matches one already in the list picks it —
+                  the catalogue stays one row per level. */}
+              <Combobox
+                id="section-grade"
+                options={gradeOptions}
+                value={gradeChoice}
+                onChange={setGradeChoice}
+                allowCustom
+                placeholder="Select or type a grade"
+                searchPlaceholder="Search or type a new grade…"
+                emptyText="Press enter to add this grade"
+              />
+              {isNewGrade ? (
+                sameLevel ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-500">
+                    You already teach “{sameLevel.name}” at this level. Pick it
+                    unless “{typedName}” is genuinely a different year.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    “{typedName}” is new — it will be added to your grades.
+                  </p>
+                )
+              ) : null}
             </div>
 
             <div className="space-y-2">

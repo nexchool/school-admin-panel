@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Layers, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { Layers, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -20,23 +20,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks";
-import {
-  useCreateGrade,
-  useDeleteGrade,
-  useGrades,
-  useUpdateGrade,
-} from "@/hooks/useGrades";
+import { useDeleteGrade, useGrades, useUpdateGrade } from "@/hooks/useGrades";
 import { ApiException } from "@/services/api";
 import type { Grade } from "@/services/gradesService";
-
-const QUICK_PRESETS: { label: string; names: string[] }[] = [
-  { label: "Pre-primary", names: ["LKG", "UKG"] },
-  {
-    label: "1 → 10",
-    names: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-  },
-  { label: "11 → 12", names: ["11", "12"] },
-];
 
 const errorMessage = (error: unknown, fallback: string) =>
   error instanceof ApiException
@@ -50,11 +36,9 @@ export function GradesList() {
   const canManage = hasPermission("grade.manage");
 
   const { data = [], isLoading, isError, refetch } = useGrades();
-  const createMut = useCreateGrade();
   const updateMut = useUpdateGrade();
   const deleteMut = useDeleteGrade();
 
-  const [name, setName] = useState("");
   const [renaming, setRenaming] = useState<Grade | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleting, setDeleting] = useState<Grade | null>(null);
@@ -63,53 +47,6 @@ export function GradesList() {
     () => [...data].sort((a, b) => a.sequence - b.sequence),
     [data],
   );
-  const nextSequence =
-    sortedGrades.length === 0
-      ? 0
-      : sortedGrades[sortedGrades.length - 1].sequence + 1;
-
-  const addOne = (gradeName: string, sequence: number) =>
-    new Promise<void>((resolve) => {
-      createMut.mutate(
-        { name: gradeName, sequence },
-        {
-          onSuccess: () => resolve(),
-          onError: (e) => {
-            toast.error(
-              `Could not add “${gradeName}”: ${errorMessage(e, "unknown error")}`,
-            );
-            resolve();
-          },
-        },
-      );
-    });
-
-  const addManual = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const value = name.trim();
-    if (!value) {
-      toast.error("Enter a grade name.");
-      return;
-    }
-    await addOne(value, nextSequence);
-    setName("");
-  };
-
-  const addPreset = async (preset: (typeof QUICK_PRESETS)[number]) => {
-    const existing = new Set(data.map((g) => g.name.toLowerCase()));
-    const toAdd = preset.names.filter((n) => !existing.has(n.toLowerCase()));
-    if (toAdd.length === 0) {
-      toast.info("All those grades already exist.");
-      return;
-    }
-    let seq = nextSequence;
-    for (const n of toAdd) {
-      await addOne(n, seq);
-      seq += 1;
-    }
-    toast.success(`Added ${toAdd.length} grade${toAdd.length === 1 ? "" : "s"}.`);
-  };
-
   const openRename = (grade: Grade) => {
     setRenaming(grade);
     setRenameValue(grade.name);
@@ -207,7 +144,7 @@ export function GradesList() {
     <div className="space-y-6">
       <PageHeader
         title="Grades"
-        description="The standards your school teaches, in the order it teaches them."
+        description="The standards your school teaches, in the order it teaches them. A grade appears here the first time you open a section in it."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -220,55 +157,6 @@ export function GradesList() {
           loading={isLoading}
         />
       </div>
-
-      {canManage ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Add a grade</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Adding stays on the page rather than behind a modal: a grade is
-                one short name, and the presets exist so a school sets up all
-                twelve in a click. A dialog per grade would be twelve dialogs. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">Quick add:</span>
-              {QUICK_PRESETS.map((p) => (
-                <Button
-                  key={p.label}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addPreset(p)}
-                  disabled={createMut.isPending}
-                >
-                  {p.label}
-                </Button>
-              ))}
-            </div>
-
-            <form onSubmit={addManual} className="flex items-end gap-2">
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="grade-name">Name</Label>
-                <Input
-                  id="grade-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. LKG or 5"
-                  maxLength={50}
-                />
-              </div>
-              <Button type="submit" disabled={createMut.isPending} className="gap-2">
-                {createMut.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                Add
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      ) : null}
 
       <Card>
         <CardHeader>
@@ -287,7 +175,7 @@ export function GradesList() {
             isError={isError}
             onRetry={() => refetch()}
             errorMessage="Couldn't load grades. Check your connection and retry."
-            emptyMessage="No grades yet. Add at least one to continue."
+            emptyMessage="No grades yet. Open a section under Classes and name its grade — it will be added here."
           />
         </CardContent>
       </Card>
