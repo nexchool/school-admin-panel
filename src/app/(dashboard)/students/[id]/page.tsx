@@ -11,7 +11,8 @@ import { useStudentAllocation } from "@/hooks/useHostel";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
-import { StudentDocumentsSection } from "@/components/students/StudentDocumentsSection";
+import { PersonDocumentsSection } from "@/components/documents/PersonDocumentsSection";
+import { useDocuments } from "@/hooks/useDocuments";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -120,9 +121,21 @@ export default function StudentDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   const canSeeRecords = hasAnyPermission(RECORD_PERMS);
+  const { data: documentSet } = useDocuments("student", id ?? null);
+  const documentsPending =
+    !!documentSet?.completeness.isTracked &&
+    !documentSet.completeness.isSatisfied;
+
   const tabs = useMemo<TabNavItem<TabId>[]>(
-    () => (canSeeRecords ? [...BASE_TABS, RECORDS_TAB] : BASE_TABS),
-    [canSeeRecords]
+    () => {
+      const base = canSeeRecords ? [...BASE_TABS, RECORDS_TAB] : BASE_TABS;
+      return base.map((tab) =>
+        tab.id === "documents" && documentsPending
+          ? { ...tab, badge: "!", badgeTone: "destructive" as const }
+          : tab
+      );
+    },
+    [canSeeRecords, documentsPending]
   );
 
   const [lifecycleAct, setLifecycleAct] = useState<LifecycleAct | null>(null);
@@ -325,10 +338,11 @@ export default function StudentDetailPage() {
             <RecordsTab student={student} />
           )}
           {activeTab === "documents" && (
-            <StudentDocumentsSection
-              studentId={student.id}
-              studentName={student.name}
-              admissionNumber={student.admission_number}
+            <PersonDocumentsSection
+              kind="student"
+              profileId={student.id}
+              subjectName={student.name}
+              referenceCode={student.admission_number}
             />
           )}
         </div>

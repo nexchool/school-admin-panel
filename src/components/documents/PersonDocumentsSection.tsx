@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AlertTriangle,
   FileText,
   Plus,
   Trash2,
@@ -9,15 +10,12 @@ import {
   Loader2,
   Download,
 } from "lucide-react";
+import { useDocuments, useDeleteDocument } from "@/hooks/useDocuments";
 import {
-  useStudentDocuments,
-  useDeleteStudentDocument,
-} from "@/hooks/useStudentDocuments";
-import {
-  studentDocumentsService,
-  DOCUMENT_TYPE_LABELS,
-  type StudentDocument,
-} from "@/services/studentDocumentsService";
+  documentsService,
+  type PersonDocument,
+  type ProfileKind,
+} from "@/services/documentsService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -31,10 +29,13 @@ import { UploadDocumentModal } from "./UploadDocumentModal";
 import { DocumentThumbnail } from "./DocumentThumbnail";
 import { toastError } from "@/lib/errorToast";
 
-interface StudentDocumentsSectionProps {
-  studentId: string;
-  studentName?: string;
-  admissionNumber?: string;
+interface PersonDocumentsSectionProps {
+  kind: ProfileKind;
+  profileId: string;
+  /** The human's name, used only to name a downloaded file. */
+  subjectName?: string;
+  /** Admission number for a student, employee number for a teacher. */
+  referenceCode?: string;
 }
 
 /**
@@ -44,22 +45,19 @@ interface StudentDocumentsSectionProps {
  * extension is preserved from the stored filename.
  */
 function buildDownloadName(
-  doc: StudentDocument,
-  studentName?: string,
-  admissionNumber?: string
+  doc: PersonDocument,
+  subjectName?: string,
+  referenceCode?: string
 ): string {
   const typeLabel =
-    doc.document_type_label ||
-    DOCUMENT_TYPE_LABELS[doc.document_type] ||
-    doc.document_type ||
-    "document";
-  const ext = doc.original_filename?.includes(".")
-    ? doc.original_filename.split(".").pop()
+    doc.documentTypeLabel || doc.documentType || "document";
+  const ext = doc.originalFilename?.includes(".")
+    ? doc.originalFilename.split(".").pop()
     : "";
   const clean = (s?: string) =>
     (s ?? "").trim().replace(/[^\w]+/g, "_").replace(/^_+|_+$/g, "");
   const base =
-    [typeLabel, studentName, admissionNumber].map(clean).filter(Boolean).join("_") ||
+    [typeLabel, subjectName, referenceCode].map(clean).filter(Boolean).join("_") ||
     "document";
   return ext ? `${base}.${ext}` : base;
 }
@@ -80,21 +78,24 @@ function triggerDownload(url: string, filename: string) {
   a.remove();
 }
 
-export function StudentDocumentsSection({
-  studentId,
-  studentName,
-  admissionNumber,
-}: StudentDocumentsSectionProps) {
-  const { data: documents = [], isLoading, refetch } = useStudentDocuments(studentId);
-  const deleteMutation = useDeleteStudentDocument(studentId);
+export function PersonDocumentsSection({
+  kind,
+  profileId,
+  subjectName,
+  referenceCode,
+}: PersonDocumentsSectionProps) {
+  const { data, isLoading, refetch } = useDocuments(kind, profileId);
+  const deleteMutation = useDeleteDocument(kind, profileId);
+  const documents = data?.documents ?? [];
+  const completeness = data?.completeness;
   const [uploadOpen, setUploadOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerDoc, setViewerDoc] = useState<StudentDocument | null>(null);
+  const [viewerDoc, setViewerDoc] = useState<PersonDocument | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewMime, setPreviewMime] = useState<string | undefined>(undefined);
   const [viewerLoading, setViewerLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
-  const [deleteDoc, setDeleteDoc] = useState<StudentDocument | null>(null);
+  const [deleteDoc, setDeleteDoc] = useState<PersonDocument | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   // Guards the async preview fetch: only the latest requested document may
   // commit its blob to state (rapid preview clicks can resolve out of order).
@@ -112,12 +113,12 @@ export function StudentDocumentsSection({
   const performDeleteDoc = async () => {
     const doc = deleteDoc;
     if (!doc) return;
-    // Toasts owned by useDeleteStudentDocument; rejection propagates to the
+    // Toasts owned by useDeletePersonDocument; rejection propagates to the
     // confirm dialog.
     await deleteMutation.mutateAsync(doc.id);
   };
 
-  const handleOpen = async (doc: StudentDocument) => {
+  const handleOpen = async (doc: PersonDocument) => {
     viewerRequestRef.current = doc.id;
     setViewerDoc(doc);
     setViewerOpen(true);
@@ -126,17 +127,14 @@ export function StudentDocumentsSection({
     revokePreview();
     setPreviewMime(undefined);
     try {
-      const blob = await studentDocumentsService.downloadDocumentBlob(
-        studentId,
-        doc.id
-      );
+      const blob = await documentsService.downloadBlob(kind, profileId, doc.id);
       const url = URL.createObjectURL(blob);
       if (viewerRequestRef.current !== doc.id) {
         // Superseded by a newer preview (or the dialog closed) — discard.
         URL.revokeObjectURL(url);
         return;
       }
-      const mime = blob.type || doc.mime_type || "";
+      const mime = blob.type || doc.mimeType || "";
       setPreviewMime(mime);
       setPreviewUrl(url);
     } catch (e: unknown) {
@@ -148,15 +146,12 @@ export function StudentDocumentsSection({
     }
   };
 
-  const handleDownload = async (doc: StudentDocument) => {
+  const handleDownload = async (doc: PersonDocument) => {
     setDownloadingId(doc.id);
     try {
-      const blob = await studentDocumentsService.downloadDocumentBlob(
-        studentId,
-        doc.id
-      );
+      const blob = await documentsService.downloadBlob(kind, profileId, doc.id);
       const url = URL.createObjectURL(blob);
-      triggerDownload(url, buildDownloadName(doc, studentName, admissionNumber));
+      triggerDownload(url, buildDownloadName(doc, subjectName, referenceCode));
       URL.revokeObjectURL(url);
     } catch (e: unknown) {
       toastError(e, "Could not download document");
@@ -171,7 +166,7 @@ export function StudentDocumentsSection({
     if (previewUrl) {
       triggerDownload(
         previewUrl,
-        buildDownloadName(viewerDoc, studentName, admissionNumber)
+        buildDownloadName(viewerDoc, subjectName, referenceCode)
       );
     } else {
       void handleDownload(viewerDoc);
@@ -201,6 +196,21 @@ export function StudentDocumentsSection({
         </Button>
       </CardHeader>
       <CardContent>
+        {/* Says what is missing rather than only that something is. The tab's
+            "!" tells you to look; this tells you what to do about it. */}
+        {completeness?.isTracked && !completeness.isSatisfied && (
+          <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <p className="text-sm">
+              Document upload is still pending —{" "}
+              <span className="font-medium">
+                {completeness.distinctTypeCount} of{" "}
+                {completeness.minimumRequired}
+              </span>{" "}
+              required document types uploaded.
+            </p>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -229,22 +239,21 @@ export function StudentDocumentsSection({
               >
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <DocumentThumbnail
-                    studentId={studentId}
+                    kind={kind}
+                    profileId={profileId}
                     doc={doc}
                     onClick={() => handleOpen(doc)}
                   />
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
-                      {doc.document_type_label ||
-                        DOCUMENT_TYPE_LABELS[doc.document_type] ||
-                        doc.document_type}
+                      {doc.documentTypeLabel || doc.documentType}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {[
-                        doc.original_filename,
-                        formatBytes(doc.file_size_bytes),
-                        doc.created_at
-                          ? new Date(doc.created_at).toLocaleDateString()
+                        doc.originalFilename,
+                        formatBytes(doc.fileSizeBytes),
+                        doc.createdAt
+                          ? new Date(doc.createdAt).toLocaleDateString()
                           : null,
                       ]
                         .filter(Boolean)
@@ -258,7 +267,7 @@ export function StudentDocumentsSection({
                     size="icon"
                     className="size-8"
                     title="Preview"
-                    aria-label={`Preview ${doc.original_filename}`}
+                    aria-label={`Preview ${doc.originalFilename}`}
                     onClick={() => handleOpen(doc)}
                   >
                     <ExternalLink className="size-4" />
@@ -268,7 +277,7 @@ export function StudentDocumentsSection({
                     size="icon"
                     className="size-8"
                     title="Download"
-                    aria-label={`Download ${doc.original_filename}`}
+                    aria-label={`Download ${doc.originalFilename}`}
                     disabled={downloadingId === doc.id}
                     onClick={() => handleDownload(doc)}
                   >
@@ -283,7 +292,7 @@ export function StudentDocumentsSection({
                     size="icon"
                     className="size-8 text-destructive hover:text-destructive"
                     title="Delete"
-                    aria-label={`Delete ${doc.original_filename}`}
+                    aria-label={`Delete ${doc.originalFilename}`}
                     onClick={() => setDeleteDoc(doc)}
                   >
                     <Trash2 className="size-4" />
@@ -297,7 +306,9 @@ export function StudentDocumentsSection({
         <UploadDocumentModal
           open={uploadOpen}
           onOpenChange={setUploadOpen}
-          studentId={studentId}
+          kind={kind}
+          profileId={profileId}
+          availableTypes={data?.availableTypes ?? []}
           onSuccess={() => {
             setUploadOpen(false);
             refetch();
@@ -307,7 +318,7 @@ export function StudentDocumentsSection({
         <ConfirmDialog
           open={!!deleteDoc}
           onOpenChange={(o) => !o && setDeleteDoc(null)}
-          title={deleteDoc ? `Delete “${deleteDoc.original_filename}”?` : "Delete document?"}
+          title={deleteDoc ? `Delete “${deleteDoc.originalFilename}”?` : "Delete document?"}
           confirmLabel="Delete"
           variant="destructive"
           loading={deleteMutation.isPending}
@@ -327,7 +338,7 @@ export function StudentDocumentsSection({
             <DialogHeader className="shrink-0 border-b border-border px-6 py-4 text-left">
               <div className="flex items-center gap-2 pr-8">
                 <DialogTitle className="min-w-0 flex-1 truncate">
-                  {viewerDoc?.original_filename ?? "Document"}
+                  {viewerDoc?.originalFilename ?? "Document"}
                 </DialogTitle>
                 <Button
                   type="button"
@@ -353,20 +364,20 @@ export function StudentDocumentsSection({
               )}
               {!viewerLoading && !viewerError && previewUrl && viewerDoc && (
                 <>
-                  {(previewMime || viewerDoc.mime_type || "").startsWith(
+                  {(previewMime || viewerDoc.mimeType || "").startsWith(
                     "image/"
                   ) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={previewUrl}
-                      alt={viewerDoc.original_filename}
+                      alt={viewerDoc.originalFilename}
                       className="mx-auto max-h-[70vh] max-w-full object-contain"
                     />
-                  ) : (previewMime || viewerDoc.mime_type || "").includes(
+                  ) : (previewMime || viewerDoc.mimeType || "").includes(
                       "pdf"
                     ) ? (
                     <iframe
-                      title={viewerDoc.original_filename}
+                      title={viewerDoc.originalFilename}
                       src={previewUrl}
                       className="h-[70vh] w-full rounded border-0 bg-background"
                     />
@@ -379,8 +390,8 @@ export function StudentDocumentsSection({
                         href={previewUrl}
                         download={buildDownloadName(
                           viewerDoc,
-                          studentName,
-                          admissionNumber
+                          subjectName,
+                          referenceCode
                         )}
                         className="text-sm font-medium text-primary underline"
                       >

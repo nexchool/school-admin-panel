@@ -3,25 +3,27 @@
 import { useEffect, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 import {
-  studentDocumentsService,
-  type StudentDocument,
-} from "@/services/studentDocumentsService";
+  documentsService,
+  type PersonDocument,
+  type ProfileKind,
+} from "@/services/documentsService";
 import { cn } from "@/lib/utils";
 
-function isImageDoc(doc: StudentDocument): boolean {
-  return (doc.mime_type ?? "").startsWith("image/");
+function isImageDoc(doc: PersonDocument): boolean {
+  return (doc.mimeType ?? "").startsWith("image/");
 }
 
 interface DocumentThumbnailProps {
-  studentId: string;
-  doc: StudentDocument;
+  kind: ProfileKind;
+  profileId: string;
+  doc: PersonDocument;
   /** When provided, the tile becomes a button (e.g. to open the full viewer). */
   onClick?: () => void;
   className?: string;
 }
 
 /**
- * A small square preview for a student document. For image documents it fetches
+ * A small square preview for a document. For image documents it fetches
  * the (authenticated) file blob once and renders a thumbnail so the user can
  * eyeball the file without opening it; PDFs / non-images and any load failure
  * fall back to a generic file icon. Each instance owns its object URL and
@@ -29,7 +31,8 @@ interface DocumentThumbnailProps {
  * cross a URL between rows.
  */
 export function DocumentThumbnail({
-  studentId,
+  kind,
+  profileId,
   doc,
   onClick,
   className,
@@ -43,8 +46,8 @@ export function DocumentThumbnail({
     let objectUrl: string | null = null;
     let cancelled = false;
 
-    studentDocumentsService
-      .downloadDocumentBlob(studentId, doc.id)
+    documentsService
+      .downloadBlob(kind, profileId, doc.id)
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -58,7 +61,7 @@ export function DocumentThumbnail({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [studentId, doc.id, image]);
+  }, [kind, profileId, doc.id, image]);
 
   const tile =
     "size-11 shrink-0 overflow-hidden rounded-md border border-border";
@@ -69,7 +72,7 @@ export function DocumentThumbnail({
       // eslint-disable-next-line @next/next/no-img-element -- object URL of a fetched blob, not a remote asset
       <img
         src={url}
-        alt={doc.original_filename}
+        alt={doc.originalFilename}
         className="size-full object-cover"
       />
     ) : (
@@ -90,7 +93,7 @@ export function DocumentThumbnail({
       <button
         type="button"
         onClick={onClick}
-        aria-label={`Open preview of ${doc.original_filename}`}
+        aria-label={`Open preview of ${doc.originalFilename}`}
         className={cn(
           tile,
           "cursor-pointer transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
