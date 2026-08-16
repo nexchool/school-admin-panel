@@ -42,10 +42,10 @@ export function StepExamWindows({ academicYearId }: StepExamWindowsProps) {
   );
 
   const describeClasses = (window: ExamWindow) => {
-    if (!window.applicable_class_ids.length) return "All classes";
-    return window.applicable_class_ids
-      .map((id) => classNameById.get(id) ?? "…")
-      .join(", ");
+    // Null and empty both mean the window applies to the whole school.
+    const classIds = window.applicable_class_ids ?? [];
+    if (!classIds.length) return "All classes";
+    return classIds.map((id) => classNameById.get(id) ?? "…").join(", ");
   };
 
   const handleSubmit = async (payload: Partial<ExamWindow>) => {
