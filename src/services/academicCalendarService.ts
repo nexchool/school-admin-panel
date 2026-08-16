@@ -216,7 +216,8 @@ const DAYS = `
 const EVENTS = `
   query CalendarEvents($yearId: ID!) {
     calendarEvents(academicYearId: $yearId) {
-      id name eventType description startDate endDate isHoliday academicYearId
+      id name eventType description eventDate status appliesTo academicYearId
+      createdAt updatedAt
     }
   }
 `;
@@ -224,7 +225,8 @@ const EVENTS = `
 const EXAM_WINDOWS = `
   query ExamWindows($yearId: ID!) {
     examWindows(academicYearId: $yearId) {
-      id name examType startDate endDate academicYearId
+      id name examType status startDate endDate durationDays
+      applicableClassIds description academicYearId createdAt updatedAt
     }
   }
 `;
@@ -256,6 +258,34 @@ type CalendarNode = {
     timeFormat: string;
     defaultEventColor: string;
   } | null;
+};
+
+type ExamWindowNode = {
+  id: string;
+  name: string;
+  examType: ExamType;
+  status: EventStatus;
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  applicableClassIds: string[];
+  description: string | null;
+  academicYearId: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+type SchoolEventNode = {
+  id: string;
+  name: string;
+  eventType: SchoolEventType;
+  description: string | null;
+  eventDate: string;
+  status: EventStatus;
+  appliesTo: AppliesTo;
+  academicYearId: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 /**
@@ -432,21 +462,24 @@ export const academicCalendarService = {
   },
 
   listExamWindows: async (academicYearId: string): Promise<ExamWindow[]> => {
-    const data = await gql<{ examWindows: Record<string, unknown>[] }>(
-      EXAM_WINDOWS,
-      { yearId: academicYearId },
-    );
-    return data.examWindows.map(
-      (w) =>
-        ({
-          id: w.id,
-          name: w.name,
-          exam_type: w.examType,
-          start_date: w.startDate,
-          end_date: w.endDate,
-          academic_year_id: w.academicYearId,
-        }) as unknown as ExamWindow,
-    );
+    const data = await gql<{ examWindows: ExamWindowNode[] }>(EXAM_WINDOWS, {
+      yearId: academicYearId,
+    });
+    return data.examWindows.map((w) => ({
+      id: w.id,
+      name: w.name,
+      exam_type: w.examType,
+      status: w.status,
+      start_date: w.startDate,
+      end_date: w.endDate,
+      duration_days: w.durationDays,
+      // Empty means every class. The schema returns a list either way.
+      applicable_class_ids: w.applicableClassIds ?? [],
+      description: w.description,
+      academic_year_id: w.academicYearId,
+      created_at: w.createdAt,
+      updated_at: w.updatedAt,
+    }));
   },
   createExamWindow: (data: Partial<ExamWindow>) =>
     apiPost<ExamWindow>(`${BASE}/exam-windows`, data),
@@ -456,23 +489,22 @@ export const academicCalendarService = {
     apiDelete<void>(`${BASE}/exam-windows/${id}`),
 
   listEvents: async (academicYearId: string): Promise<SchoolEvent[]> => {
-    const data = await gql<{ calendarEvents: Record<string, unknown>[] }>(
-      EVENTS,
-      { yearId: academicYearId },
-    );
-    return data.calendarEvents.map(
-      (e) =>
-        ({
-          id: e.id,
-          name: e.name,
-          event_type: e.eventType,
-          description: e.description,
-          start_date: e.startDate,
-          end_date: e.endDate,
-          is_holiday: e.isHoliday,
-          academic_year_id: e.academicYearId,
-        }) as unknown as SchoolEvent,
-    );
+    const data = await gql<{ calendarEvents: SchoolEventNode[] }>(EVENTS, {
+      yearId: academicYearId,
+    });
+    return data.calendarEvents.map((e) => ({
+      id: e.id,
+      name: e.name,
+      event_type: e.eventType,
+      description: e.description,
+      // An event sits on one day; there was never a start/end pair to read.
+      event_date: e.eventDate,
+      status: e.status,
+      applies_to: e.appliesTo,
+      academic_year_id: e.academicYearId,
+      created_at: e.createdAt,
+      updated_at: e.updatedAt,
+    }));
   },
   createEvent: (data: Partial<SchoolEvent>) =>
     apiPost<SchoolEvent>(`${BASE}/events`, data),
