@@ -152,7 +152,8 @@ export function buildCalendarEntries({
       startDate: w.start_date,
       endDate: w.end_date,
       typeLabel: labelFor(EXAM_TYPE_OPTIONS, w.exam_type),
-      appliesTo: w.applicable_class_ids.length
+      // Null and empty both mean the window applies to the whole school.
+      appliesTo: w.applicable_class_ids?.length
         ? `${w.applicable_class_ids.length} classes`
         : "All classes",
       description: w.description,
