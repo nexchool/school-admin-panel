@@ -290,7 +290,97 @@ const UPDATE_MEDIUM = `
 `;
 const REMOVE_MEDIUM = `mutation RemoveMedium($id: ID!) { removeMedium(id: $id) }`;
 
+
+// --- Academic cycles --------------------------------------------------------
+// The dated period a year is actually operated in. A school has one until it
+// runs two boards on different calendars, or opens a vacation batch — which is
+// why every screen defaults it rather than asking.
+const ACADEMIC_CYCLES = `
+  query AcademicCycles($academicYearId: ID!) {
+    academicCycles(academicYearId: $academicYearId) {
+      id academicYearId name startDate endDate cycleKind
+    }
+  }
+`;
+const ADD_ACADEMIC_CYCLE = `
+  mutation AddAcademicCycle($input: AcademicCycleInput!) {
+    addAcademicCycle(input: $input) {
+      id academicYearId name startDate endDate cycleKind
+    }
+  }
+`;
+const UPDATE_ACADEMIC_CYCLE = `
+  mutation UpdateAcademicCycle($id: ID!, $changes: AcademicCycleChanges!) {
+    updateAcademicCycle(id: $id, changes: $changes) {
+      id academicYearId name startDate endDate cycleKind
+    }
+  }
+`;
+const ARCHIVE_ACADEMIC_CYCLE = `
+  mutation ArchiveAcademicCycle($id: ID!) {
+    archiveAcademicCycle(id: $id) { id name }
+  }
+`;
+
+export type AcademicCycle = {
+  id: string;
+  academicYearId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  cycleKind: string;
+};
+
+export type AcademicCycleInput = {
+  academicYearId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  cycleKind?: string;
+};
+
+export type AcademicCycleChanges = Partial<
+  Omit<AcademicCycleInput, "academicYearId">
+>;
+
 export const academicStructureService = {
+  academicCycles: async (academicYearId: string): Promise<AcademicCycle[]> => {
+    const data = await gql<{ academicCycles: AcademicCycle[] }>(
+      ACADEMIC_CYCLES,
+      { academicYearId },
+    );
+    // Field names match on both sides, so there is nothing to map and
+    // nothing to get wrong.
+    return data.academicCycles;
+  },
+
+  addAcademicCycle: async (input: AcademicCycleInput): Promise<AcademicCycle> => {
+    const data = await gql<{ addAcademicCycle: AcademicCycle }>(
+      ADD_ACADEMIC_CYCLE,
+      { input },
+    );
+    return data.addAcademicCycle;
+  },
+
+  updateAcademicCycle: async (
+    id: string,
+    changes: AcademicCycleChanges,
+  ): Promise<AcademicCycle> => {
+    const data = await gql<{ updateAcademicCycle: AcademicCycle }>(
+      UPDATE_ACADEMIC_CYCLE,
+      { id, changes },
+    );
+    return data.updateAcademicCycle;
+  },
+
+  archiveAcademicCycle: async (id: string): Promise<{ id: string }> => {
+    const data = await gql<{ archiveAcademicCycle: { id: string } }>(
+      ARCHIVE_ACADEMIC_CYCLE,
+      { id },
+    );
+    return data.archiveAcademicCycle;
+  },
+
   campuses: async (status?: string): Promise<SchoolUnit[]> => {
     const data = await gql<{ campuses: CampusNode[] }>(CAMPUSES, { status });
     return data.campuses.map(toSchoolUnit);

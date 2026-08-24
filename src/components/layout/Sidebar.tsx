@@ -79,6 +79,8 @@ const SIDEBAR_NAV_CORE: NavEntry[] = [
   { href: "/students", label: "Students", icon: GraduationCap, permissions: ROUTE_PERMISSIONS["/students"] },
   { href: "/teachers", label: "Teachers", icon: Users, permissions: ROUTE_PERMISSIONS["/teachers"] },
   { href: "/classes", label: "Classes", icon: BookOpen, permissions: ROUTE_PERMISSIONS["/classes"] },
+  { href: "/examinations", label: "Examinations", icon: ClipboardList, feature: "examinations", permissions: ROUTE_PERMISSIONS["/examinations"] },
+  { href: "/examinations/corrections", label: "Mark Corrections", icon: ClipboardList, feature: "examinations", permissions: ROUTE_PERMISSIONS["/examinations/corrections"] },
   { href: "/attendance", label: "Attendance", icon: ClipboardCheck, feature: "attendance", permissions: ROUTE_PERMISSIONS["/attendance"] },
   { href: "/attendance/corrections", label: "Corrections", icon: ClipboardCheck, feature: "attendance", permissions: ROUTE_PERMISSIONS["/attendance/corrections"] },
   { href: "/dashboard/finance", label: "Finance", icon: Wallet, feature: "fees_management", permissions: ROUTE_PERMISSIONS["/dashboard/finance"] },
