@@ -30,6 +30,7 @@ import { useCreateGrade, useGrades } from "@/hooks/useGrades";
 import { useMediums } from "@/hooks/useSubjectContexts";
 import { useProgrammes } from "@/hooks/useProgrammes";
 import { useSchoolUnits } from "@/hooks/useSchoolUnits";
+import { useAcademicCycles } from "@/hooks/useAcademicCycles";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
 import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 
@@ -102,6 +103,19 @@ export function CreateSectionModal({
   // The header's active year and campus are what the user is already looking
   // at, so they are the answer far more often than not.
   const effectiveYear = yearId || academicYearId || years[0]?.id || "";
+
+  // The dated period this section runs in. A school has one until it opens a
+  // second, so the field only appears when there is a choice to make — and
+  // when there is, the server refuses to guess, so it has to be made.
+  const { data: cycles = [] } = useAcademicCycles(effectiveYear);
+  const [cycleId, setCycleId] = useState("");
+  const mustChooseCycle = cycles.length > 1;
+  // Derived, not reset in an effect: changing the year changes the list, and a
+  // cycle from the previous year is simply not in it. Validating the selection
+  // against what is on offer keeps this correct without a second source of
+  // truth for "what is selected" (and eslint forbids the effect anyway).
+  const chosenCycle = cycles.some((c) => c.id === cycleId) ? cycleId : "";
+  const effectiveCycle = mustChooseCycle ? chosenCycle : cycles[0]?.id || "";
   const effectiveCampus = campusId || unitId || "";
 
   const sortedGrades = useMemo(
@@ -183,6 +197,7 @@ export function CreateSectionModal({
         name: "",
         section: trimmedSection,
         academic_year_id: effectiveYear,
+        academic_cycle_id: effectiveCycle || undefined,
         school_unit_id: effectiveCampus,
         programme_id: effectiveProgramme,
         grade_id: gradeId,
@@ -248,6 +263,28 @@ export function CreateSectionModal({
               </Select>
             </div>
           </div>
+
+          {mustChooseCycle ? (
+            <div className="space-y-2">
+              <Label htmlFor="section-cycle">Academic cycle</Label>
+              <Select value={chosenCycle} onValueChange={setCycleId}>
+                <SelectTrigger id="section-cycle">
+                  <SelectValue placeholder="Select cycle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cycles.map((cycle) => (
+                    <SelectItem key={cycle.id} value={cycle.id}>
+                      {cycle.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This year runs more than one cycle. Choose the one this section
+                belongs to.
+              </p>
+            </div>
+          ) : null}
 
           {isSectionOfKnownClass ? null : (
             <div className="space-y-2">

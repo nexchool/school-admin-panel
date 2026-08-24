@@ -142,6 +142,13 @@ export interface CreateClassInput {
   name: string;
   section: string;
   academic_year_id: string;
+  /**
+   * The dated period the section runs in. Omitted by every school with one
+   * cycle — the server resolves it. Required once a year runs several, where
+   * the server refuses to guess rather than put a CBSE section on GSEB's
+   * calendar.
+   */
+  academic_cycle_id?: string;
   teacher_id?: string;
   start_date?: string;
   end_date?: string;

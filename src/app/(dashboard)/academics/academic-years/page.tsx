@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { AcademicCyclesDialog } from "@/components/academics/AcademicCyclesDialog";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,9 @@ function fmtRange(start: string, end: string) {
 }
 
 export default function AcademicYearsPage() {
+  // Cycles live behind an action on the year they belong to. A school with
+  // one never opens this and never learns the word.
+  const [cyclesFor, setCyclesFor] = useState<AcademicYear | null>(null);
   const qc = useQueryClient();
   const { hasPermission } = useAuth();
   const canManage = hasPermission("class.manage");
@@ -152,10 +156,21 @@ export default function AcademicYearsPage() {
     {
       key: "actions",
       header: "",
-      className: "w-[120px] text-right",
+      className: "w-[160px] text-right",
       cell: (r) =>
         canManage ? (
           <div className="flex justify-end gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setCyclesFor(r)}
+              title="Academic cycles"
+            >
+              <CalendarRange className="h-4 w-4" />
+              <span className="sr-only">Cycles for {r.name}</span>
+            </Button>
             <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(r)}>
               <Pencil className="h-4 w-4" />
               <span className="sr-only">Edit</span>
@@ -292,7 +307,14 @@ export default function AcademicYearsPage() {
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving…
-                </>
+                      <AcademicCyclesDialog
+        key={cyclesFor?.id ?? "none"}
+        year={cyclesFor}
+        open={cyclesFor !== null}
+        onOpenChange={(open) => !open && setCyclesFor(null)}
+        canManage={canManage}
+      />
+</>
               ) : editing ? (
                 "Save changes"
               ) : (

@@ -19,6 +19,7 @@ export const OPTIONAL_MODULES = [
   "hostel",
   "notifications",
   "academic_calendar",
+  "examinations",
 ] as const;
 
 export type OptionalModule = (typeof OPTIONAL_MODULES)[number];

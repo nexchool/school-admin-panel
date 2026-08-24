@@ -65,6 +65,12 @@ export const ROUTE_PERMISSIONS = {
     "teacher.manage",
   ],
   "/classes": ["class.read", "class.manage"],
+  // Scheduling only. Publishing results answers to `examination.publish`,
+  // which no screen on this route uses.
+  "/examinations": ["examination.read", "examination.manage"],
+  // Deciding on a correction is the assessment owner's job, not a marker's —
+  // the same split `/attendance/corrections` already makes.
+  "/examinations/corrections": ["assessment.manage"],
   "/subjects": ["subject.read", "subject.manage"],
   "/departments": ["department.read", "department.manage"],
   "/timetable": ["timetable.read", "timetable.manage"],

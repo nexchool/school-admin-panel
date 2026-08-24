@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,7 +31,10 @@ import {
   type ProfileHeaderBadge,
   type QuickStatItem,
 } from "@/components/detail";
+import { PersonDocumentsSection } from "@/components/documents/PersonDocumentsSection";
+import { useDocuments } from "@/hooks/useDocuments";
 import {
+  FileText,
   Loader2,
   User,
   BookOpen,
@@ -47,7 +50,13 @@ import {
 } from "lucide-react";
 import type { Teacher, UpdateTeacherInput } from "@/types/teacher";
 
-type TabKey = "info" | "subjects" | "availability" | "leaves" | "workload";
+type TabKey =
+  | "info"
+  | "subjects"
+  | "availability"
+  | "leaves"
+  | "workload"
+  | "documents";
 
 const TABS: TabNavItem<TabKey>[] = [
   { id: "info", label: "Info", icon: User },
@@ -55,6 +64,7 @@ const TABS: TabNavItem<TabKey>[] = [
   { id: "availability", label: "Availability", icon: Calendar },
   { id: "leaves", label: "Leaves", icon: ClipboardList },
   { id: "workload", label: "Workload", icon: BarChart3 },
+  { id: "documents", label: "Documents", icon: FileText },
 ];
 
 const TAB_IDS: TabKey[] = TABS.map((t) => t.id);
@@ -71,6 +81,21 @@ export default function TeacherDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const initialTab = (searchParams?.get("tab") as TabKey | null) ?? "info";
+  // The Documents tab carries the pending warning. Read here as well as inside
+  // the section, but TanStack serves both from one cache entry — it is one
+  // request, not two.
+  const { data: documentSet } = useDocuments("teacher", id ?? null);
+  const tabs = useMemo<TabNavItem<TabKey>[]>(() => {
+    const pending =
+      !!documentSet?.completeness.isTracked &&
+      !documentSet.completeness.isSatisfied;
+    return TABS.map((tab) =>
+      tab.id === "documents" && pending
+        ? { ...tab, badge: "!", badgeTone: "destructive" as const }
+        : tab
+    );
+  }, [documentSet]);
+
   const [activeTab, setActiveTab] = useState<TabKey>(
     TAB_IDS.includes(initialTab) ? initialTab : "info"
   );
@@ -177,7 +202,7 @@ export default function TeacherDetailPage() {
       <QuickStats items={statsItems} />
 
       <div className="space-y-5 pt-2">
-        <TabNav tabs={TABS} active={activeTab} onChange={setActiveTab} />
+        <TabNav tabs={tabs} active={activeTab} onChange={setActiveTab} />
 
         <div className="min-h-[300px]">
           {activeTab === "info" && <InfoTab teacher={teacher} />}
@@ -189,6 +214,14 @@ export default function TeacherDetailPage() {
           )}
           {activeTab === "leaves" && <TeacherLeavesTab teacherId={id} />}
           {activeTab === "workload" && <TeacherWorkloadTab teacherId={id} />}
+          {activeTab === "documents" && (
+            <PersonDocumentsSection
+              kind="teacher"
+              profileId={id}
+              subjectName={teacher.name}
+              referenceCode={teacher.employee_id}
+            />
+          )}
         </div>
       </div>
 

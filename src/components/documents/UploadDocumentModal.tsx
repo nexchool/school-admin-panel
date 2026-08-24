@@ -20,26 +20,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DOCUMENT_TYPES,
-  DOCUMENT_TYPE_LABELS,
   MAX_DOCUMENT_SIZE_LABEL,
   validateDocumentFile,
-} from "@/services/studentDocumentsService";
-import { useUploadStudentDocument } from "@/hooks/useStudentDocuments";
+  type DocumentTypeOption,
+  type ProfileKind,
+} from "@/services/documentsService";
+import { useUploadDocument } from "@/hooks/useDocuments";
 import { FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface UploadDocumentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  studentId: string;
+  kind: ProfileKind;
+  profileId: string;
+  /**
+   * What this profile may file, as the server narrowed it. Passed in rather
+   * than fetched again: the parent already has it, and the two must agree
+   * about which types a teacher is offered versus a student.
+   */
+  availableTypes: DocumentTypeOption[];
   onSuccess?: () => void;
 }
 
 export function UploadDocumentModal({
   open,
   onOpenChange,
-  studentId,
+  kind,
+  profileId,
+  availableTypes,
   onSuccess,
 }: UploadDocumentModalProps) {
   const [documentType, setDocumentType] = useState<string>("");
@@ -51,7 +60,7 @@ export function UploadDocumentModal({
   // body fail mid-flight as an opaque network error (NXS-31 / NXS-38).
   const [fileError, setFileError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadMutation = useUploadStudentDocument(studentId);
+  const uploadMutation = useUploadDocument(kind, profileId);
 
   // Belt-and-suspenders: revoke any outstanding object URL on unmount.
   useEffect(() => {
@@ -91,7 +100,7 @@ export function UploadDocumentModal({
     if (fileError) return;
     try {
       await uploadMutation.mutateAsync({ documentType, file });
-      // Success + error toasts owned by useUploadStudentDocument.
+      // Success + error toasts owned by useUploadDocument.
       onSuccess?.();
       handleClose(false);
     } catch {
@@ -117,9 +126,9 @@ export function UploadDocumentModal({
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                {DOCUMENT_TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {DOCUMENT_TYPE_LABELS[t]}
+                {availableTypes.map((t) => (
+                  <SelectItem key={t.code} value={t.code}>
+                    {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>
