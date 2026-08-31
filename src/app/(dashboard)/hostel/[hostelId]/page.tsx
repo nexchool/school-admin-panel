@@ -3,13 +3,17 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Plus, RotateCcw } from "lucide-react";
+import { ChevronLeft, Pencil, Plus, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { RoomTile } from "@/components/hostel/RoomTile";
+import {
+  HostelFormDialog,
+  HostelFormValues,
+} from "@/components/hostel/HostelFormDialog";
 import {
   RoomFormDialog,
   RoomFormValues,
@@ -20,6 +24,7 @@ import {
   useCreateRoom,
   useHostel,
   useRooms,
+  useUpdateHostel,
 } from "@/hooks/useHostel";
 
 import type { HostelRoom } from "@/services/hostelService";
@@ -28,7 +33,7 @@ import type { HostelRoom } from "@/services/hostelService";
  * Screen 2 — Rooms grid for a single hostel.
  *
  * Layout:
- *   - Header: back link, hostel name, "Add room" CTA.
+ *   - Header: back link, hostel name, warden line, "Edit" + "Add room" CTAs.
  *   - Rooms grouped by `floor` (case-insensitive sort, "Ground Floor" wins).
  *   - Each group: responsive grid of square RoomTile components, 2-5 cols
  *     depending on viewport.
@@ -50,7 +55,9 @@ export default function RoomsGridPage() {
     status: "active",
   });
   const createRoom = useCreateRoom();
+  const updateHostel = useUpdateHostel(hostelId);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   // room_id → count of currently active allocations
   const occupiedByRoomId = useMemo(() => {
@@ -96,6 +103,20 @@ export default function RoomsGridPage() {
     setCreateOpen(false);
   }
 
+  async function handleUpdateHostel(values: HostelFormValues) {
+    // Empty maps to null, not undefined. This is a PATCH, so an omitted key
+    // means "leave unchanged" — mapping blank to undefined (the way the create
+    // handler does) would make a warden phone impossible to remove once set.
+    await updateHostel.mutateAsync({
+      name: values.name,
+      capacity: values.capacity,
+      warden_name: values.warden_name?.trim() || null,
+      warden_phone: values.warden_phone?.trim() || null,
+      address: values.address?.trim() || null,
+    });
+    setEditOpen(false);
+  }
+
   const isLoading = hostelQuery.isLoading || roomsQuery.isLoading;
   const isError = hostelQuery.isError || roomsQuery.isError;
 
@@ -123,7 +144,14 @@ export default function RoomsGridPage() {
             </p>
           )}
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setEditOpen(true)}
+            disabled={!hostelQuery.data}
+          >
+            <Pencil className="mr-2 size-4" /> Edit
+          </Button>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 size-4" /> Add room
           </Button>
@@ -199,6 +227,14 @@ export default function RoomsGridPage() {
         hostelName={hostelQuery.data?.name}
         onSubmit={handleCreate}
         saving={createRoom.isPending}
+      />
+
+      <HostelFormDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        defaultValues={hostelQuery.data}
+        onSubmit={handleUpdateHostel}
+        saving={updateHostel.isPending}
       />
     </div>
   );
