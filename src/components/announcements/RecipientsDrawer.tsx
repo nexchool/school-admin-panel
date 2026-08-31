@@ -27,12 +27,19 @@ function relativeTime(iso: string | null): string {
 }
 
 export function RecipientsDrawer({ announcementId, open, onClose }: Props) {
-  const { data: recipients = [], isLoading } = useAnnouncementRecipients(
-    open ? announcementId : undefined,
-  );
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useAnnouncementRecipients(open ? announcementId : undefined);
 
-  const total = recipients.length;
-  const readCount = recipients.filter((r) => !!r.read_at).length;
+  const recipients = data?.pages.flatMap((page) => page.items) ?? [];
+  // Off the envelope, not off `recipients` — the roster is paged, so measuring
+  // the rows in hand would report "20 / 20" for a notice sent to 4,000 parents.
+  const total = data?.pages[0]?.total ?? 0;
+  const readCount = data?.pages[0]?.read_count ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -79,6 +86,21 @@ export function RecipientsDrawer({ announcementId, open, onClose }: Props) {
                 </li>
               ))}
             </ul>
+          )}
+
+          {hasNextPage && (
+            <div className="flex justify-center py-3">
+              <button
+                type="button"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="rounded-md border border-border px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted disabled:opacity-60"
+              >
+                {isFetchingNextPage
+                  ? "Loading…"
+                  : `Show more (${recipients.length} of ${total})`}
+              </button>
+            </div>
           )}
         </div>
       </DialogContent>

@@ -3,6 +3,7 @@
 import {
   useInfiniteQuery,
   useQuery,
+  type InfiniteData,
   type QueryKey,
   type UseInfiniteQueryOptions,
   type UseInfiniteQueryResult,
@@ -56,7 +57,10 @@ export function useTenantQuery<
 export function useTenantInfiniteQuery<
   TQueryFnData,
   TError = Error,
-  TData = TQueryFnData,
+  // An infinite query's data is the accumulated pages, not one page. This
+  // mirrors TanStack's own default; `TData = TQueryFnData` collapses it to a
+  // single page and `data.pages` stops type-checking at every call site.
+  TData = InfiniteData<TQueryFnData>,
   TQueryKey extends QueryKey = QueryKey,
   TPageParam = unknown,
 >(

@@ -11,7 +11,7 @@ import type {
   AnnouncementRevision,
   CreateAnnouncementPayload,
   UpdateAnnouncementPayload,
-  RecipientReadStatus,
+  RecipientRoster,
   SystemTemplate,
 } from "@/types/announcement";
 
@@ -46,9 +46,9 @@ export const announcementsService = {
     );
     return unwrap(data);
   },
-  recipients: async (id: string): Promise<RecipientReadStatus[]> => {
-    const data = await apiGet<RecipientReadStatus[] | { data: RecipientReadStatus[] }>(
-      `/api/announcements/${id}/recipients`,
+  recipients: async (id: string, page = 1): Promise<RecipientRoster> => {
+    const data = await apiGet<RecipientRoster | { data: RecipientRoster }>(
+      `/api/announcements/${id}/recipients?page=${page}`,
     );
     return unwrap(data);
   },
