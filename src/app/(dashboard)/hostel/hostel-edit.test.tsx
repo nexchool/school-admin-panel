@@ -9,7 +9,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -18,9 +18,11 @@ import RoomsGridPage from "./[hostelId]/page";
 import { hostelService } from "@/services/hostelService";
 import type { Hostel } from "@/services/hostelService";
 
+const push = vi.fn();
+
 vi.mock("next/navigation", () => ({
   useParams: () => ({ hostelId: "h-1" }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -28,6 +30,7 @@ vi.mock("@/services/hostelService", () => ({
   hostelService: {
     getHostel: vi.fn(),
     updateHostel: vi.fn(),
+    deleteHostel: vi.fn(),
     listRooms: vi.fn(),
     listAllocations: vi.fn(),
     createRoom: vi.fn(),
@@ -76,6 +79,7 @@ beforeEach(() => {
   vi.mocked(hostelService.listRooms).mockResolvedValue([]);
   vi.mocked(hostelService.listAllocations).mockResolvedValue([]);
   vi.mocked(hostelService.updateHostel).mockResolvedValue(HOSTEL);
+  vi.mocked(hostelService.deleteHostel).mockResolvedValue(undefined);
 });
 
 describe("hostel edit entry point", () => {
@@ -146,5 +150,74 @@ describe("saving an edited hostel", () => {
       await screen.findByText(/enter a valid 10-digit mobile number/i)
     ).toBeInTheDocument();
     expect(hostelService.updateHostel).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleting a hostel", () => {
+  /**
+   * Open the confirm dialog and return its confirm button.
+   *
+   * The header button and the confirm button share an accessible name, so the
+   * confirm button is looked up inside the dialog rather than page-wide.
+   */
+  async function openDeleteDialog(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole("button", { name: /delete hostel/i }));
+    const dialog = await screen.findByRole("dialog");
+    return within(dialog).getByRole("button", { name: /delete hostel/i });
+  }
+
+  it("asks before deleting, naming the hostel", async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await user.click(screen.getByRole("button", { name: /delete hostel/i }));
+
+    expect(
+      screen.getByRole("heading", { name: /delete this hostel\?/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Boys Hostel A and its rooms/i)).toBeInTheDocument();
+    expect(hostelService.deleteHostel).not.toHaveBeenCalled();
+  });
+
+  it("does not delete when the confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await user.click(screen.getByRole("button", { name: /delete hostel/i }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: /^cancel$/i }));
+
+    expect(hostelService.deleteHostel).not.toHaveBeenCalled();
+  });
+
+  it("deletes and returns to the hostels list once confirmed", async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    const confirm = await openDeleteDialog(user);
+    await user.click(confirm);
+
+    await waitFor(() => {
+      expect(hostelService.deleteHostel).toHaveBeenCalledWith("h-1");
+    });
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/hostel");
+    });
+  });
+
+  it("stays put when the server refuses because students are allocated", async () => {
+    const user = userEvent.setup();
+    vi.mocked(hostelService.deleteHostel).mockRejectedValue(
+      new Error("Cannot delete a hostel with 12 students still allocated.")
+    );
+    await renderScreen();
+
+    const confirm = await openDeleteDialog(user);
+    await user.click(confirm);
+
+    await waitFor(() => {
+      expect(hostelService.deleteHostel).toHaveBeenCalled();
+    });
+    expect(push).not.toHaveBeenCalled();
   });
 });

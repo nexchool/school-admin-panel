@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Pencil, Plus, RotateCcw } from "lucide-react";
+import { ChevronLeft, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { RoomTile } from "@/components/hostel/RoomTile";
 import {
   HostelFormDialog,
@@ -23,6 +24,7 @@ import {
   useAllocations,
   useCreateRoom,
   useHostel,
+  useDeleteHostel,
   useRooms,
   useUpdateHostel,
 } from "@/hooks/useHostel";
@@ -33,7 +35,8 @@ import type { HostelRoom } from "@/services/hostelService";
  * Screen 2 — Rooms grid for a single hostel.
  *
  * Layout:
- *   - Header: back link, hostel name, warden line, "Edit" + "Add room" CTAs.
+ *   - Header: back link, hostel name, warden line, "Edit" / "Delete" /
+ *     "Add room" CTAs.
  *   - Rooms grouped by `floor` (case-insensitive sort, "Ground Floor" wins).
  *   - Each group: responsive grid of square RoomTile components, 2-5 cols
  *     depending on viewport.
@@ -47,6 +50,7 @@ import type { HostelRoom } from "@/services/hostelService";
 export default function RoomsGridPage() {
   const params = useParams<{ hostelId: string }>();
   const hostelId = params.hostelId;
+  const router = useRouter();
 
   const hostelQuery = useHostel(hostelId);
   const roomsQuery = useRooms(hostelId);
@@ -56,8 +60,10 @@ export default function RoomsGridPage() {
   });
   const createRoom = useCreateRoom();
   const updateHostel = useUpdateHostel(hostelId);
+  const deleteHostel = useDeleteHostel();
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // room_id → count of currently active allocations
   const occupiedByRoomId = useMemo(() => {
@@ -117,11 +123,19 @@ export default function RoomsGridPage() {
     setEditOpen(false);
   }
 
+  async function handleDeleteHostel() {
+    // Deliberately not caught: the server refuses with 409 while students are
+    // still allocated, and ConfirmDialog keeps itself open when onConfirm
+    // throws so the toast explaining why stays next to the button that failed.
+    await deleteHostel.mutateAsync(hostelId);
+    router.push("/hostel");
+  }
+
   const isLoading = hostelQuery.isLoading || roomsQuery.isLoading;
   const isError = hostelQuery.isError || roomsQuery.isError;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 px-4 sm:px-6 lg:px-8">
       {/* Breadcrumb / header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
@@ -151,6 +165,14 @@ export default function RoomsGridPage() {
             disabled={!hostelQuery.data}
           >
             <Pencil className="mr-2 size-4" /> Edit
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setDeleteOpen(true)}
+            disabled={!hostelQuery.data}
+            aria-label="Delete hostel"
+          >
+            <Trash2 className="mr-2 size-4" /> Delete
           </Button>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="mr-2 size-4" /> Add room
@@ -235,6 +257,21 @@ export default function RoomsGridPage() {
         defaultValues={hostelQuery.data}
         onSubmit={handleUpdateHostel}
         saving={updateHostel.isPending}
+      />
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete this hostel?"
+        description={
+          hostelQuery.data
+            ? `${hostelQuery.data.name} and its rooms will no longer appear. Students still allocated must be checked out first.`
+            : undefined
+        }
+        confirmLabel="Delete hostel"
+        variant="destructive"
+        onConfirm={handleDeleteHostel}
+        loading={deleteHostel.isPending}
       />
     </div>
   );
