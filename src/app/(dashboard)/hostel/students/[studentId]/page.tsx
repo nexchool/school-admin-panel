@@ -73,7 +73,7 @@ export default function HostelStudentDetailPage() {
 
   // Sorted slices for display.
   const recentGatepasses = useMemo(
-    () => (gatepassQuery.data ?? []).slice(0, 5),
+    () => (gatepassQuery.data?.gatepasses ?? []).slice(0, 5),
     [gatepassQuery.data]
   );
   const recentVisitorLogs = useMemo(
@@ -305,7 +305,7 @@ export default function HostelStudentDetailPage() {
             isEmpty={recentGatepasses.length === 0}
             emptyLabel="No gatepasses yet."
             action={
-              gatepassQuery.data && gatepassQuery.data.length > 5 ? (
+              gatepassQuery.data && gatepassQuery.data.total > 5 ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/hostel/gatepasses?student_id=${studentId}`}>
                     View all

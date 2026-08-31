@@ -127,6 +127,34 @@ export interface HostelGatepass {
   deleted_at: string | null;
 }
 
+/** Filters the gatepass board sends; `status` may be several at once. */
+export interface GatepassFilters {
+  hostel_id?: string;
+  student_id?: string;
+  status?: GatepassStatus | GatepassStatus[];
+  type?: GatepassType;
+  search?: string;
+  page?: number;
+  per_page?: number;
+  /** Pending is worked oldest-first; every other column reads newest-first. */
+  oldest?: boolean;
+}
+
+/**
+ * One page of gatepasses.
+ *
+ * `total` counts the whole filtered set, not `gatepasses` — it is what a
+ * column header shows, and the closed column holds every gatepass the school
+ * has ever issued.
+ */
+export interface GatepassPage {
+  gatepasses: HostelGatepass[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 export interface HostelGatepassAudit {
   id: string;
   gatepass_id: string;
@@ -379,21 +407,19 @@ export const hostelService = {
   },
 
   // ---- Gatepasses ----
-  async listGatepasses(filters?: {
-    hostel_id?: string;
-    student_id?: string;
-    status?: GatepassStatus;
-    type?: GatepassType;
-  }): Promise<HostelGatepass[]> {
+  async listGatepasses(filters?: GatepassFilters): Promise<GatepassPage> {
     const params = new URLSearchParams();
     Object.entries(filters || {}).forEach(([k, v]) => {
-      if (v) params.append(k, String(v));
+      if (v === undefined || v === null || v === "" || v === false) return;
+      // The board's last column is two statuses in one; the API takes them
+      // comma-separated.
+      params.append(k, Array.isArray(v) ? v.join(",") : String(v));
     });
     const qs = params.toString();
-    const env = await apiGet<ApiEnvelope<{ gatepasses: HostelGatepass[] }>>(
+    const env = await apiGet<ApiEnvelope<GatepassPage>>(
       `/api/hostel/gatepasses${qs ? `?${qs}` : ""}`
     );
-    return unwrap(env).gatepasses;
+    return unwrap(env);
   },
 
   async getGatepass(

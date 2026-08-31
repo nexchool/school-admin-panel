@@ -20,6 +20,8 @@ import {
 import {
   AllocationStatus,
   BedStatus,
+  GatepassFilters,
+  GatepassPage,
   GatepassStatus,
   GatepassType,
   Hostel,
@@ -35,6 +37,7 @@ import {
 } from "@/services/hostelService";
 import { toastSuccess } from "@/lib/errorToast";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useTenantInfiniteQuery } from "@/hooks/useTenantQuery";
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -62,6 +65,15 @@ export const hostelKeys = {
     list: (filters?: Record<string, unknown>) =>
       ["hostel", "gatepasses", "list", filters ?? {}] as const,
     detail: (id: string) => ["hostel", "gatepasses", id] as const,
+    column: (statuses: string[], search?: string, oldest?: boolean) =>
+      [
+        "hostel",
+        "gatepasses",
+        "column",
+        statuses.join(","),
+        search ?? "",
+        oldest ? "oldest" : "newest",
+      ] as const,
     overdue: ["hostel", "gatepasses", "overdue"] as const,
   },
   visitors: {
@@ -329,13 +341,15 @@ export function useCheckoutAllocation() {
 // Gatepasses
 // ---------------------------------------------------------------------------
 
+/**
+ * One page of gatepasses for a narrow, naturally small filter — a single
+ * student at the gate, or one child's recent history.
+ *
+ * The board does not use this; it has a column per status and pages each one
+ * independently. See `useGatepassColumn`.
+ */
 export function useGatepasses(
-  filters?: {
-    hostel_id?: string;
-    student_id?: string;
-    status?: GatepassStatus;
-    type?: GatepassType;
-  },
+  filters?: GatepassFilters,
   options?: { enabled?: boolean },
 ) {
   const { tenantId } = useAuth();
@@ -345,6 +359,34 @@ export function useGatepasses(
     // Callers (e.g. the gatekeeper) gate on a selected student so we don't fetch
     // every gatepass in the tenant with only a status filter before one is picked.
     enabled: !!tenantId && (options?.enabled ?? true),
+  });
+}
+
+/**
+ * One column of the gatepass board, paged.
+ *
+ * Each column asks the server for its own statuses, sort and page. The header
+ * count comes from `total` on any page rather than from the rows loaded so
+ * far — the closed column holds every gatepass the school has ever issued, and
+ * measuring what is in hand would report the page size as the total.
+ */
+export function useGatepassColumn(
+  statuses: GatepassStatus[],
+  options?: { search?: string; oldest?: boolean },
+) {
+  const search = options?.search?.trim() || undefined;
+  return useTenantInfiniteQuery({
+    queryKey: hostelKeys.gatepasses.column(statuses, search, options?.oldest),
+    queryFn: ({ pageParam }) =>
+      hostelService.listGatepasses({
+        status: statuses,
+        search,
+        oldest: options?.oldest,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last: GatepassPage) =>
+      last.page < last.total_pages ? last.page + 1 : undefined,
   });
 }
 
