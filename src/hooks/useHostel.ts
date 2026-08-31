@@ -22,6 +22,8 @@ import {
   BedStatus,
   GatepassFilters,
   GatepassPage,
+  VisitorLogFilters,
+  VisitorLogPage,
   GatepassStatus,
   GatepassType,
   Hostel,
@@ -81,6 +83,8 @@ export const hostelKeys = {
       ["hostel", "visitor-logs", filters ?? {}] as const,
     search: (prefix: string) =>
       ["hostel", "visitors", "search", prefix] as const,
+    history: (term?: string) =>
+      ["hostel", "visitor-logs", "history", term ?? ""] as const,
   },
   dashboard: ["hostel", "dashboard"] as const,
   reports: {
@@ -484,14 +488,14 @@ export function useGatepassCheckin() {
 // Visitors
 // ---------------------------------------------------------------------------
 
-export function useVisitorLogs(filters?: {
-  hostel_id?: string;
-  student_id?: string;
-  visitor_id?: string;
-  open?: boolean;
-  start_date?: string;
-  end_date?: string;
-}) {
+/**
+ * Visitor logs for a narrow filter — one child's recent visitors, or the
+ * `open: true` view of who is in the building right now, which the server
+ * returns whole because it is bounded by concurrent visitors.
+ *
+ * The full history is unbounded; see `useVisitorHistory`.
+ */
+export function useVisitorLogs(filters?: VisitorLogFilters) {
   const { tenantId } = useAuth();
   return useQuery({
     queryKey: [...hostelKeys.visitors.logs(filters as Record<string, unknown>), tenantId],
@@ -499,6 +503,26 @@ export function useVisitorLogs(filters?: {
     enabled: !!tenantId,
     // The "currently inside" panel refreshes every 30s in the spec.
     refetchInterval: filters?.open ? 30_000 : false,
+  });
+}
+
+/**
+ * The visit history, paged and searched on the server.
+ *
+ * This list grows for the life of the school. The page used to download all of
+ * it and filter in the browser over `student_id` and `visitor_id` — UUIDs
+ * nobody types — which also meant the box only searched what had already
+ * loaded.
+ */
+export function useVisitorHistory(search?: string) {
+  const term = search?.trim() || undefined;
+  return useTenantInfiniteQuery({
+    queryKey: hostelKeys.visitors.history(term),
+    queryFn: ({ pageParam }) =>
+      hostelService.listVisitorLogs({ search: term, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last: VisitorLogPage) =>
+      last.page < last.total_pages ? last.page + 1 : undefined,
   });
 }
 

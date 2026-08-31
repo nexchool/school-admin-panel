@@ -77,7 +77,7 @@ export default function HostelStudentDetailPage() {
     [gatepassQuery.data]
   );
   const recentVisitorLogs = useMemo(
-    () => (visitorLogsQuery.data ?? []).slice(0, 5),
+    () => (visitorLogsQuery.data?.visitor_logs ?? []).slice(0, 5),
     [visitorLogsQuery.data]
   );
 
@@ -102,7 +102,7 @@ export default function HostelStudentDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="space-y-1">
         <Link
@@ -263,11 +263,11 @@ export default function HostelStudentDetailPage() {
             isLoading={allocationsHistoryQuery.isLoading}
             isError={allocationsHistoryQuery.isError}
             onRetry={() => allocationsHistoryQuery.refetch()}
-            isEmpty={(allocationsHistoryQuery.data ?? []).length === 0}
+            isEmpty={(allocationsHistoryQuery.data?.allocations ?? []).length === 0}
             emptyLabel="No allocation history."
           >
             <ul className="divide-y">
-              {(allocationsHistoryQuery.data ?? []).map((row) => (
+              {(allocationsHistoryQuery.data?.allocations ?? []).map((row) => (
                 <AllocationHistoryRow key={row.id} row={row} />
               ))}
             </ul>
@@ -330,7 +330,7 @@ export default function HostelStudentDetailPage() {
             isEmpty={recentVisitorLogs.length === 0}
             emptyLabel="No visitor records yet."
             action={
-              visitorLogsQuery.data && visitorLogsQuery.data.length > 5 ? (
+              visitorLogsQuery.data && visitorLogsQuery.data.total > 5 ? (
                 <Button asChild variant="ghost" size="sm">
                   <Link href={`/hostel/visitors?student_id=${studentId}`}>
                     View all
@@ -502,7 +502,7 @@ function SectionCard({
 
 function PageSkeleton() {
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6">
       <Skeleton className="h-6 w-40" />
       <div className="grid gap-6 lg:grid-cols-3">
         <Skeleton className="h-96 lg:col-span-1" />

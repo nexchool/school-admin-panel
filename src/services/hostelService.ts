@@ -57,6 +57,8 @@ export interface HostelRoom {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  /** Beds currently taken, counted on the server. */
+  occupied_count?: number;
 }
 
 export interface HostelBed {
@@ -97,6 +99,51 @@ export interface HostelAllocation {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+export interface AllocationFilters {
+  hostel_id?: string;
+  room_id?: string;
+  student_id?: string;
+  status?: AllocationStatus;
+  academic_year_id?: string;
+  page?: number;
+  per_page?: number;
+}
+
+/** One page of allocations; `total` counts the whole filtered set. */
+export interface AllocationPage {
+  allocations: HostelAllocation[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface VisitorLogFilters {
+  hostel_id?: string;
+  student_id?: string;
+  visitor_id?: string;
+  open?: boolean;
+  start_date?: string;
+  end_date?: string;
+  search?: string;
+  page?: number;
+  per_page?: number;
+}
+
+/**
+ * One page of visitor logs.
+ *
+ * The `open: true` view (who is in the building now) is naturally bounded and
+ * comes back whole; the history is paged and grows for the life of the school.
+ */
+export interface VisitorLogPage {
+  visitor_logs: HostelVisitorLog[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
 }
 
 export interface HostelGatepass {
@@ -351,22 +398,16 @@ export const hostelService = {
   },
 
   // ---- Allocations ----
-  async listAllocations(filters?: {
-    hostel_id?: string;
-    room_id?: string;
-    student_id?: string;
-    status?: AllocationStatus;
-    academic_year_id?: string;
-  }): Promise<HostelAllocation[]> {
+  async listAllocations(filters?: AllocationFilters): Promise<AllocationPage> {
     const params = new URLSearchParams();
     Object.entries(filters || {}).forEach(([k, v]) => {
       if (v) params.append(k, String(v));
     });
     const qs = params.toString();
-    const env = await apiGet<ApiEnvelope<{ allocations: HostelAllocation[] }>>(
+    const env = await apiGet<ApiEnvelope<AllocationPage>>(
       `/api/hostel/allocations${qs ? `?${qs}` : ""}`
     );
-    return unwrap(env).allocations;
+    return unwrap(env);
   },
 
   async createAllocation(input: {
@@ -521,24 +562,17 @@ export const hostelService = {
     return unwrap(env).visitor_log;
   },
 
-  async listVisitorLogs(filters?: {
-    hostel_id?: string;
-    student_id?: string;
-    visitor_id?: string;
-    open?: boolean;
-    start_date?: string;
-    end_date?: string;
-  }): Promise<HostelVisitorLog[]> {
+  async listVisitorLogs(filters?: VisitorLogFilters): Promise<VisitorLogPage> {
     const params = new URLSearchParams();
     Object.entries(filters || {}).forEach(([k, v]) => {
-      if (v === undefined || v === null || v === false) return;
+      if (v === undefined || v === null || v === false || v === "") return;
       params.append(k, v === true ? "true" : String(v));
     });
     const qs = params.toString();
-    const env = await apiGet<ApiEnvelope<{ visitor_logs: HostelVisitorLog[] }>>(
+    const env = await apiGet<ApiEnvelope<VisitorLogPage>>(
       `/api/hostel/visitor-logs${qs ? `?${qs}` : ""}`
     );
-    return unwrap(env).visitor_logs;
+    return unwrap(env);
   },
 
   // ---- Dashboard / reports ----

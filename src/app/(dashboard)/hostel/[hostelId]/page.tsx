@@ -21,7 +21,6 @@ import {
 } from "@/components/hostel/RoomFormDialog";
 
 import {
-  useAllocations,
   useCreateRoom,
   useHostel,
   useDeleteHostel,
@@ -44,8 +43,8 @@ import type { HostelRoom } from "@/services/hostelService";
  * Data:
  *   - useHostel(hostelId)            → name + warden info (header).
  *   - useRooms(hostelId)             → rooms list.
- *   - useAllocations({hostel_id,…})  → active allocations to compute
- *                                       per-room occupancy.
+ *   - useRooms(hostelId)             → each room carries its occupied_count,
+ *                                       counted on the server.
  */
 export default function RoomsGridPage() {
   const params = useParams<{ hostelId: string }>();
@@ -54,10 +53,6 @@ export default function RoomsGridPage() {
 
   const hostelQuery = useHostel(hostelId);
   const roomsQuery = useRooms(hostelId);
-  const allocsQuery = useAllocations({
-    hostel_id: hostelId,
-    status: "active",
-  });
   const createRoom = useCreateRoom();
   const updateHostel = useUpdateHostel(hostelId);
   const deleteHostel = useDeleteHostel();
@@ -65,14 +60,17 @@ export default function RoomsGridPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // room_id → count of currently active allocations
+  // room_id → beds currently taken. Counted on the server: fetching every
+  // active allocation to tally them here sent hundreds of rows to render a
+  // handful of numbers, and would count only the first page now that the
+  // allocations endpoint is paged.
   const occupiedByRoomId = useMemo(() => {
     const map = new Map<string, number>();
-    for (const a of allocsQuery.data ?? []) {
-      map.set(a.room_id, (map.get(a.room_id) ?? 0) + 1);
+    for (const room of roomsQuery.data ?? []) {
+      map.set(room.id, room.occupied_count ?? 0);
     }
     return map;
-  }, [allocsQuery.data]);
+  }, [roomsQuery.data]);
 
   // Rooms grouped by floor, with floor names ordered so "Ground Floor"
   // appears first and the rest sort alphabetically.
@@ -135,7 +133,7 @@ export default function RoomsGridPage() {
   const isError = hostelQuery.isError || roomsQuery.isError;
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="space-y-6">
       {/* Breadcrumb / header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">

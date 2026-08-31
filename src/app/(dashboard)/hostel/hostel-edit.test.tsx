@@ -77,7 +77,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(hostelService.getHostel).mockResolvedValue(HOSTEL);
   vi.mocked(hostelService.listRooms).mockResolvedValue([]);
-  vi.mocked(hostelService.listAllocations).mockResolvedValue([]);
+  vi.mocked(hostelService.listAllocations).mockResolvedValue({
+    allocations: [],
+    total: 0,
+    page: 1,
+    per_page: 25,
+    total_pages: 1,
+  });
   vi.mocked(hostelService.updateHostel).mockResolvedValue(HOSTEL);
   vi.mocked(hostelService.deleteHostel).mockResolvedValue(undefined);
 });

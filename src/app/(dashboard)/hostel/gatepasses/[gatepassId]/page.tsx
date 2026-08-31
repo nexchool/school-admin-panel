@@ -46,7 +46,7 @@ export default function GatepassDetailPage() {
 
   if (query.isLoading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="space-y-6">
         <Skeleton className="h-6 w-40" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -73,7 +73,7 @@ export default function GatepassDetailPage() {
   const { gatepass, audit_trail } = query.data;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, RefreshCw, RotateCcw, Search, UserCheck } from "lucide-react";
 
@@ -16,6 +16,7 @@ import {
 import {
   useVisitorCheckIn,
   useVisitorCheckOut,
+  useVisitorHistory,
   useVisitorLogs,
 } from "@/hooks/useHostel";
 
@@ -30,31 +31,28 @@ import type { HostelVisitorLog } from "@/services/hostelService";
  */
 export default function VisitorsPage() {
   const [historyFilter, setHistoryFilter] = useState("");
+  const [appliedFilter, setAppliedFilter] = useState("");
+
+  // The filter is a server query now, so don't send one per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setAppliedFilter(historyFilter), 300);
+    return () => clearTimeout(timer);
+  }, [historyFilter]);
 
   const insideQuery = useVisitorLogs({ open: true });
-  const historyQuery = useVisitorLogs({ open: false });
+  const historyQuery = useVisitorHistory(appliedFilter);
   const checkIn = useVisitorCheckIn();
   const checkOut = useVisitorCheckOut();
 
-  const filteredHistory = useMemo(() => {
-    const all = historyQuery.data ?? [];
-    const q = historyFilter.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter((l) => {
-      const haystack = [
-        l.purpose ?? "",
-        l.student_id,
-        l.visitor_id,
-        l.check_in_at,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [historyQuery.data, historyFilter]);
+  const inside = insideQuery.data?.visitor_logs ?? [];
+  // Paged and searched on the server: this list grows for the life of the
+  // school, and filtering here only ever searched what had already loaded.
+  const filteredHistory =
+    historyQuery.data?.pages.flatMap((page) => page.visitor_logs) ?? [];
+  const historyTotal = historyQuery.data?.pages[0]?.total ?? 0;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="space-y-1">
         <Link
@@ -77,7 +75,7 @@ export default function VisitorsPage() {
             <UserCheck className="size-4 text-emerald-600" />
             Currently inside
             <Badge variant="default" className="ml-2 tabular-nums">
-              {insideQuery.data?.length ?? 0}
+              {inside.length}
             </Badge>
           </CardTitle>
           <Button
@@ -104,13 +102,13 @@ export default function VisitorsPage() {
                 Retry
               </Button>
             </div>
-          ) : (insideQuery.data ?? []).length === 0 ? (
+          ) : inside.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No visitors are currently inside.
             </p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {insideQuery.data!.map((log) => (
+              {inside.map((log) => (
                 <CurrentlyInsideCard
                   key={log.id}
                   log={log}
@@ -144,7 +142,7 @@ export default function VisitorsPage() {
             <Input
               value={historyFilter}
               onChange={(e) => setHistoryFilter(e.target.value)}
-              placeholder="Filter purpose / student…"
+              placeholder="Search student, visitor, phone, purpose…"
               className="pl-9"
             />
           </div>
@@ -202,6 +200,21 @@ export default function VisitorsPage() {
                   ))}
                 </tbody>
               </table>
+
+              {historyQuery.hasNextPage && (
+                <div className="flex justify-center py-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={historyQuery.isFetchingNextPage}
+                    onClick={() => historyQuery.fetchNextPage()}
+                  >
+                    {historyQuery.isFetchingNextPage
+                      ? "Loading…"
+                      : `Show more (${filteredHistory.length} of ${historyTotal})`}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
