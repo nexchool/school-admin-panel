@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+import { optionalPhone } from "@/lib/validation/fields";
 import type { Hostel } from "@/services/hostelService";
 
 /**
@@ -25,6 +26,9 @@ import type { Hostel } from "@/services/hostelService";
  * - `name` and `capacity` are required (matches backend POST validator).
  * - `warden_name`, `warden_phone`, `address` are optional.
  * - Capacity must be a positive integer.
+ * - `warden_phone`, when filled, must be a valid Indian mobile number. The rule
+ *   lives in @/lib/validation/fields and is mirrored server-side in
+ *   modules/hostel/hostel_schemas.py.
  */
 const hostelFormSchema = z.object({
   name: z.string().trim().min(1, "Hostel name is required"),
@@ -35,7 +39,7 @@ const hostelFormSchema = z.object({
     .int("Capacity must be a whole number")
     .positive("Capacity must be greater than zero"),
   warden_name: z.string().trim().optional().or(z.literal("")),
-  warden_phone: z.string().trim().optional().or(z.literal("")),
+  warden_phone: optionalPhone,
   address: z.string().trim().optional().or(z.literal("")),
 });
 
@@ -146,9 +150,16 @@ export function HostelFormDialog({
                 <Label htmlFor="warden_phone">Warden phone (optional)</Label>
                 <Input
                   id="warden_phone"
+                  inputMode="tel"
                   placeholder="+91 98xxxxxxxx"
+                  aria-invalid={Boolean(errors.warden_phone)}
                   {...register("warden_phone")}
                 />
+                {errors.warden_phone && (
+                  <p className="text-sm text-destructive">
+                    {errors.warden_phone.message}
+                  </p>
+                )}
               </div>
             </div>
 
