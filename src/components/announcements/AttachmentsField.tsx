@@ -26,6 +26,22 @@ function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * What an announcement attachment may be, mirroring the server's allowlist in
+ * `modules/announcements/services.py`. Kept as extensions *and* MIME types
+ * because browsers vary in which they honour.
+ */
+const ATTACHMENT_ACCEPT = [
+  ".pdf,application/pdf",
+  ".jpg,.jpeg,image/jpeg",
+  ".png,image/png",
+  ".webp,image/webp",
+  ".doc,application/msword",
+  ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls,application/vnd.ms-excel",
+  ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+].join(",");
+
 export function AttachmentsField({
   attachments,
   announcementId,
@@ -70,6 +86,10 @@ export function AttachmentsField({
           ref={inputRef}
           type="file"
           multiple
+          // Mirrors the server's allowlist (announcements/services.py). Without
+          // it the picker offers everything and the refusal only arrives after
+          // the upload.
+          accept={ATTACHMENT_ACCEPT}
           className="hidden"
           onChange={onFileChange}
         />

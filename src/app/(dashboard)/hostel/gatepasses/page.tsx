@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -24,11 +24,11 @@ import {
   useApproveGatepass,
   useGatepassCheckin,
   useGatepassCheckout,
-  useGatepasses,
+  useGatepassColumn,
   useRejectGatepass,
 } from "@/hooks/useHostel";
 
-import type { HostelGatepass } from "@/services/hostelService";
+import type { GatepassStatus, HostelGatepass } from "@/services/hostelService";
 
 /**
  * Screen 7 — Gatepass kanban board.
@@ -39,24 +39,33 @@ import type { HostelGatepass } from "@/services/hostelService";
  *   1. Pending   — needs warden approval (security guard calls parent first)
  *   2. Approved  — student hasn't left yet
  *   3. Active    — currently out
- *   4. Closed    — completed (closed / rejected)
- *   5. Overdue   — never returned by expected time, system flagged
+ *   4. Overdue   — never returned by expected time, system flagged
+ *   5. Closed    — completed (closed / rejected)
  *
- * Each card surfaces the actions appropriate for its column.
+ * Each column is its own paged query rather than one download split five
+ * ways. The first four are naturally small — a hostel has only so many
+ * children out at once — but "closed" holds every gatepass the school has
+ * ever issued, so it is paged and its header count comes from the server.
+ *
+ * Search runs on the server for the same reason: filtering in the browser
+ * only ever searched the rows already downloaded.
  */
 
 const COLUMNS: {
   key: string;
   label: string;
   /** Status values shown in this column (allows merging if needed). */
-  statuses: HostelGatepass["status"][];
+  statuses: GatepassStatus[];
   emptyHint: string;
+  /** A warden works the pending queue from the oldest request. */
+  oldest?: boolean;
 }[] = [
   {
     key: "pending",
     label: "Pending",
     statuses: ["pending"],
     emptyHint: "No requests waiting.",
+    oldest: true,
   },
   {
     key: "approved",
@@ -84,54 +93,142 @@ const COLUMNS: {
   },
 ];
 
+/** Actions each card offers, wired once and shared by every column. */
+interface CardActions {
+  busy: boolean;
+  onApprove: (gp: HostelGatepass) => void;
+  onReject: (gp: HostelGatepass) => void;
+  onCheckout: (gp: HostelGatepass) => void;
+  onCheckin: (gp: HostelGatepass) => void;
+}
+
+function GatepassColumn({
+  column,
+  search,
+  actions,
+}: {
+  column: (typeof COLUMNS)[number];
+  search: string;
+  actions: CardActions;
+}) {
+  const query = useGatepassColumn(column.statuses, {
+    search,
+    oldest: column.oldest,
+  });
+
+  const rows = query.data?.pages.flatMap((page) => page.gatepasses) ?? [];
+  // From the envelope, not `rows.length` — the closed column is paged, so
+  // counting what is loaded would report the page size as the column total.
+  const total = query.data?.pages[0]?.total ?? 0;
+
+  return (
+    <section
+      className="flex w-72 shrink-0 flex-col rounded-lg bg-muted/30 p-3 lg:w-80"
+      aria-label={`${column.label} column`}
+    >
+      <header className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wide">
+          {column.label}
+        </h2>
+        <Badge variant="secondary" className="tabular-nums">
+          {query.isLoading ? "…" : total}
+        </Badge>
+      </header>
+
+      <div className="flex flex-col gap-3 overflow-y-auto">
+        {query.isLoading ? (
+          <Skeleton className="h-64 w-full rounded-md" />
+        ) : query.isError ? (
+          <div className="rounded-md border border-dashed p-4 text-center">
+            <p className="text-xs text-destructive">Failed to load.</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 gap-1.5"
+              onClick={() => query.refetch()}
+            >
+              <RotateCcw className="size-3.5" /> Retry
+            </Button>
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="rounded-md border border-dashed bg-background/50 p-4 text-center text-xs text-muted-foreground">
+            {search ? "No matches in this column." : column.emptyHint}
+          </p>
+        ) : (
+          <>
+            {rows.map((gp) => (
+              <GatepassCard
+                key={gp.id}
+                gp={gp}
+                actions={
+                  <GatepassQuickActions
+                    gp={gp}
+                    busy={actions.busy}
+                    // Errors are surfaced via the hook's meta.errorFallback
+                    // + the global mutation cache toast.
+                    onApprove={() => actions.onApprove(gp)}
+                    onReject={() => actions.onReject(gp)}
+                    onCheckout={() => actions.onCheckout(gp)}
+                    onCheckin={() => actions.onCheckin(gp)}
+                  />
+                }
+              />
+            ))}
+
+            {query.hasNextPage && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                disabled={query.isFetchingNextPage}
+                onClick={() => query.fetchNextPage()}
+              >
+                {query.isFetchingNextPage
+                  ? "Loading…"
+                  : `Show more (${rows.length} of ${total})`}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function GatepassesKanbanPage() {
   const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
 
-  const gatepassesQuery = useGatepasses();
+  // Every keystroke would otherwise be five queries, one per column.
+  useEffect(() => {
+    const timer = setTimeout(() => setAppliedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const approve = useApproveGatepass();
   const reject = useRejectGatepass();
   const checkout = useGatepassCheckout();
   const checkin = useGatepassCheckin();
 
-  const filteredByColumn = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const all = gatepassesQuery.data ?? [];
-    const matches = (gp: HostelGatepass) =>
-      !term ||
-      [gp.student_id, gp.parent_phone, gp.reason ?? "", gp.type]
-        .join(" ")
-        .toLowerCase()
-        .includes(term);
-
-    return COLUMNS.map((col) => ({
-      ...col,
-      rows: all
-        .filter((gp) => col.statuses.includes(gp.status) && matches(gp))
-        .sort((a, b) => {
-          // For pending, oldest-first so wardens process the oldest.
-          if (col.key === "pending") {
-            return (
-              new Date(a.requested_at).getTime() -
-              new Date(b.requested_at).getTime()
-            );
-          }
-          // Otherwise newest-first.
-          return (
-            new Date(b.requested_at).getTime() -
-            new Date(a.requested_at).getTime()
-          );
-        }),
-    }));
-  }, [gatepassesQuery.data, search]);
-
-  const busy =
-    approve.isPending ||
-    reject.isPending ||
-    checkout.isPending ||
-    checkin.isPending;
+  const actions: CardActions = {
+    busy:
+      approve.isPending ||
+      reject.isPending ||
+      checkout.isPending ||
+      checkin.isPending,
+    onApprove: (gp) => approve.mutate(gp.id),
+    onReject: (gp) => {
+      // null = Cancel → abort; "" = OK with empty → proceed.
+      const input = window.prompt("Reason for rejection (optional):");
+      if (input === null) return;
+      reject.mutate({ id: gp.id, reason: input.trim() || undefined });
+    },
+    onCheckout: (gp) => checkout.mutate(gp.id),
+    onCheckin: (gp) => checkin.mutate(gp.id),
+  };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
@@ -161,84 +258,22 @@ export default function GatepassesKanbanPage() {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter by student, parent phone, reason…"
+          placeholder="Search name, admission number, parent phone, reason…"
           className="pl-9"
         />
       </div>
 
-      {/* Content */}
-      {gatepassesQuery.isLoading ? (
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {COLUMNS.map((col) => (
-            <Skeleton key={col.key} className="h-96 w-72 shrink-0 rounded-lg" />
-          ))}
-        </div>
-      ) : gatepassesQuery.isError ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-destructive">Failed to load gatepasses.</p>
-            <Button
-              variant="outline"
-              onClick={() => gatepassesQuery.refetch()}
-              className="gap-2"
-            >
-              <RotateCcw className="size-4" /> Retry
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          {filteredByColumn.map((col) => (
-            <section
-              key={col.key}
-              className="flex w-72 shrink-0 flex-col rounded-lg bg-muted/30 p-3 lg:w-80"
-              aria-label={`${col.label} column`}
-            >
-              <header className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wide">
-                  {col.label}
-                </h2>
-                <Badge variant="secondary" className="tabular-nums">
-                  {col.rows.length}
-                </Badge>
-              </header>
-              <div className="flex flex-col gap-3 overflow-y-auto">
-                {col.rows.length === 0 ? (
-                  <p className="rounded-md border border-dashed bg-background/50 p-4 text-center text-xs text-muted-foreground">
-                    {col.emptyHint}
-                  </p>
-                ) : (
-                  col.rows.map((gp) => (
-                    <GatepassCard
-                      key={gp.id}
-                      gp={gp}
-                      actions={
-                        <GatepassQuickActions
-                          gp={gp}
-                          busy={busy}
-                          // Errors are surfaced via the hook's meta.errorFallback
-                          // + the global mutation cache toast.
-                          onApprove={() => approve.mutate(gp.id)}
-                          onReject={() => {
-                            // null = Cancel → abort; "" = OK with empty → proceed.
-                            const input = window.prompt(
-                              "Reason for rejection (optional):"
-                            );
-                            if (input === null) return;
-                            reject.mutate({ id: gp.id, reason: input.trim() || undefined });
-                          }}
-                          onCheckout={() => checkout.mutate(gp.id)}
-                          onCheckin={() => checkin.mutate(gp.id)}
-                        />
-                      }
-                    />
-                  ))
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+      {/* Board */}
+      <div className="flex gap-3 overflow-x-auto pb-2">
+        {COLUMNS.map((col) => (
+          <GatepassColumn
+            key={col.key}
+            column={col}
+            search={appliedSearch}
+            actions={actions}
+          />
+        ))}
+      </div>
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <ListFilter className="size-3.5" />

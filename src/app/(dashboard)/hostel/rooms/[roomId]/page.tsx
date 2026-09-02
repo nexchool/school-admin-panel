@@ -56,7 +56,7 @@ export default function RoomDetailPage() {
 
   const activeAllocationsByBedId = useMemo(() => {
     const map = new Map<string, HostelAllocation>();
-    for (const a of allocationsQuery.data ?? []) {
+    for (const a of allocationsQuery.data?.allocations ?? []) {
       if (a.status === "active" && !a.deleted_at) {
         map.set(a.bed_id, a);
       }
@@ -66,7 +66,7 @@ export default function RoomDetailPage() {
 
   // Sorted history rows: active first (most recent check_in), then completed.
   const historyRows = useMemo(() => {
-    const rows = [...(allocationsQuery.data ?? [])];
+    const rows = [...(allocationsQuery.data?.allocations ?? [])];
     rows.sort((a, b) => {
       // Active rows first
       if (a.status === "active" && b.status !== "active") return -1;
@@ -133,7 +133,7 @@ export default function RoomDetailPage() {
   const isError = roomQuery.isError;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">

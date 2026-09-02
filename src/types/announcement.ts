@@ -59,6 +59,22 @@ export interface RecipientReadStatus {
   status: string;
 }
 
+/**
+ * One page of the read-receipt roster.
+ *
+ * `total` and `read_count` describe the whole roster, not `items` — a notice
+ * to a whole school is one row per parent, so the counter has to come from the
+ * server rather than from the length of the page in hand.
+ */
+export interface RecipientRoster {
+  items: RecipientReadStatus[];
+  total: number;
+  read_count: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 export interface SystemTemplate {
   id: string;
   title: string;

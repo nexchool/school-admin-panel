@@ -20,6 +20,10 @@ import {
 import {
   AllocationStatus,
   BedStatus,
+  GatepassFilters,
+  GatepassPage,
+  VisitorLogFilters,
+  VisitorLogPage,
   GatepassStatus,
   GatepassType,
   Hostel,
@@ -35,6 +39,7 @@ import {
 } from "@/services/hostelService";
 import { toastSuccess } from "@/lib/errorToast";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useTenantInfiniteQuery } from "@/hooks/useTenantQuery";
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -62,6 +67,15 @@ export const hostelKeys = {
     list: (filters?: Record<string, unknown>) =>
       ["hostel", "gatepasses", "list", filters ?? {}] as const,
     detail: (id: string) => ["hostel", "gatepasses", id] as const,
+    column: (statuses: string[], search?: string, oldest?: boolean) =>
+      [
+        "hostel",
+        "gatepasses",
+        "column",
+        statuses.join(","),
+        search ?? "",
+        oldest ? "oldest" : "newest",
+      ] as const,
     overdue: ["hostel", "gatepasses", "overdue"] as const,
   },
   visitors: {
@@ -69,6 +83,8 @@ export const hostelKeys = {
       ["hostel", "visitor-logs", filters ?? {}] as const,
     search: (prefix: string) =>
       ["hostel", "visitors", "search", prefix] as const,
+    history: (term?: string) =>
+      ["hostel", "visitor-logs", "history", term ?? ""] as const,
   },
   dashboard: ["hostel", "dashboard"] as const,
   reports: {
@@ -329,13 +345,15 @@ export function useCheckoutAllocation() {
 // Gatepasses
 // ---------------------------------------------------------------------------
 
+/**
+ * One page of gatepasses for a narrow, naturally small filter — a single
+ * student at the gate, or one child's recent history.
+ *
+ * The board does not use this; it has a column per status and pages each one
+ * independently. See `useGatepassColumn`.
+ */
 export function useGatepasses(
-  filters?: {
-    hostel_id?: string;
-    student_id?: string;
-    status?: GatepassStatus;
-    type?: GatepassType;
-  },
+  filters?: GatepassFilters,
   options?: { enabled?: boolean },
 ) {
   const { tenantId } = useAuth();
@@ -345,6 +363,34 @@ export function useGatepasses(
     // Callers (e.g. the gatekeeper) gate on a selected student so we don't fetch
     // every gatepass in the tenant with only a status filter before one is picked.
     enabled: !!tenantId && (options?.enabled ?? true),
+  });
+}
+
+/**
+ * One column of the gatepass board, paged.
+ *
+ * Each column asks the server for its own statuses, sort and page. The header
+ * count comes from `total` on any page rather than from the rows loaded so
+ * far — the closed column holds every gatepass the school has ever issued, and
+ * measuring what is in hand would report the page size as the total.
+ */
+export function useGatepassColumn(
+  statuses: GatepassStatus[],
+  options?: { search?: string; oldest?: boolean },
+) {
+  const search = options?.search?.trim() || undefined;
+  return useTenantInfiniteQuery({
+    queryKey: hostelKeys.gatepasses.column(statuses, search, options?.oldest),
+    queryFn: ({ pageParam }) =>
+      hostelService.listGatepasses({
+        status: statuses,
+        search,
+        oldest: options?.oldest,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last: GatepassPage) =>
+      last.page < last.total_pages ? last.page + 1 : undefined,
   });
 }
 
@@ -442,14 +488,14 @@ export function useGatepassCheckin() {
 // Visitors
 // ---------------------------------------------------------------------------
 
-export function useVisitorLogs(filters?: {
-  hostel_id?: string;
-  student_id?: string;
-  visitor_id?: string;
-  open?: boolean;
-  start_date?: string;
-  end_date?: string;
-}) {
+/**
+ * Visitor logs for a narrow filter — one child's recent visitors, or the
+ * `open: true` view of who is in the building right now, which the server
+ * returns whole because it is bounded by concurrent visitors.
+ *
+ * The full history is unbounded; see `useVisitorHistory`.
+ */
+export function useVisitorLogs(filters?: VisitorLogFilters) {
   const { tenantId } = useAuth();
   return useQuery({
     queryKey: [...hostelKeys.visitors.logs(filters as Record<string, unknown>), tenantId],
@@ -457,6 +503,26 @@ export function useVisitorLogs(filters?: {
     enabled: !!tenantId,
     // The "currently inside" panel refreshes every 30s in the spec.
     refetchInterval: filters?.open ? 30_000 : false,
+  });
+}
+
+/**
+ * The visit history, paged and searched on the server.
+ *
+ * This list grows for the life of the school. The page used to download all of
+ * it and filter in the browser over `student_id` and `visitor_id` — UUIDs
+ * nobody types — which also meant the box only searched what had already
+ * loaded.
+ */
+export function useVisitorHistory(search?: string) {
+  const term = search?.trim() || undefined;
+  return useTenantInfiniteQuery({
+    queryKey: hostelKeys.visitors.history(term),
+    queryFn: ({ pageParam }) =>
+      hostelService.listVisitorLogs({ search: term, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (last: VisitorLogPage) =>
+      last.page < last.total_pages ? last.page + 1 : undefined,
   });
 }
 

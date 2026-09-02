@@ -3,10 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { announcementsService } from "@/services/announcementsService";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useTenantInfiniteQuery } from "@/hooks/useTenantQuery";
 import type {
   Announcement,
   AnnouncementAttachment,
   CreateAnnouncementPayload,
+  RecipientRoster,
   UpdateAnnouncementPayload,
 } from "@/types/announcement";
 
@@ -57,12 +59,21 @@ export function useAnnouncementRevisions(id: string | undefined) {
   });
 }
 
+/**
+ * The read-receipt roster, a page at a time.
+ *
+ * The counter reads `total` / `read_count` off any page rather than measuring
+ * the rows in hand, so it stays correct before the whole roster is loaded —
+ * which for a whole-school notice it never will be.
+ */
 export function useAnnouncementRecipients(id: string | undefined) {
-  const { tenantId } = useAuth();
-  return useQuery({
-    queryKey: [...announcementsKeys.recipients(id ?? ""), tenantId],
-    queryFn: () => announcementsService.recipients(id!),
-    enabled: !!id && !!tenantId,
+  return useTenantInfiniteQuery({
+    queryKey: announcementsKeys.recipients(id ?? ""),
+    queryFn: ({ pageParam }) => announcementsService.recipients(id!, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (last: RecipientRoster) =>
+      last.page < last.total_pages ? last.page + 1 : undefined,
+    enabled: !!id,
   });
 }
 

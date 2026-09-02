@@ -57,6 +57,8 @@ export interface HostelRoom {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  /** Beds currently taken, counted on the server. */
+  occupied_count?: number;
 }
 
 export interface HostelBed {
@@ -99,6 +101,51 @@ export interface HostelAllocation {
   deleted_at: string | null;
 }
 
+export interface AllocationFilters {
+  hostel_id?: string;
+  room_id?: string;
+  student_id?: string;
+  status?: AllocationStatus;
+  academic_year_id?: string;
+  page?: number;
+  per_page?: number;
+}
+
+/** One page of allocations; `total` counts the whole filtered set. */
+export interface AllocationPage {
+  allocations: HostelAllocation[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface VisitorLogFilters {
+  hostel_id?: string;
+  student_id?: string;
+  visitor_id?: string;
+  open?: boolean;
+  start_date?: string;
+  end_date?: string;
+  search?: string;
+  page?: number;
+  per_page?: number;
+}
+
+/**
+ * One page of visitor logs.
+ *
+ * The `open: true` view (who is in the building now) is naturally bounded and
+ * comes back whole; the history is paged and grows for the life of the school.
+ */
+export interface VisitorLogPage {
+  visitor_logs: HostelVisitorLog[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
 export interface HostelGatepass {
   id: string;
   tenant_id: string;
@@ -125,6 +172,34 @@ export interface HostelGatepass {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+/** Filters the gatepass board sends; `status` may be several at once. */
+export interface GatepassFilters {
+  hostel_id?: string;
+  student_id?: string;
+  status?: GatepassStatus | GatepassStatus[];
+  type?: GatepassType;
+  search?: string;
+  page?: number;
+  per_page?: number;
+  /** Pending is worked oldest-first; every other column reads newest-first. */
+  oldest?: boolean;
+}
+
+/**
+ * One page of gatepasses.
+ *
+ * `total` counts the whole filtered set, not `gatepasses` — it is what a
+ * column header shows, and the closed column holds every gatepass the school
+ * has ever issued.
+ */
+export interface GatepassPage {
+  gatepasses: HostelGatepass[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
 }
 
 export interface HostelGatepassAudit {
@@ -323,22 +398,16 @@ export const hostelService = {
   },
 
   // ---- Allocations ----
-  async listAllocations(filters?: {
-    hostel_id?: string;
-    room_id?: string;
-    student_id?: string;
-    status?: AllocationStatus;
-    academic_year_id?: string;
-  }): Promise<HostelAllocation[]> {
+  async listAllocations(filters?: AllocationFilters): Promise<AllocationPage> {
     const params = new URLSearchParams();
     Object.entries(filters || {}).forEach(([k, v]) => {
       if (v) params.append(k, String(v));
     });
     const qs = params.toString();
-    const env = await apiGet<ApiEnvelope<{ allocations: HostelAllocation[] }>>(
+    const env = await apiGet<ApiEnvelope<AllocationPage>>(
       `/api/hostel/allocations${qs ? `?${qs}` : ""}`
     );
-    return unwrap(env).allocations;
+    return unwrap(env);
   },
 
   async createAllocation(input: {
@@ -379,21 +448,19 @@ export const hostelService = {
   },
 
   // ---- Gatepasses ----
-  async listGatepasses(filters?: {
-    hostel_id?: string;
-    student_id?: string;
-    status?: GatepassStatus;
-    type?: GatepassType;
-  }): Promise<HostelGatepass[]> {
+  async listGatepasses(filters?: GatepassFilters): Promise<GatepassPage> {
     const params = new URLSearchParams();
     Object.entries(filters || {}).forEach(([k, v]) => {
-      if (v) params.append(k, String(v));
+      if (v === undefined || v === null || v === "" || v === false) return;
+      // The board's last column is two statuses in one; the API takes them
+      // comma-separated.
+      params.append(k, Array.isArray(v) ? v.join(",") : String(v));
     });
     const qs = params.toString();
-    const env = await apiGet<ApiEnvelope<{ gatepasses: HostelGatepass[] }>>(
+    const env = await apiGet<ApiEnvelope<GatepassPage>>(
       `/api/hostel/gatepasses${qs ? `?${qs}` : ""}`
     );
-    return unwrap(env).gatepasses;
+    return unwrap(env);
   },
 
   async getGatepass(
@@ -495,24 +562,17 @@ export const hostelService = {
     return unwrap(env).visitor_log;
   },
 
-  async listVisitorLogs(filters?: {
-    hostel_id?: string;
-    student_id?: string;
-    visitor_id?: string;
-    open?: boolean;
-    start_date?: string;
-    end_date?: string;
-  }): Promise<HostelVisitorLog[]> {
+  async listVisitorLogs(filters?: VisitorLogFilters): Promise<VisitorLogPage> {
     const params = new URLSearchParams();
     Object.entries(filters || {}).forEach(([k, v]) => {
-      if (v === undefined || v === null || v === false) return;
+      if (v === undefined || v === null || v === false || v === "") return;
       params.append(k, v === true ? "true" : String(v));
     });
     const qs = params.toString();
-    const env = await apiGet<ApiEnvelope<{ visitor_logs: HostelVisitorLog[] }>>(
+    const env = await apiGet<ApiEnvelope<VisitorLogPage>>(
       `/api/hostel/visitor-logs${qs ? `?${qs}` : ""}`
     );
-    return unwrap(env).visitor_logs;
+    return unwrap(env);
   },
 
   // ---- Dashboard / reports ----

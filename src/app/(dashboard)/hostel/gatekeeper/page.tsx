@@ -85,9 +85,9 @@ export default function GatekeeperPage() {
 
   const actionableGatepasses = useMemo(() => {
     return [
-      ...(approvedGpQuery.data ?? []),
-      ...(activeGpQuery.data ?? []),
-      ...(overdueGpQuery.data ?? []),
+      ...(approvedGpQuery.data?.gatepasses ?? []),
+      ...(activeGpQuery.data?.gatepasses ?? []),
+      ...(overdueGpQuery.data?.gatepasses ?? []),
     ];
   }, [approvedGpQuery.data, activeGpQuery.data, overdueGpQuery.data]);
 
