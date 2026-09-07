@@ -7,6 +7,25 @@
  * this?* before *what are they sitting?* — and it is what makes a multi-section
  * examination obvious rather than something you discover by counting rows.
  *
+ * **A section is named the way the school names it.** `display_name` is
+ * composed server-side ("Grade 10 A"); `name` is a nullable legacy label and is
+ * empty for every section created through the structured form, so a picker
+ * that fell back to `section` printed a wall of "A", "A", "B" that told nobody
+ * which class they were choosing. Where a trust runs several campuses, boards
+ * or mediums, whichever of those actually differ across the offered sections
+ * are shown beneath the name — the ones that do not differ are noise.
+ *
+ * **The list is already scoped.** The page hands over the sections of the
+ * active branch and academic year, the two filters in the header, so this
+ * screen never offers a section from another campus or a closed year.
+ *
+ * **Subjects come from the offerings, not the catalogue.** A trust's
+ * catalogue holds every subject any campus teaches; scheduling one that a
+ * chosen section is not taught is refused for the whole set
+ * (`OFFERING_NOT_FOUND`). So the picker asks the server what these sections
+ * are taught, and a subject only some of them are taught is shown as
+ * unavailable rather than as a choice that will fail at the last step.
+ *
  * **Nothing is created until Create.** Moving between steps costs nothing and
  * leaves nothing behind; a wizard that opened a draft examination on the
  * server would leave a school's list full of things nobody finished.
@@ -18,7 +37,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Loader2, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,22 +60,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { useCreateExamination, useExamTypes } from "@/hooks/useExaminations";
+import {
+  useCreateExamination,
+  useExamTypes,
+  useExaminationSubjectOptions,
+} from "@/hooks/useExaminations";
 import type { ClassItem } from "@/types/class";
 import type { SubjectSetEntry } from "@/types/examination";
-
-export interface WizardSubject {
-  id: string;
-  name: string;
-}
 
 interface Props {
   open: boolean;
   onClose: () => void;
   academicCycleId: string;
+  /** The active branch and academic year's sections. Scoped by the caller. */
   sections: ClassItem[];
-  subjects: WizardSubject[];
   isLoadingOptions?: boolean;
+  /** Named so the empty state can say which branch has no sections. */
+  scopeLabel?: string;
   onCreated: (examinationId: string) => void;
 }
 
@@ -64,9 +84,67 @@ const STEPS = ["Sections", "Subjects", "Details", "Papers", "Review"] as const;
 type Step = (typeof STEPS)[number];
 
 const DEFAULT_MAX_MARKS = 100;
+const UNGROUPED = "Other sections";
 
+/** What the school calls this section. Never composed here — see the header. */
 function sectionLabel(section: ClassItem): string {
-  return section.name?.trim() || section.section || section.id;
+  const composed = [section.grade_name, section.section]
+    .filter((part) => part && String(part).trim())
+    .join(" ");
+  return (
+    section.display_name?.trim() ||
+    section.name?.trim() ||
+    composed ||
+    section.section?.trim() ||
+    section.id
+  );
+}
+
+/** Which structural dimensions actually differ across what is on offer.
+ *  A single-campus, single-medium school is told neither. */
+function varyingDimensions(sections: ClassItem[]) {
+  const distinct = (pick: (section: ClassItem) => string | null | undefined) =>
+    new Set(
+      sections
+        .map((section) => pick(section))
+        .filter((value): value is string => !!value && !!value.trim()),
+    ).size;
+  return {
+    campus: distinct((s) => s.school_unit_name) > 1,
+    programme: distinct((s) => s.programme_name) > 1,
+    medium: distinct((s) => s.medium_name) > 1,
+    stream: distinct((s) => s.stream) > 1,
+  };
+}
+
+function sectionMeta(
+  section: ClassItem,
+  varying: ReturnType<typeof varyingDimensions>,
+): string {
+  return [
+    varying.campus ? section.school_unit_name : null,
+    varying.programme ? section.programme_name : null,
+    varying.medium ? section.medium_name : null,
+    varying.stream ? section.stream : null,
+  ]
+    .filter((part) => part && String(part).trim())
+    .join(" · ");
+}
+
+/** Everything a search box should be able to match on one section. */
+function searchHaystack(section: ClassItem): string {
+  return [
+    sectionLabel(section),
+    section.grade_name,
+    section.section,
+    section.school_unit_name,
+    section.programme_name,
+    section.medium_name,
+    section.stream,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 export function CreateExaminationWizard({
@@ -74,13 +152,14 @@ export function CreateExaminationWizard({
   onClose,
   academicCycleId,
   sections,
-  subjects,
   isLoadingOptions,
+  scopeLabel,
   onCreated,
 }: Props) {
   const [step, setStep] = useState<Step>("Sections");
   const [classIds, setClassIds] = useState<string[]>([]);
   const [subjectIds, setSubjectIds] = useState<string[]>([]);
+  const [sectionSearch, setSectionSearch] = useState("");
   const [name, setName] = useState("");
   const [examTypeId, setExamTypeId] = useState("");
   const [maxMarks, setMaxMarks] = useState(String(DEFAULT_MAX_MARKS));
@@ -90,22 +169,76 @@ export function CreateExaminationWizard({
   const [failure, setFailure] = useState<string | null>(null);
 
   const { data: examTypes = [] } = useExamTypes();
+  const { data: subjectOptions = [], isLoading: isLoadingSubjects } =
+    useExaminationSubjectOptions(classIds);
   const create = useCreateExamination();
+
+  /** Only the subjects every chosen section is taught can be fanned across
+   *  them all; the rest are shown as unavailable, with the reason. */
+  const availableSubjects = useMemo(
+    () => subjectOptions.filter((option) => option.offeredByAll),
+    [subjectOptions],
+  );
+  const partialSubjects = useMemo(
+    () => subjectOptions.filter((option) => !option.offeredByAll),
+    [subjectOptions],
+  );
+
+  // Narrowing the sections can strand a subject the new set is not all taught.
+  // Derived rather than synced back into state: what a school is shown, what
+  // the count says and what is sent are then the same list by construction.
+  const chosenSubjectIds = useMemo(() => {
+    if (isLoadingSubjects) return subjectIds;
+    const offered = new Set(availableSubjects.map((option) => option.id));
+    return subjectIds.filter((id) => offered.has(id));
+  }, [subjectIds, availableSubjects, isLoadingSubjects]);
+
+  const varying = useMemo(() => varyingDimensions(sections), [sections]);
+
+  const visibleSections = useMemo(() => {
+    const needle = sectionSearch.trim().toLowerCase();
+    if (!needle) return sections;
+    return sections.filter((section) => searchHaystack(section).includes(needle));
+  }, [sections, sectionSearch]);
+
+  /** Grouped by grade, in teaching order — Nursery before Std 2 before Std 10,
+   *  which is `grade_sequence`, never the name sorted as text. */
+  const grades = useMemo(() => {
+    const groups = new Map<
+      string,
+      { label: string; sequence: number; sections: ClassItem[] }
+    >();
+    for (const section of visibleSections) {
+      const label = section.grade_name?.trim() || UNGROUPED;
+      const group = groups.get(label) ?? {
+        label,
+        sequence:
+          section.grade_sequence ?? (label === UNGROUPED ? Number.MAX_SAFE_INTEGER : 0),
+        sections: [],
+      };
+      group.sections.push(section);
+      groups.set(label, group);
+    }
+    return [...groups.values()].sort(
+      (a, b) => a.sequence - b.sequence || a.label.localeCompare(b.label),
+    );
+  }, [visibleSections]);
 
   const selectedSections = useMemo(
     () => sections.filter((s) => classIds.includes(s.id)),
     [sections, classIds],
   );
   const selectedSubjects = useMemo(
-    () => subjects.filter((s) => subjectIds.includes(s.id)),
-    [subjects, subjectIds],
+    () => availableSubjects.filter((s) => chosenSubjectIds.includes(s.id)),
+    [availableSubjects, chosenSubjectIds],
   );
-  const paperCount = classIds.length * subjectIds.length;
+  const paperCount = classIds.length * chosenSubjectIds.length;
 
   const reset = () => {
     setStep("Sections");
     setClassIds([]);
     setSubjectIds([]);
+    setSectionSearch("");
     setName("");
     setExamTypeId("");
     setMaxMarks(String(DEFAULT_MAX_MARKS));
@@ -123,13 +256,23 @@ export function CreateExaminationWizard({
   const toggle = (list: string[], id: string) =>
     list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
+  const toggleGrade = (groupSections: ClassItem[]) => {
+    const ids = groupSections.map((section) => section.id);
+    const allChosen = ids.every((id) => classIds.includes(id));
+    setClassIds((list) =>
+      allChosen
+        ? list.filter((id) => !ids.includes(id))
+        : [...new Set([...list, ...ids])],
+    );
+  };
+
   /** Only what the user can see on this step. The server stays authoritative. */
   const validate = (current: Step): boolean => {
     const found: Record<string, string> = {};
     if (current === "Sections" && classIds.length === 0) {
       found.sections = "Choose at least one section";
     }
-    if (current === "Subjects" && subjectIds.length === 0) {
+    if (current === "Subjects" && chosenSubjectIds.length === 0) {
       found.subjects = "Choose at least one subject";
     }
     if (current === "Details") {
@@ -166,7 +309,7 @@ export function CreateExaminationWizard({
 
   const buildSubjectSet = () => ({
     classIds,
-    subjects: subjectIds.map<SubjectSetEntry>((subjectId) => ({
+    subjects: chosenSubjectIds.map<SubjectSetEntry>((subjectId) => ({
       subjectId,
       maxMarks: Number(maxMarks),
       passMarks: passMarks.trim() ? Number(passMarks) : null,
@@ -217,6 +360,7 @@ export function CreateExaminationWizard({
           <DialogDescription>
             Choose the sections sitting this examination, then the subjects they
             will sit. One set of subjects is scheduled across every section.
+            {scopeLabel ? ` Showing ${scopeLabel}.` : null}
           </DialogDescription>
         </DialogHeader>
 
@@ -251,32 +395,106 @@ export function CreateExaminationWizard({
                 <p className="text-sm text-muted-foreground">Loading sections…</p>
               ) : sections.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  This academic cycle has no sections yet.
+                  {scopeLabel
+                    ? `No sections in ${scopeLabel} yet.`
+                    : "This academic cycle has no sections yet."}
                 </p>
               ) : (
-                <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-                  {sections.map((section) => {
-                    const checked = classIds.includes(section.id);
-                    return (
-                      <label
-                        key={section.id}
-                        className={cn(
-                          "flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm",
-                          checked && "border-primary bg-primary/5",
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() =>
-                            setClassIds((list) => toggle(list, section.id))
-                          }
-                        />
-                        {sectionLabel(section)}
-                      </label>
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="relative w-full sm:w-64">
+                      <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        aria-label="Search sections"
+                        className="pl-8"
+                        placeholder="Search grade, section, medium…"
+                        value={sectionSearch}
+                        onChange={(event) => setSectionSearch(event.target.value)}
+                      />
+                    </div>
+                    <p
+                      className="text-xs text-muted-foreground"
+                      data-testid="section-selection-count"
+                    >
+                      {classIds.length} of {sections.length} sections selected
+                    </p>
+                  </div>
+
+                  <div className="max-h-64 space-y-4 overflow-y-auto pr-1">
+                    {grades.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No section matches “{sectionSearch}”.
+                      </p>
+                    ) : (
+                      grades.map((group) => {
+                        const allChosen = group.sections.every((section) =>
+                          classIds.includes(section.id),
+                        );
+                        return (
+                          <div key={group.label}>
+                            <div className="mb-1 flex items-center justify-between gap-2">
+                              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                {group.label}
+                              </h3>
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                className="h-auto p-0 text-xs"
+                                onClick={() => toggleGrade(group.sections)}
+                              >
+                                {allChosen ? "Clear" : "Select all"}
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                              {group.sections.map((section) => {
+                                const checked = classIds.includes(section.id);
+                                const label = sectionLabel(section);
+                                const meta = sectionMeta(section, varying);
+                                return (
+                                  <label
+                                    key={section.id}
+                                    className={cn(
+                                      "flex cursor-pointer items-start gap-2 rounded-md border p-2 text-sm",
+                                      checked && "border-primary bg-primary/5",
+                                    )}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="mt-0.5"
+                                      aria-label={label}
+                                      checked={checked}
+                                      onChange={() =>
+                                        setClassIds((list) =>
+                                          toggle(list, section.id),
+                                        )
+                                      }
+                                    />
+                                    <span className="min-w-0">
+                                      <span className="block truncate font-medium">
+                                        {label}
+                                      </span>
+                                      {meta && (
+                                        <span className="block truncate text-xs text-muted-foreground">
+                                          {meta}
+                                        </span>
+                                      )}
+                                      {typeof section.student_count === "number" && (
+                                        <span className="block text-xs text-muted-foreground">
+                                          {section.student_count} students
+                                        </span>
+                                      )}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
               )}
               <FieldError message={errors.sections} />
             </fieldset>
@@ -289,35 +507,69 @@ export function CreateExaminationWizard({
                 <RequiredMark />
               </legend>
               <p className="mb-2 text-xs text-muted-foreground">
-                Each subject is scheduled for every section you chose.
+                Each subject is scheduled for every section you chose, so only
+                the subjects all {classIds.length} of them are taught can be
+                picked.
               </p>
-              <div className="grid max-h-64 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-                {subjects.map((subject) => {
-                  const checked = subjectIds.includes(subject.id);
-                  return (
-                    <label
-                      key={subject.id}
-                      className={cn(
-                        "flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm",
-                        checked && "border-primary bg-primary/5",
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() =>
-                          setSubjectIds((list) => toggle(list, subject.id))
-                        }
-                      />
-                      {subject.name}
-                    </label>
-                  );
-                })}
-              </div>
+              {isLoadingSubjects ? (
+                <p className="text-sm text-muted-foreground">Loading subjects…</p>
+              ) : availableSubjects.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  The sections you chose share no subject. Choose sections that
+                  are taught the same subjects, or schedule them separately.
+                </p>
+              ) : (
+                <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
+                  {availableSubjects.map((subject) => {
+                    const checked = chosenSubjectIds.includes(subject.id);
+                    return (
+                      <label
+                        key={subject.id}
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2 rounded-md border p-2 text-sm",
+                          checked && "border-primary bg-primary/5",
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          aria-label={subject.name}
+                          checked={checked}
+                          onChange={() =>
+                            setSubjectIds((list) => toggle(list, subject.id))
+                          }
+                        />
+                        <span className="truncate">{subject.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
               <FieldError message={errors.subjects} />
+
+              {partialSubjects.length > 0 && (
+                <div className="mt-3" data-testid="partial-subjects">
+                  <p className="text-xs text-muted-foreground">
+                    Not available for this set — only some of the chosen
+                    sections are taught these. Schedule them in their own
+                    examination.
+                  </p>
+                  <ul className="mt-1 flex flex-wrap gap-1">
+                    {partialSubjects.map((subject) => (
+                      <li
+                        key={subject.id}
+                        className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground"
+                      >
+                        {subject.name} · {subject.sectionCount} of{" "}
+                        {classIds.length}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {paperCount > 0 && (
                 <p className="mt-3 text-sm" data-testid="paper-count-hint">
-                  {classIds.length} sections × {subjectIds.length} subjects ={" "}
+                  {classIds.length} sections × {chosenSubjectIds.length} subjects ={" "}
                   <strong>{paperCount} papers</strong>
                 </p>
               )}
@@ -418,7 +670,7 @@ export function CreateExaminationWizard({
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Subjects</dt>
-                  <dd className="font-medium">{subjectIds.length}</dd>
+                  <dd className="font-medium">{chosenSubjectIds.length}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Papers to create</dt>

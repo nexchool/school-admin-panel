@@ -73,6 +73,20 @@ export interface ExaminationListFilters {
 }
 
 /** One subject in a subject set — the same settings apply to every section. */
+/**
+ * A subject the chosen sections are taught. Not the catalogue: scheduling a
+ * subject a chosen section does not teach is refused for the whole set, so
+ * the picker offers what the offerings say and nothing else.
+ */
+export interface ExaminationSubjectOption {
+  id: string;
+  name: string;
+  code?: string | null;
+  /** How many of the chosen sections are taught it. */
+  sectionCount: number;
+  offeredByAll: boolean;
+}
+
 export interface SubjectSetEntry {
   subjectId: string;
   maxMarks: number;

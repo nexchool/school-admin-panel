@@ -23,6 +23,8 @@ export const examinationsKeys = {
     [...examinationsKeys.all, "list", filters] as const,
   detail: (id: string) => [...examinationsKeys.all, "detail", id] as const,
   types: [...["examinations"], "types"] as const,
+  subjectOptions: (classIds: string[]) =>
+    [...["examinations"], "subject-options", [...classIds].sort()] as const,
   register: (paperId: string) =>
     [...["examinations"], "register", paperId] as const,
   results: (examinationId: string) =>
@@ -45,6 +47,21 @@ export function useExamination(id: string | null) {
     queryKey: examinationsKeys.detail(id ?? ""),
     queryFn: () => examinationsService.get(id!),
     enabled: !!id,
+  });
+}
+
+/**
+ * The subjects the chosen sections are taught.
+ *
+ * Keyed on the sorted section ids so re-picking the same set in another order
+ * is the same cache entry, and idle until a section is chosen — there is no
+ * such thing as "the subjects of no sections".
+ */
+export function useExaminationSubjectOptions(classIds: string[]) {
+  return useTenantQuery({
+    queryKey: examinationsKeys.subjectOptions(classIds),
+    queryFn: () => examinationsService.subjectOptions(classIds),
+    enabled: classIds.length > 0,
   });
 }
 

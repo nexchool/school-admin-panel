@@ -30,8 +30,9 @@ import { useAuth } from "@/hooks";
 import { useExaminations } from "@/hooks/useExaminations";
 import { useAcademicCycles } from "@/hooks/useAcademicCycles";
 import { useActiveAcademicYear } from "@/contexts/ActiveAcademicYearContext";
+import { useActiveUnit } from "@/contexts/ActiveUnitContext";
 import { useClassesList } from "@/hooks/useClasses";
-import { useSubjects } from "@/hooks/useSubjects";
+import { useSchoolUnits } from "@/hooks/useSchoolUnits";
 import {
   EXAMINATION_STATUS_LABEL,
   type Examination,
@@ -39,6 +40,8 @@ import {
 } from "@/types/examination";
 
 const PAGE_SIZE = 20;
+/** The classes API caps a page at 100, and one branch of one year fits in it. */
+const MAX_SECTIONS = 100;
 /** Radix Select forbids value="", so this stands in for "no filter". */
 const ANY = "__all__";
 
@@ -54,6 +57,8 @@ export default function ExaminationsPage() {
   const router = useRouter();
   const { hasPermission } = useAuth();
   const { academicYearId } = useActiveAcademicYear();
+  const { unitId } = useActiveUnit();
+  const { data: units = [] } = useSchoolUnits();
   const { data: cycles = [] } = useAcademicCycles(academicYearId ?? undefined);
 
   const [cycleId, setCycleId] = useState<string>(ANY);
@@ -81,16 +86,23 @@ export default function ExaminationsPage() {
   const wizardCycleId =
     cycleId !== ANY ? cycleId : cycles.length === 1 ? cycles[0].id : "";
 
-  const { data: sectionsPage } = useClassesList({
+  // The header's two filters, applied. Without the branch a trust running
+  // twenty campuses offered every one of their sections in the wizard, so the
+  // person scheduling a Grade 10 examination for their own campus scrolled
+  // past four hundred others to find it. The server refuses a section from a
+  // different cycle than the examination (`CLASS_WRONG_CYCLE`); this does not
+  // re-derive that rule, it only offers what the header already scoped to.
+  const { data: sectionsPage, isLoading: isLoadingSections } = useClassesList({
     academic_year_id: academicYearId ?? undefined,
-    per_page: 200,
+    school_unit_id: unitId ?? undefined,
+    per_page: MAX_SECTIONS,
   });
-  const { data: subjects = [] } = useSubjects();
 
-  // Every section of the active year. The server refuses any that belong to a
-  // different cycle than the examination (`CLASS_WRONG_CYCLE`), so this does
-  // not re-derive that rule — it only offers the year's sections to pick from.
   const sections = sectionsPage?.items ?? [];
+  const activeUnitName = units.find((unit) => unit.id === unitId)?.name;
+  const scopeLabel = activeUnitName
+    ? `sections in ${activeUnitName}`
+    : "sections in the active academic year";
 
   const columns: DataTableColumn<Examination>[] = [
     {
@@ -221,10 +233,8 @@ export default function ExaminationsPage() {
           onClose={() => setWizardOpen(false)}
           academicCycleId={wizardCycleId}
           sections={sections}
-          subjects={subjects.map((subject) => ({
-            id: subject.id,
-            name: subject.name,
-          }))}
+          isLoadingOptions={isLoadingSections}
+          scopeLabel={scopeLabel}
           onCreated={(id) => {
             setWizardOpen(false);
             router.push(`/examinations/${id}`);

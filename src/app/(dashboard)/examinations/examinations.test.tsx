@@ -59,16 +59,25 @@ vi.mock("@/hooks/useAcademicCycles", () => ({
   }),
 }));
 
+const classesListFilters: Record<string, unknown>[] = [];
+
 vi.mock("@/hooks/useClasses", () => ({
-  useClassesList: () => ({ data: { items: [] } }),
+  useClassesList: (filters: Record<string, unknown>) => {
+    classesListFilters.push(filters);
+    return { data: { items: [] }, isLoading: false };
+  },
 }));
 
-vi.mock("@/hooks/useSubjects", () => ({
-  useSubjects: () => ({ data: [] }),
+vi.mock("@/hooks/useSchoolUnits", () => ({
+  useSchoolUnits: () => ({ data: [{ id: "su-1", name: "Main Campus" }] }),
 }));
 
 vi.mock("@/contexts/ActiveAcademicYearContext", () => ({
   useActiveAcademicYear: () => ({ academicYearId: "ay-1" }),
+}));
+
+vi.mock("@/contexts/ActiveUnitContext", () => ({
+  useActiveUnit: () => ({ unitId: "su-1" }),
 }));
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -154,6 +163,22 @@ describe("examination list", () => {
     render(<ExaminationsPage />, { wrapper });
     await userEvent.click(await screen.findByText("Grade 10 Half-Yearly"));
     expect(push).toHaveBeenCalledWith("/examinations/ex-1");
+  });
+
+  it("asks only for the sections of the header's branch and year", async () => {
+    classesListFilters.length = 0;
+    vi.mocked(examinationsService.list).mockResolvedValue({
+      nodes: [EXAM], hasNextPage: false, totalCount: 1,
+    });
+    render(<ExaminationsPage />, { wrapper });
+    await screen.findByText("Grade 10 Half-Yearly");
+
+    // Both header filters reach the query. Without the branch a trust running
+    // twenty campuses offered every campus's sections in the wizard.
+    expect(classesListFilters[0]).toMatchObject({
+      academic_year_id: "ay-1",
+      school_unit_id: "su-1",
+    });
   });
 
   it("hides the create action from somebody who may only read", async () => {

@@ -24,6 +24,7 @@ import type {
   MarkingRegister,
   ExamType,
   Examination,
+  ExaminationSubjectOption,
   ExaminationListFilters,
   ExaminationPage,
   SubjectSet,
@@ -68,6 +69,14 @@ const EXAMINATION = `
 
 const EXAM_TYPES = `
   query ExamTypes { examTypes { id name code sequence } }
+`;
+
+const SUBJECT_OPTIONS = `
+  query ExaminationSubjectOptions($classIds: [ID!]!) {
+    examinationSubjectOptions(classIds: $classIds) {
+      id name code sectionCount offeredByAll
+    }
+  }
 `;
 
 const CREATE_EXAMINATION = `
@@ -243,6 +252,16 @@ export const examinationsService = {
   examTypes: async (): Promise<ExamType[]> => {
     const data = await gql<{ examTypes: ExamType[] }>(EXAM_TYPES);
     return data.examTypes;
+  },
+
+  /** What these sections can actually sit. The server reads the offerings. */
+  subjectOptions: async (
+    classIds: string[],
+  ): Promise<ExaminationSubjectOption[]> => {
+    const data = await gql<{
+      examinationSubjectOptions: ExaminationSubjectOption[];
+    }>(SUBJECT_OPTIONS, { classIds });
+    return data.examinationSubjectOptions;
   },
 
   create: async (input: CreateExaminationInput): Promise<Examination> => {

@@ -21,6 +21,7 @@ vi.mock("@/services/examinationsService", () => ({
   examinationsService: {
     create: vi.fn(),
     examTypes: vi.fn(),
+    subjectOptions: vi.fn(),
   },
 }));
 
@@ -28,9 +29,25 @@ vi.mock("@/components/providers/AuthProvider", () => ({
   useAuth: () => ({ tenantId: "tenant-1", hasPermission: () => true }),
 }));
 
+// `name` is empty on every section the structured form creates — the label a
+// school reads is `display_name`, which is what these assert on.
 const SECTIONS = [
-  { id: "cl-a", name: "Grade 10 A" },
-  { id: "cl-b", name: "Grade 10 B" },
+  {
+    id: "cl-a",
+    name: "",
+    section: "A",
+    display_name: "Grade 10 A",
+    grade_name: "Grade 10",
+    grade_sequence: 10,
+  },
+  {
+    id: "cl-b",
+    name: "",
+    section: "B",
+    display_name: "Grade 10 B",
+    grade_name: "Grade 10",
+    grade_sequence: 10,
+  },
 ] as unknown as ClassItem[];
 
 const SUBJECTS = [
@@ -40,7 +57,12 @@ const SUBJECTS = [
   { id: "sb-4", name: "Social Science" },
   { id: "sb-5", name: "Hindi" },
   { id: "sb-6", name: "Computer" },
-];
+].map((subject) => ({
+  ...subject,
+  code: null,
+  sectionCount: 2,
+  offeredByAll: true,
+}));
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -54,7 +76,6 @@ function renderWizard(onCreated = vi.fn()) {
       onClose={vi.fn()}
       academicCycleId="cy-1"
       sections={SECTIONS}
-      subjects={SUBJECTS}
       onCreated={onCreated}
     />,
     { wrapper },
@@ -76,6 +97,7 @@ beforeEach(() => {
   vi.mocked(examinationsService.examTypes).mockResolvedValue([
     { id: "et-1", name: "Half Yearly", sequence: 1 },
   ]);
+  vi.mocked(examinationsService.subjectOptions).mockResolvedValue(SUBJECTS);
   vi.mocked(examinationsService.create).mockResolvedValue({
     id: "ex-1",
     name: "Half Yearly",
@@ -92,6 +114,47 @@ describe("create examination wizard", () => {
     expect(await screen.findByText(/choose at least one section/i)).toBeVisible();
   });
 
+  it("names a section the way the school does, not by its letter", async () => {
+    renderWizard();
+
+    // The regression: `name` is empty on a structured-form section, so a
+    // picker falling back to `section` showed a column of "A", "A", "B".
+    expect(screen.getByLabelText("Grade 10 A")).toBeVisible();
+    expect(screen.getByLabelText("Grade 10 B")).toBeVisible();
+    expect(screen.queryByLabelText("A")).toBeNull();
+  });
+
+  it("offers only the subjects every chosen section is taught", async () => {
+    vi.mocked(examinationsService.subjectOptions).mockResolvedValue([
+      { ...SUBJECTS[0], sectionCount: 2, offeredByAll: true },
+      { ...SUBJECTS[1], sectionCount: 1, offeredByAll: false },
+    ]);
+    renderWizard();
+
+    await pickSections("Grade 10 A", "Grade 10 B");
+    await next();
+
+    expect(await screen.findByLabelText("Mathematics")).toBeVisible();
+    // Scheduling it would be refused for the whole set, so it is shown as
+    // unavailable rather than offered and then rejected at the last step.
+    expect(screen.queryByLabelText("Science")).toBeNull();
+    expect(screen.getByTestId("partial-subjects")).toHaveTextContent(
+      /Science · 1 of 2/,
+    );
+  });
+
+  it("asks for the subjects of exactly the sections chosen", async () => {
+    renderWizard();
+    await pickSections("Grade 10 A", "Grade 10 B");
+
+    await waitFor(() =>
+      expect(examinationsService.subjectOptions).toHaveBeenCalledWith([
+        "cl-a",
+        "cl-b",
+      ]),
+    );
+  });
+
   it("refuses to move on with no subject chosen", async () => {
     renderWizard();
     await pickSections("Grade 10 A");
@@ -104,8 +167,8 @@ describe("create examination wizard", () => {
     renderWizard();
     await pickSections("Grade 10 A", "Grade 10 B");
     await next();
-    await userEvent.click(screen.getByLabelText("Mathematics"));
-    await userEvent.click(screen.getByLabelText("Science"));
+    await userEvent.click(await screen.findByLabelText("Mathematics"));
+    await userEvent.click(await screen.findByLabelText("Science"));
 
     expect(screen.getByTestId("paper-count-hint")).toHaveTextContent(
       "2 sections × 2 subjects = 4 papers",
@@ -116,7 +179,7 @@ describe("create examination wizard", () => {
     renderWizard();
     await pickSections("Grade 10 A");
     await next();
-    await userEvent.click(screen.getByLabelText("Mathematics"));
+    await userEvent.click(await screen.findByLabelText("Mathematics"));
     await next();
     await next();
 
@@ -128,7 +191,7 @@ describe("create examination wizard", () => {
     renderWizard();
     await pickSections("Grade 10 A", "Grade 10 B");
     await next();
-    await userEvent.click(screen.getByLabelText("Mathematics"));
+    await userEvent.click(await screen.findByLabelText("Mathematics"));
     await back();
 
     expect(screen.getByLabelText("Grade 10 A")).toBeChecked();
@@ -139,7 +202,7 @@ describe("create examination wizard", () => {
     renderWizard();
     await pickSections("Grade 10 A");
     await next();
-    await userEvent.click(screen.getByLabelText("Mathematics"));
+    await userEvent.click(await screen.findByLabelText("Mathematics"));
     await next();
     await userEvent.type(screen.getByLabelText(/name/i), "Half Yearly");
     await userEvent.click(screen.getByLabelText(/kind of examination/i));
@@ -162,7 +225,7 @@ describe("create examination wizard", () => {
     await pickSections("Grade 10 A", "Grade 10 B");
     await next();
     for (const subject of SUBJECTS) {
-      await userEvent.click(screen.getByLabelText(subject.name));
+      await userEvent.click(await screen.findByLabelText(subject.name));
     }
     expect(screen.getByTestId("paper-count-hint")).toHaveTextContent(
       "2 sections × 6 subjects = 12 papers",
@@ -211,7 +274,7 @@ describe("create examination wizard", () => {
 
     await pickSections("Grade 10 A");
     await next();
-    await userEvent.click(screen.getByLabelText("Mathematics"));
+    await userEvent.click(await screen.findByLabelText("Mathematics"));
     await next();
     await userEvent.type(screen.getByLabelText(/name/i), "Half Yearly");
     await userEvent.click(screen.getByLabelText(/kind of examination/i));
