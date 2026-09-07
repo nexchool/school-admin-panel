@@ -44,6 +44,8 @@ import { registerFeatureChangeHandler, resetFeatureStamp } from "@/lib/featureSt
 import { registerForbiddenHandler } from "@/lib/forbiddenHandler";
 import {
   login as loginService,
+  loginWithMobileOtp as loginWithMobileOtpService,
+  loginWithMobilePin as loginWithMobilePinService,
   logout as logoutService,
   redeemLoginLink as redeemLoginLinkService,
   getProfile,
@@ -73,6 +75,17 @@ interface AuthContextType {
     password: string
   ) => Promise<{ requiresTenantChoice: boolean; forcePasswordReset: boolean }>;
   loginWithTenant: (tenantId: string) => Promise<{ forcePasswordReset: boolean }>;
+  /** Sign in with a mobile number and a PIN. Only offered where policy allows it. */
+  loginWithMobilePin: (
+    mobile: string,
+    pin: string
+  ) => Promise<{ forcePasswordReset: boolean }>;
+  /** Sign in with a code sent to a phone. Only offered where policy allows it. */
+  loginWithMobileOtp: (
+    mobile: string,
+    code: string,
+    challengeId?: string
+  ) => Promise<{ forcePasswordReset: boolean }>;
   /** Establish a session from a one-time platform-admin login link (god-login). */
   loginWithCode: (code: string) => Promise<void>;
   clearPendingTenantChoice: () => void;
@@ -356,6 +369,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [setAuthData, refreshUser, queryClient]
   );
 
+  /**
+   * Sign in with a code sent to a phone.
+   *
+   * Deliberately its own function rather than an argument to `login`: the two
+   * carry different secrets and the mobile one has no tenant-choice branch —
+   * a number is only meaningful inside one school, so there is never a list to
+   * choose from.
+   */
+  const loginWithMobileOtp = useCallback(
+    async (
+      mobile: string,
+      code: string,
+      challengeId?: string
+    ): Promise<{ forcePasswordReset: boolean }> => {
+      const subdomain = getCurrentSubdomain();
+      const response = await loginWithMobileOtpService({
+        mobile,
+        code,
+        ...(challengeId ? { challenge_id: challengeId } : {}),
+        ...(subdomain ? { subdomain } : {}),
+      });
+      queryClient.clear();
+      await setAuthData(response);
+      await refreshUser();
+      return { forcePasswordReset: response.force_password_reset ?? false };
+    },
+    [setAuthData, refreshUser, queryClient]
+  );
+
+  /**
+   * Sign in with a mobile number and a PIN.
+   *
+   * Its own function alongside the code one: the two carry different secrets,
+   * and neither has a tenant-choice branch because a number is meaningful in
+   * only one school.
+   */
+  const loginWithMobilePin = useCallback(
+    async (mobile: string, pin: string): Promise<{ forcePasswordReset: boolean }> => {
+      const subdomain = getCurrentSubdomain();
+      const response = await loginWithMobilePinService({
+        mobile,
+        pin,
+        ...(subdomain ? { subdomain } : {}),
+      });
+      queryClient.clear();
+      await setAuthData(response);
+      await refreshUser();
+      return { forcePasswordReset: response.force_password_reset ?? false };
+    },
+    [setAuthData, refreshUser, queryClient]
+  );
+
   const loginWithTenant = useCallback(
     async (tenantId: string): Promise<{ forcePasswordReset: boolean }> => {
       if (!pendingTenantChoice) return { forcePasswordReset: false };
@@ -461,6 +526,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         pendingTenantChoice,
         login,
+        loginWithMobileOtp,
+        loginWithMobilePin,
         loginWithTenant,
         loginWithCode,
         clearPendingTenantChoice,

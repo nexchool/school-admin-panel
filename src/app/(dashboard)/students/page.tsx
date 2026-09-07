@@ -49,6 +49,7 @@ import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useProgrammes } from "@/hooks/useProgrammes";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { BulkImportStudents } from "@/components/students/BulkImportStudents";
+import { BulkCredentialDialog } from "@/components/students/BulkCredentialDialog";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { BulkActionBar } from "@/components/tables/BulkActionBar";
@@ -77,6 +78,7 @@ import {
   RotateCcw,
   Download,
   Trash2,
+  KeyRound,
   GraduationCap,
   ChevronDown,
   Loader2,
@@ -404,13 +406,16 @@ export default function StudentsPage() {
   const createMutation = useCreateStudent();
   const bulkDeleteMutation = useBulkDeleteStudents();
   const bulkStatusMutation = useBulkUpdateStudentStatus();
-  const { hasPermission } = useAuth();
+  const { hasPermission, tenantName } = useAuth();
   const canUpdate = hasPermission("student.update");
   const canDelete = hasPermission("student.delete");
+  // Handing out working passwords is its own authority, separate from editing.
+  const canManageCredentials = hasPermission("student.credential.manage");
 
   // Row selection (persists across pages; ids may span pages).
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkCredentialsOpen, setBulkCredentialsOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
@@ -1103,7 +1108,7 @@ export default function StudentsPage() {
         </CardHeader>
 
         <CardContent>
-          {(canUpdate || canDelete) && (
+          {(canUpdate || canDelete || canManageCredentials) && (
             <BulkActionBar
               selectedCount={selectedCount}
               onClear={clearSelection}
@@ -1136,6 +1141,17 @@ export default function StudentsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
+              {canManageCredentials && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setBulkCredentialsOpen(true)}
+                >
+                  <KeyRound className="size-4" />
+                  Create passwords
+                </Button>
+              )}
               {canDelete && (
                 <Button
                   variant="destructive"
@@ -1194,6 +1210,15 @@ export default function StudentsPage() {
         </CardContent>
       </Card>
 
+      <BulkCredentialDialog
+        open={bulkCredentialsOpen}
+        onOpenChange={setBulkCredentialsOpen}
+        studentIds={[...selectedIds]}
+        nameFor={(studentId) =>
+          items.find((student) => student.id === studentId)?.name
+        }
+        schoolName={tenantName}
+      />
       <ConfirmDialog
         open={bulkDeleteOpen}
         onOpenChange={setBulkDeleteOpen}

@@ -75,6 +75,7 @@ type GraphQLReply<T> = { data?: T | null; errors?: GraphQLError[] };
 export async function gql<T>(
   query: string,
   variables?: Record<string, unknown>,
+  isRetry = false,
 ): Promise<T> {
   const response = await apiRequest(GRAPHQL_ENDPOINT, {
     method: "POST",
@@ -107,6 +108,15 @@ export async function gql<T>(
     const status = STATUS_FOR_CODE[code] ?? 400;
 
     if (code === "UNAUTHENTICATED" && typeof window !== "undefined") {
+      // An expired access token reaches GraphQL as a 200 carrying
+      // `UNAUTHENTICATED`, not as an HTTP 401, so the transport's own renewal
+      // never sees it. Renew here for the same reason and on the same shared
+      // promise, then run the operation once more. `isRetry` is what makes it
+      // once: a second refusal is a real one.
+      const { refreshSession } = await import("@/lib/sessionRefresh");
+      if (!isRetry && (await refreshSession())) {
+        return gql<T>(query, variables, true);
+      }
       await endSession();
     }
     // A 403 can mean this person's permissions went stale — the same

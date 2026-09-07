@@ -791,6 +791,13 @@ export function BulkImportStudents({
                   Failed: {importResult.failed}
                 </span>
               </div>
+              {importResult.created > 0 && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Imported students sign in with the password issued to them
+                  and are required to choose a new one before they can use the
+                  app.
+                </p>
+              )}
             </div>
             {importResult.failed_rows.length > 0 && (
               <div className="space-y-2">

@@ -6,7 +6,7 @@ import { useAuth } from "@/components/providers";
 import { notificationKeys } from "@/hooks/useNotifications";
 import { getApiUrl } from "@/lib/constants";
 import { shouldRefreshNotificationsOnEvent } from "@/lib/notificationRealtime";
-import { getAccessToken, getRefreshToken, getTenantId } from "@/lib/storage";
+import { getAccessToken, getTenantId } from "@/lib/storage";
 
 const RETRY_MS = 2800;
 
@@ -52,9 +52,8 @@ async function consumeOneSseConnection(
   queryClient: ReturnType<typeof useQueryClient>,
   signal: AbortSignal
 ): Promise<void> {
-  const [accessToken, refreshToken, tenantId] = await Promise.all([
+  const [accessToken, tenantId] = await Promise.all([
     getAccessToken(),
-    getRefreshToken(),
     getTenantId(),
   ]);
   if (!accessToken) {
@@ -67,7 +66,6 @@ async function consumeOneSseConnection(
     Accept: "text/event-stream",
     Authorization: `Bearer ${accessToken}`,
   };
-  if (refreshToken) headers["X-Refresh-Token"] = refreshToken;
   if (tenantId) headers["X-Tenant-ID"] = tenantId;
 
   const response = await fetch(url, {
@@ -78,6 +76,14 @@ async function consumeOneSseConnection(
   });
 
   if (response.status === 401) {
+    // A stream held open across an access token's whole lifetime will be
+    // refused when it reconnects, which is ordinary expiry rather than a
+    // rejected identity. Renew once — sharing whatever renewal the rest of
+    // the app already has under way — and let the loop reconnect. Only a
+    // renewal that fails means the session is really over.
+    const { refreshSession } = await import("@/lib/sessionRefresh");
+    if (await refreshSession()) return;
+
     const { clearAuth } = await import("@/lib/storage");
     await clearAuth();
     if (typeof window !== "undefined") window.location.replace("/login");

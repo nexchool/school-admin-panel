@@ -404,6 +404,15 @@ export function BulkImportTeachers({
                   Failed: {importResult.failed}
                 </span>
               </div>
+              {(importResult.accounts_skipped_no_email ?? 0) > 0 && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {importResult.accounts_skipped_no_email} teacher
+                  {importResult.accounts_skipped_no_email === 1 ? " was" : "s were"}{" "}
+                  imported without a sign-in account because no email address
+                  was supplied. Their staff record, department and permissions
+                  are all in place — add an email address to give them a login.
+                </p>
+              )}
             </div>
             {importResult.failed_rows.length > 0 && (
               <div className="space-y-2">

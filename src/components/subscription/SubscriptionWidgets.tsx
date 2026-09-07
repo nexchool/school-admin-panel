@@ -86,12 +86,19 @@ function MiniCard({
  */
 export function SubscriptionWidgets() {
   const { data } = useSubscriptionState();
-  if (!data) return null;
+  // `billing` and `usage` are absent for a user without `subscription.read`.
+  // The tiles are all commercials, so with nothing to show there is nothing
+  // to render — previously this destructured them unconditionally and would
+  // have thrown for such a user.
+  if (!data?.billing || !data.usage) return null;
   return <SubscriptionWidgetsImpl state={data} />;
 }
 
 function SubscriptionWidgetsImpl({ state }: { state: SubscriptionState }) {
-  const { subscription, usage, billing } = state;
+  const { subscription } = state;
+  // Narrowed by the caller; these are the whole point of the tiles.
+  const usage = state.usage!;
+  const billing = state.billing!;
   const status = statusLabel(subscription.status);
 
   // Cache "now" for the lifetime of this render-pass tree. The trial

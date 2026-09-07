@@ -2,10 +2,10 @@ import { getApiUrl } from "@/lib/constants";
 import { isPublicAuthApiUrl } from "@/lib/auth-api";
 import { noteFeatureStamp } from "@/lib/featureStamp";
 import { notifyForbidden } from "@/lib/forbiddenHandler";
+import { refreshSession } from "@/lib/sessionRefresh";
 import { getCurrentSubdomain } from "@/lib/subdomain";
 import {
   getAccessToken,
-  getRefreshToken,
   getTenantId,
   setAccessToken,
 } from "@/lib/storage";
@@ -41,15 +41,28 @@ export const endSession = async (): Promise<void> => {
   }
 };
 
+/**
+ * Send the request, renewing the session once if it comes back unauthorised.
+ *
+ * The refresh token is deliberately *not* attached to ordinary requests any
+ * more. It used to ride along on every call so the server could renew an
+ * expired access token in passing, which was convenient while a refresh token
+ * could be presented any number of times. Now that it rotates, a token sent
+ * on twenty parallel requests is a token presented twenty times, and the
+ * server cannot tell that from theft. It is therefore spent in exactly one
+ * place — `refreshSession` — and only when a 401 says it is needed.
+ *
+ * One retry, never a loop: if the renewed token is also refused, the session
+ * really is over and `handleResponse` ends it.
+ */
 export const apiRequest = async (
   endpoint: string,
   options: RequestInit = {},
   skipJsonContentType = false
 ): Promise<Response> => {
   const url = getApiUrl(endpoint);
-  const [accessToken, refreshToken, tenantId] = await Promise.all([
+  const [accessToken, tenantId] = await Promise.all([
     getAccessToken(),
-    getRefreshToken(),
     getTenantId(),
   ]);
 
@@ -63,9 +76,11 @@ export const apiRequest = async (
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
-  if (refreshToken) {
-    headers["X-Refresh-Token"] = refreshToken;
-  }
+
+  // Which application is calling. Telemetry and product policy, never a
+  // security boundary — the server records an absent header as "unknown", so
+  // an older build keeps working unchanged.
+  headers["X-Client-Surface"] = "admin-web";
   if (tenantId) {
     headers["X-Tenant-ID"] = tenantId;
   } else {
@@ -82,9 +97,23 @@ export const apiRequest = async (
     // tenant's GET /api/* response after a tenant switch because the URL
     // is identical and only the X-Tenant-ID header differs (browsers do
     // not key the HTTP cache on custom request headers).
-    const response = await fetch(url, { ...options, headers, cache: "no-store" });
+    let response = await fetch(url, { ...options, headers, cache: "no-store" });
 
-    // Handle transparent token refresh (backend sends X-New-Access-Token)
+    if (
+      response.status === 401 &&
+      !isPublicAuthApiUrl(url) &&
+      !url.includes("/api/auth/refresh")
+    ) {
+      const renewed = await refreshSession();
+      if (renewed) {
+        const fresh = await getAccessToken();
+        if (fresh) headers["Authorization"] = `Bearer ${fresh}`;
+        response = await fetch(url, { ...options, headers, cache: "no-store" });
+      }
+    }
+
+    // Older builds of the API renewed in passing and announced it here. Kept
+    // so a client running against one still picks the new token up.
     const newAccessToken = response.headers.get("X-New-Access-Token");
     if (newAccessToken) {
       await setAccessToken(newAccessToken);

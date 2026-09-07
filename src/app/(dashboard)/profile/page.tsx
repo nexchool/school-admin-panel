@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks";
+import { MySessionsCard } from "@/components/access/MySessionsCard";
 import {
   Card,
   CardContent,
@@ -303,6 +304,8 @@ export default function ProfilePage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <MySessionsCard />
 
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent>

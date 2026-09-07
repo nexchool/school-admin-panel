@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NEXCHOOL_PRIVACY_URL, NEXCHOOL_TERMS_URL } from "@/lib/externalLinks";
+import { MobileOtpForm } from "@/components/auth/login/MobileOtpForm";
+import { MobilePinForm } from "@/components/auth/login/MobilePinForm";
+import { getTenantBranding } from "@/services/authService";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -41,6 +44,33 @@ export function LoginForm() {
       setResetJustCompleted(true);
       sessionStorage.removeItem("pw_reset_success");
     }
+  }, []);
+
+  // Which ways in this school allows. Read from public branding, which the
+  // server has published since the authentication policy was built. A method a
+  // school has not enabled is not offered — and because the server refuses it
+  // anyway, this hides an option rather than enforcing a rule.
+  const [otpOffered, setOtpOffered] = useState(false);
+  const [pinOffered, setPinOffered] = useState(false);
+  const [useMobileCode, setUseMobileCode] = useState(false);
+  const [useMobilePin, setUseMobilePin] = useState(false);
+  useEffect(() => {
+    let current = true;
+    getTenantBranding()
+      .then((branding) => {
+        if (current) {
+          const methods = branding?.auth?.methods ?? [];
+          setOtpOffered(methods.includes("mobile_otp"));
+          setPinOffered(methods.includes("mobile_pin"));
+        }
+      })
+      .catch(() => {
+        // No tenant context yet, or branding is unavailable. Offering nothing
+        // extra is the safe failure.
+      });
+    return () => {
+      current = false;
+    };
   }, []);
 
   const form = useForm<LoginValues>({
@@ -89,6 +119,34 @@ export function LoginForm() {
             Back
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (useMobilePin) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1 text-center">
+          <h2 className="text-3xl font-bold tracking-tight">Welcome back</h2>
+          <p className="text-sm text-muted-foreground">
+            Sign in with your mobile number and PIN
+          </p>
+        </div>
+        <MobilePinForm onBack={() => setUseMobilePin(false)} />
+      </div>
+    );
+  }
+
+  if (useMobileCode) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-1 text-center">
+          <h2 className="text-3xl font-bold tracking-tight">Welcome back</h2>
+          <p className="text-sm text-muted-foreground">
+            We&apos;ll text you a code to sign in
+          </p>
+        </div>
+        <MobileOtpForm onBack={() => setUseMobileCode(false)} />
       </div>
     );
   }
@@ -190,6 +248,26 @@ export function LoginForm() {
           {!form.formState.isSubmitting && <ArrowRight className="size-4" aria-hidden="true" />}
         </Button>
       </form>
+
+      {otpOffered && (
+        <button
+          type="button"
+          onClick={() => setUseMobileCode(true)}
+          className="w-full text-sm font-medium text-primary hover:underline"
+        >
+          Sign in with a code sent to my phone
+        </button>
+      )}
+
+      {pinOffered && (
+        <button
+          type="button"
+          onClick={() => setUseMobilePin(true)}
+          className="w-full text-sm font-medium text-primary hover:underline"
+        >
+          Sign in with my mobile number and PIN
+        </button>
+      )}
 
       <p className="text-center text-xs text-muted-foreground">
         By signing in, you agree to our{" "}

@@ -54,6 +54,49 @@ export const login = (data: {
 export const logout = () => apiPost<unknown>(API_ENDPOINTS.LOGOUT);
 
 /**
+ * Sign in with a mobile number and a PIN.
+ *
+ * The same endpoint as every other sign-in, with the method named, so the
+ * server runs the same gates rather than a fourth copy of them.
+ */
+export const loginWithMobilePin = (data: {
+  mobile: string;
+  pin: string;
+  tenant_id?: string;
+  subdomain?: string;
+}) =>
+  apiPost<LoginResponse>(API_ENDPOINTS.LOGIN, {
+    method: "mobile_pin",
+    identifier: data.mobile,
+    password: data.pin,
+    ...(data.tenant_id ? { tenant_id: data.tenant_id } : {}),
+    ...(data.subdomain ? { subdomain: data.subdomain } : {}),
+  });
+
+/**
+ * Sign in with a code sent to a phone.
+ *
+ * The same endpoint as a password sign-in, with the method named — so every
+ * gate the server already runs for a password runs for this too, rather than
+ * a second sign-in path with its own copy of them.
+ */
+export const loginWithMobileOtp = (data: {
+  mobile: string;
+  code: string;
+  challenge_id?: string;
+  tenant_id?: string;
+  subdomain?: string;
+}) =>
+  apiPost<LoginResponse>(API_ENDPOINTS.LOGIN, {
+    method: "mobile_otp",
+    identifier: data.mobile,
+    password: data.code,
+    ...(data.challenge_id ? { challenge_id: data.challenge_id } : {}),
+    ...(data.tenant_id ? { tenant_id: data.tenant_id } : {}),
+    ...(data.subdomain ? { subdomain: data.subdomain } : {}),
+  });
+
+/**
  * Redeem a one-time platform-admin login link. The backend returns the same
  * shape as a normal login, scoped to the target tenant (god-login session).
  */
@@ -116,6 +159,26 @@ export interface ProfileResponse {
 
 export const getProfile = () => apiGet<ProfileResponse>(API_ENDPOINTS.PROFILE);
 
+/** A code sent to a phone, and how long it is good for. Never the code. */
+export interface OtpRequestResponse {
+  sent: boolean;
+  challenge_id?: string;
+  expires_at?: string;
+}
+
+/**
+ * Ask for a sign-in code.
+ *
+ * Answers the same way whether or not the number belongs to anybody — so a
+ * success here means "if that number can sign in, a code is on its way", and
+ * the UI must not read it as "that number exists".
+ */
+export const requestMobileOtp = (payload: {
+  mobile: string;
+  tenant_id?: string;
+  subdomain?: string;
+}) => apiPost<OtpRequestResponse>("/api/auth/otp/request", payload);
+
 /** Public branding for the resolved tenant, shown pre-auth on the login screen. */
 export interface TenantBranding {
   name: string;
@@ -124,6 +187,16 @@ export interface TenantBranding {
   tagline?: string | null;
   /** Opt-in per-tenant login layout key; "default" (or absent) = standard login. */
   login_variant?: string;
+  /**
+   * Which ways in this school allows, from its authentication policy.
+   *
+   * The server has published this since the policy was built and nothing read
+   * it. It is what decides whether the mobile-code option appears at all — a
+   * method a school has not enabled must not be offered, and checking that on
+   * the client alone would be theatre, so this only hides an option the server
+   * would refuse anyway.
+   */
+  auth?: { methods?: string[] };
 }
 
 /** GET /api/auth/tenant-branding — public; branding for resolved tenant (Host / header / default). */

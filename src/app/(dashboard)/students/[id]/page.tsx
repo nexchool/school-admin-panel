@@ -11,6 +11,8 @@ import { useStudentAllocation } from "@/hooks/useHostel";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { StudentFormModal } from "@/components/students/StudentFormModal";
+import { AccountAccessPanel } from "@/components/access/AccountAccessPanel";
+import { StudentCredentialPanel } from "@/components/students/StudentCredentialPanel";
 import { PersonDocumentsSection } from "@/components/documents/PersonDocumentsSection";
 import { useDocuments } from "@/hooks/useDocuments";
 import { Button } from "@/components/ui/button";
@@ -68,6 +70,7 @@ import {
   ChevronDown,
   Check,
   ExternalLink,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Student, UpdateStudentInput } from "@/types/student";
@@ -80,7 +83,8 @@ type TabId =
   | "address"
   | "academic"
   | "documents"
-  | "records";
+  | "records"
+  | "signin";
 
 const BASE_TABS: TabNavItem<TabId>[] = [
   { id: "overview", label: "Overview", icon: User },
@@ -96,6 +100,16 @@ const RECORDS_TAB: TabNavItem<TabId> = {
   label: "Records",
   icon: ClipboardList,
 };
+
+// Handing a child a working password is its own authority, separate from
+// editing their record — so the tab appears only for whoever holds it.
+const SIGN_IN_TAB: TabNavItem<TabId> = {
+  id: "signin",
+  label: "Sign-in",
+  icon: KeyRound,
+};
+
+const CREDENTIAL_PERM = "student.credential.manage";
 
 // Permissions that unlock the linked-records tab (fees / attendance / transport /
 // hostel). `hasPermission` is wildcard-aware, so `.manage` / `system.manage` pass.
@@ -113,7 +127,7 @@ export default function StudentDetailPage() {
   const id = params?.id as string | undefined;
   const { data: student, isLoading, isError } = useStudent(id ?? null);
   const { data: classes = [] } = useClasses();
-  const { hasAnyPermission } = useAuth();
+  const { hasAnyPermission, hasPermission, tenantName } = useAuth();
   const updateMutation = useUpdateStudent();
   const deleteMutation = useDeleteStudent();
   const [editOpen, setEditOpen] = useState(false);
@@ -121,6 +135,10 @@ export default function StudentDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   const canSeeRecords = hasAnyPermission(RECORD_PERMS);
+  const canManageCredentials = hasPermission(CREDENTIAL_PERM);
+  // Suspending an account is a different authority from issuing a password:
+  // one hands somebody a way in, the other takes every way in away.
+  const canManageAccess = hasPermission("user.manage");
   const { data: documentSet } = useDocuments("student", id ?? null);
   const documentsPending =
     !!documentSet?.completeness.isTracked &&
@@ -128,14 +146,18 @@ export default function StudentDetailPage() {
 
   const tabs = useMemo<TabNavItem<TabId>[]>(
     () => {
-      const base = canSeeRecords ? [...BASE_TABS, RECORDS_TAB] : BASE_TABS;
+      const base = [
+        ...BASE_TABS,
+        ...(canSeeRecords ? [RECORDS_TAB] : []),
+        ...(canManageCredentials ? [SIGN_IN_TAB] : []),
+      ];
       return base.map((tab) =>
         tab.id === "documents" && documentsPending
           ? { ...tab, badge: "!", badgeTone: "destructive" as const }
           : tab
       );
     },
-    [canSeeRecords, documentsPending]
+    [canSeeRecords, canManageCredentials, documentsPending]
   );
 
   const [lifecycleAct, setLifecycleAct] = useState<LifecycleAct | null>(null);
@@ -336,6 +358,25 @@ export default function StudentDetailPage() {
           {activeTab === "academic" && <AcademicTab student={student} />}
           {activeTab === "records" && canSeeRecords && (
             <RecordsTab student={student} />
+          )}
+          {activeTab === "signin" && canManageCredentials && (
+            <div className="space-y-5">
+              <StudentCredentialPanel
+                studentId={student.id}
+                studentName={student.name}
+                schoolName={tenantName}
+              />
+              {/* Beneath the credentials rather than beside them: an operator
+                  reaches for "reset their password" far more often than for
+                  "shut this account down", and the order should say which is
+                  the ordinary act. */}
+              {canManageAccess && (
+                <AccountAccessPanel
+                  accountId={student.user_id}
+                  personName={student.name}
+                />
+              )}
+            </div>
           )}
           {activeTab === "documents" && (
             <PersonDocumentsSection

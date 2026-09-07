@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,10 @@ type ConfirmDialogProps = {
   variant?: "default" | "destructive";
   onConfirm: () => void | Promise<void>;
   loading?: boolean;
+  /** Anything the decision needs beyond the question — a reason to record, a
+   *  choice that changes what confirming does. Sits between the description
+   *  and the buttons. */
+  children?: ReactNode;
 };
 
 export function ConfirmDialog({
@@ -32,6 +38,7 @@ export function ConfirmDialog({
   variant = "default",
   onConfirm,
   loading,
+  children,
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -40,6 +47,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
+        {children}
         <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             {cancelLabel}

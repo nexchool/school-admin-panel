@@ -54,6 +54,10 @@ export type BulkImportResult = {
   updated: number;
   failed: number;
   failed_rows: BulkImportFailedRow[];
+  /** Teachers imported without a sign-in account because no email address was
+   *  supplied. They are successful imports, not failures. */
+  accounts_created?: number;
+  accounts_skipped_no_email?: number;
 };
 
 export type StudentsSortBy =
