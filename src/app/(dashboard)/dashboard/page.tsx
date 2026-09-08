@@ -516,7 +516,14 @@ function DashboardContent({ data }: { data: DashboardData }) {
             <CardTitle className="text-sm font-semibold">Pending Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {/* Leave requests */}
+            {/*
+              Leave requests — absent, not zero, when this person may not see
+              them. `?? 0` would render a "Leave requests 0" row linking to
+              /teachers for a calendar-only sub-admin: a widget about staff
+              business, pointing at a page they cannot open, claiming a figure
+              they were never given.
+            */}
+            {actions.pending_leave_requests === undefined ? null : (
             <Link href="/teachers" className="block">
               <div
                 className={`flex items-center justify-between rounded-xl px-3.5 py-3 cursor-pointer transition-colors ${
@@ -532,10 +539,11 @@ function DashboardContent({ data }: { data: DashboardData }) {
                 <Badge
                   variant={(actions.pending_leave_requests ?? 0) > 0 ? "destructive" : "secondary"}
                 >
-                  {(actions.pending_leave_requests ?? 0)}
+                  {actions.pending_leave_requests}
                 </Badge>
               </div>
             </Link>
+            )}
 
             {/* Upcoming holidays */}
             {(actions.upcoming_holidays ?? []).length > 0 ? (
