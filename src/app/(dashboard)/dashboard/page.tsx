@@ -29,7 +29,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "@/hooks/useDashboard";
-import type { DashboardAlerts, DashboardData } from "@/services/dashboardService";
+import type {
+  DashboardAlerts,
+  DashboardData,
+  SectionVisibility,
+} from "@/services/dashboardService";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -65,7 +69,8 @@ function severity(count: number): AlertSeverity {
 // ─── alert definitions ───────────────────────────────────────────────────────
 
 interface AlertItemDef {
-  key: keyof Omit<DashboardAlerts, "total_issues">;
+  // `visible` is the envelope, not a row; `total_issues` is the sum of them.
+  key: keyof Omit<DashboardAlerts, "total_issues" | "visible">;
   title: string;
   href: string;
 }
@@ -147,7 +152,10 @@ function HealthBadge({ score }: { score: number }) {
 }
 
 function AlertsSection({ alerts }: { alerts: DashboardAlerts }) {
-  const visible = ALERT_DEFS.filter((d) => alerts[d.key] > 0);
+  // A row the caller may not see is absent from the payload, not zero. Both
+  // read as "nothing to show here", which is the correct rendering for each:
+  // there is no row to offer, and no reason to explain why.
+  const visible = ALERT_DEFS.filter((d) => (alerts[d.key] ?? 0) > 0);
 
   if (visible.length === 0) {
     return (
@@ -182,7 +190,7 @@ function AlertsSection({ alerts }: { alerts: DashboardAlerts }) {
       <CardContent>
         <div className="flex flex-col gap-1.5">
           {visible.map((def) => {
-            const count = alerts[def.key];
+            const count = alerts[def.key] ?? 0;
             const sev = severity(count);
             const isWarn = sev === "warn";
             return (
@@ -237,10 +245,24 @@ export default function DashboardPage() {
   return <DashboardContent data={data} />;
 }
 
+/**
+ * A section the server withheld from this caller.
+ *
+ * The payload is already scoped — a finance officer's response carries
+ * `{visible: false}` where the roll counts would be — so this is not the
+ * defence, it is the rendering. The defence is in
+ * `server/modules/dashboard/service.py`, because a card hidden in React is
+ * still a card whose data sits in devtools.
+ *
+ * Note it is NOT the same test as `enabled === false`, which means the school
+ * is not on that plan and gets an upsell placeholder.
+ */
+const hidden = (section?: SectionVisibility) => section?.visible === false;
+
 function DashboardContent({ data }: { data: DashboardData }) {
   const { overview, today, alerts, finance, transport, actions, health_score } = data;
 
-  const updatedAgo = timeAgo(today.last_attendance_marked_at);
+  const updatedAgo = timeAgo(today.last_attendance_marked_at ?? null);
 
   return (
     <div className="space-y-7 pb-10">
@@ -249,12 +271,12 @@ function DashboardContent({ data }: { data: DashboardData }) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {overview.academic_year} &middot; Live school overview
+            {overview.academic_year ? `${overview.academic_year} · ` : ""}Live school overview
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <HealthBadge score={health_score} />
-          {alerts.total_issues > 0 ? (
+          {(alerts.total_issues ?? 0) > 0 ? (
             <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
               <AlertTriangle className="size-3" />
               {alerts.total_issues} issue{alerts.total_issues !== 1 ? "s" : ""} need attention
@@ -269,17 +291,19 @@ function DashboardContent({ data }: { data: DashboardData }) {
       </div>
 
       {/* ── 1. Overview stats ───────────────────────────────────────────── */}
+      {hidden(overview) ? null : (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={GraduationCap} label="Students"      value={overview.total_students} sub="Total enrolled" />
-        <StatCard icon={Users}         label="Teachers"      value={overview.total_teachers} sub="Active staff" />
-        <StatCard icon={BookOpen}      label="Classes"       value={overview.total_classes}  sub="Active classes" />
-        <StatCard icon={Calendar}      label="Academic Year" value={overview.academic_year} />
+        <StatCard icon={GraduationCap} label="Students"      value={overview.total_students ?? 0} sub="Total enrolled" />
+        <StatCard icon={Users}         label="Teachers"      value={overview.total_teachers ?? 0} sub="Active staff" />
+        <StatCard icon={BookOpen}      label="Classes"       value={overview.total_classes ?? 0}  sub="Active classes" />
+        <StatCard icon={Calendar}      label="Academic Year" value={overview.academic_year ?? "—"} />
       </div>
+      )}
 
       {/* ── 2. Today + Alerts ───────────────────────────────────────────── */}
-      <div className={`grid gap-4 ${today.enabled === false ? "" : "lg:grid-cols-2"}`}>
-        {/* Today's operations — hidden when attendance feature is off */}
-        {today.enabled === false ? null : (
+      <div className={`grid gap-4 ${today.enabled === false || hidden(today) ? "" : "lg:grid-cols-2"}`}>
+        {/* Off for the school (`enabled`) or not this person's (`visible`). */}
+        {today.enabled === false || hidden(today) ? null : (
         <Card className="shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -320,18 +344,18 @@ function DashboardContent({ data }: { data: DashboardData }) {
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">Attendance completion</span>
                 <span className="font-bold tabular-nums">
-                  {today.attendance_completion_percentage.toFixed(0)}%
+                  {(today.attendance_completion_percentage ?? 0).toFixed(0)}%
                 </span>
               </div>
-              <ProgressBar value={today.attendance_completion_percentage} />
+              <ProgressBar value={(today.attendance_completion_percentage ?? 0)} />
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">
                   {today.attendance_marked_classes} of {today.total_classes} classes marked
                 </span>
-                {today.pending_attendance_classes > 0 ? (
+                {(today.pending_attendance_classes ?? 0) > 0 ? (
                   <Link href="/attendance">
                     <span className="font-semibold text-red-500 cursor-pointer hover:underline">
-                      {today.pending_attendance_classes} pending →
+                      {(today.pending_attendance_classes ?? 0)} pending →
                     </span>
                   </Link>
                 ) : (
@@ -348,7 +372,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
       </div>
 
       {/* ── 3. Finance ──────────────────────────────────────────────────── */}
-      {finance.enabled === false ? null : (
+      {finance.enabled === false || hidden(finance) ? null : (
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Finance snapshot */}
         <Card className="shadow-sm lg:col-span-1">
@@ -364,20 +388,20 @@ function DashboardContent({ data }: { data: DashboardData }) {
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Collected</span>
                 <span className="font-bold text-emerald-600">
-                  {fmt(finance.total_collected)}
+                  {fmt(finance.total_collected ?? 0)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Expected</span>
-                <span className="font-medium">{fmt(finance.total_expected)}</span>
+                <span className="font-medium">{fmt(finance.total_expected ?? 0)}</span>
               </div>
-              <ProgressBar value={finance.collection_percentage} />
+              <ProgressBar value={finance.collection_percentage ?? 0} />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
-                  {finance.collection_percentage.toFixed(1)}% collected
+                  {(finance.collection_percentage ?? 0).toFixed(1)}% collected
                 </span>
                 {/* Trend indicator */}
-                <TrendChip pct={finance.trend_percentage} />
+                <TrendChip pct={finance.trend_percentage ?? 0} />
               </div>
             </div>
 
@@ -386,7 +410,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Outstanding</span>
                 <span className="font-semibold text-amber-600">
-                  {fmt(finance.total_outstanding)}
+                  {fmt(finance.total_outstanding ?? 0)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
@@ -394,7 +418,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
                 <Link href="/dashboard/finance">
                   <span
                     className={`font-semibold cursor-pointer hover:underline ${
-                      finance.overdue_count > 0 ? "text-red-500" : "text-muted-foreground"
+                      (finance.overdue_count ?? 0) > 0 ? "text-red-500" : "text-muted-foreground"
                     }`}
                   >
                     {finance.overdue_count}
@@ -413,11 +437,11 @@ function DashboardContent({ data }: { data: DashboardData }) {
                 <TrendingUp className="size-4 text-violet-500" />
                 Fee Collection — Last 7 Days
               </CardTitle>
-              <TrendChip pct={finance.trend_percentage} />
+              <TrendChip pct={finance.trend_percentage ?? 0} />
             </div>
           </CardHeader>
           <CardContent>
-            <FinanceTrendChart data={finance.last_7_days_collection} />
+            <FinanceTrendChart data={finance.last_7_days_collection ?? []} />
           </CardContent>
         </Card>
       </div>
@@ -426,7 +450,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
       {/* ── 4. Transport + Pending actions ──────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Transport */}
-        {transport.enabled ? (
+        {hidden(transport) ? null : transport.enabled ? (
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -486,6 +510,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
         )}
 
         {/* Pending actions */}
+        {hidden(actions) ? null : (
         <Card className="shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Pending Actions</CardTitle>
@@ -495,7 +520,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
             <Link href="/teachers" className="block">
               <div
                 className={`flex items-center justify-between rounded-xl px-3.5 py-3 cursor-pointer transition-colors ${
-                  actions.pending_leave_requests > 0
+                  (actions.pending_leave_requests ?? 0) > 0
                     ? "bg-amber-50 border border-amber-200 hover:bg-amber-100"
                     : "bg-muted/50 hover:bg-muted"
                 }`}
@@ -505,20 +530,20 @@ function DashboardContent({ data }: { data: DashboardData }) {
                   Leave requests
                 </div>
                 <Badge
-                  variant={actions.pending_leave_requests > 0 ? "destructive" : "secondary"}
+                  variant={(actions.pending_leave_requests ?? 0) > 0 ? "destructive" : "secondary"}
                 >
-                  {actions.pending_leave_requests}
+                  {(actions.pending_leave_requests ?? 0)}
                 </Badge>
               </div>
             </Link>
 
             {/* Upcoming holidays */}
-            {actions.upcoming_holidays.length > 0 ? (
+            {(actions.upcoming_holidays ?? []).length > 0 ? (
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1 pt-1">
                   Upcoming Holidays
                 </p>
-                {actions.upcoming_holidays.map((h) => (
+                {(actions.upcoming_holidays ?? []).map((h) => (
                   <Link key={`${h.name}-${h.date}`} href="/academics/calendar" className="block">
                     <div className="flex items-center justify-between rounded-xl bg-muted/50 px-3.5 py-2.5 cursor-pointer hover:bg-muted transition-colors">
                       <span className="text-sm font-medium">{h.name}</span>
@@ -536,6 +561,7 @@ function DashboardContent({ data }: { data: DashboardData }) {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );
