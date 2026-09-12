@@ -75,6 +75,7 @@ import {
 import { toast } from "sonner";
 import type { Student, UpdateStudentInput } from "@/types/student";
 import { toastError } from "@/lib/errorToast";
+import { schoolMonthIso } from "@/lib/datetime";
 
 type TabId =
   | "overview"
@@ -770,7 +771,7 @@ function FeesPanel({ student }: { student: Student }) {
 }
 
 function AttendancePanel({ student }: { student: Student }) {
-  const month = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  const month = useMemo(() => schoolMonthIso(), []);
   const { data, isLoading } = useStudentAttendance(student.id, month);
 
   return (

@@ -51,6 +51,7 @@ import type {
   ClassesSortBy,
 } from "@/types/class";
 import { classLabel } from "@/lib/gradeLevel";
+import { schoolTodayIso } from "@/lib/datetime";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 const DEFAULT_PAGE_SIZE = 10;
@@ -187,7 +188,7 @@ export default function ClassesPage() {
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;
-      a.download = `classes_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `classes_${schoolTodayIso()}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ApiException } from "@/services/api";
 import { toast } from "sonner";
+import { schoolTodayIso } from "@/lib/datetime";
 
 type Step = "upload" | "preview" | "importing" | "results";
 
@@ -73,7 +74,7 @@ function exportFailedRowsXlsx(
   XLSX.utils.book_append_sheet(wb, ws, "Failed rows");
   XLSX.writeFile(
     wb,
-    `bulk-import-teachers-failed-${new Date().toISOString().slice(0, 10)}.xlsx`
+    `bulk-import-teachers-failed-${schoolTodayIso()}.xlsx`
   );
 }
 

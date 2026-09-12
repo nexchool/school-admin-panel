@@ -33,6 +33,7 @@ import { StatusBadge } from "@/components/hostel/GatepassCard";
 
 import type { HostelGatepass } from "@/services/hostelService";
 import type { Student } from "@/types/student";
+import { formatDateTime } from "@/lib/datetime";
 
 /**
  * Screen 8 — Gatekeeper operations.
@@ -327,9 +328,9 @@ function GatekeeperGatepass({
           </div>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="size-3.5" />
-            {new Date(gp.departure_datetime).toLocaleString()}
+            {formatDateTime(gp.departure_datetime)}
             {" → "}
-            {new Date(gp.expected_return_datetime).toLocaleString()}
+            {formatDateTime(gp.expected_return_datetime)}
           </p>
           {gp.reason && (
             <p className="text-xs text-muted-foreground">Reason: {gp.reason}</p>

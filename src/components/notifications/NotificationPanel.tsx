@@ -14,6 +14,7 @@ import {
   flattenNotificationPages,
 } from "@/hooks/useNotifications";
 import type { AppNotification } from "@/types/notification";
+import { formatDate } from "@/lib/datetime";
 
 interface NotificationPanelProps {
   open: boolean;
@@ -30,7 +31,7 @@ function formatRelativeTime(iso: string | null | undefined): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString();
+  return formatDate(iso);
 }
 
 function getNotificationIcon(type: string): string {

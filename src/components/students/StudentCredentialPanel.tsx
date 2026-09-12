@@ -16,6 +16,7 @@ import {
   useStudentCredentialStatus,
 } from "@/hooks/useStudentCredentials";
 import type { IssuedCredential } from "@/services/studentCredentialsService";
+import { formatDateTime } from "@/lib/datetime";
 
 /**
  * How this student signs in, and the two things an operator can do about it.
@@ -177,7 +178,7 @@ export function StudentCredentialPanel({
           [
             "Last signed in",
             status.last_login_at
-              ? new Date(status.last_login_at).toLocaleString()
+              ? formatDateTime(status.last_login_at)
               : "Never",
           ],
         ]}

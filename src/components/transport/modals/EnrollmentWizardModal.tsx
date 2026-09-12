@@ -31,6 +31,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { toastError } from "@/lib/errorToast";
+import { schoolTodayIso } from "@/lib/datetime";
 
 const STEPS = ["Student", "Route", "Bus", "Pickup stop", "Confirm"] as const;
 
@@ -59,7 +60,7 @@ export function EnrollmentWizardModal({ open, onOpenChange, routes, onDone }: Pr
   const [dropStopId, setDropStopId] = useState<string | null>(null);
   const [monthlyFee, setMonthlyFee] = useState("");
   const [feeCycle, setFeeCycle] = useState<TransportFeeCycle>("monthly");
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(() => schoolTodayIso());
 
   const [feePlans, setFeePlans] = useState<{ route_id: string; amount: number }[]>([]);
 
@@ -95,7 +96,7 @@ export function EnrollmentWizardModal({ open, onOpenChange, routes, onDone }: Pr
       setDropStopId(null);
       setMonthlyFee("");
       setFeeCycle("monthly");
-      setStartDate(new Date().toISOString().slice(0, 10));
+      setStartDate(schoolTodayIso());
       return;
     }
     transportService.listFeePlans().then(setFeePlans).catch(() => setFeePlans([]));

@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { addDaysIso, formatDateTime, schoolTodayIso } from "@/lib/datetime";
 
 const KNOWN_MODULES = [
   "students",
@@ -51,21 +52,16 @@ const PAGE_SIZE = 20;
 const ALL_UNITS = "all";
 
 function defaultDateFrom(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 30);
-  return d.toISOString().split("T")[0];
+  return addDaysIso(schoolTodayIso(), -30);
 }
 
 function defaultDateTo(): string {
-  return new Date().toISOString().split("T")[0];
+  return schoolTodayIso();
 }
 
 function formatTimestamp(isoString: string): string {
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(isoString));
+    return formatDateTime(isoString);
   } catch {
     return isoString;
   }
@@ -205,7 +201,7 @@ function AuditLogContent() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `audit-log-${new Date().toISOString().split("T")[0]}.xlsx`;
+      a.download = `audit-log-${schoolTodayIso()}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {

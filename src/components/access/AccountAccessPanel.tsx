@@ -17,6 +17,7 @@ import {
   useSuspendAccount,
 } from "@/hooks/useAccountAccess";
 import type { AccountSession } from "@/services/accountAccessService";
+import { formatDateTime } from "@/lib/datetime";
 
 /**
  * Whether this person can get in, and where they currently are.
@@ -166,7 +167,7 @@ export function AccountAccessPanel({
           [
             "Last signed in",
             access.last_login_at
-              ? new Date(access.last_login_at).toLocaleString()
+              ? formatDateTime(access.last_login_at)
               : "Never",
           ],
         ]}
@@ -199,7 +200,7 @@ export function AccountAccessPanel({
                       session.login_method ??
                       "Unknown method"}
                     {session.last_accessed_at
-                      ? ` · last used ${new Date(session.last_accessed_at).toLocaleString()}`
+                      ? ` · last used ${formatDateTime(session.last_accessed_at)}`
                       : ""}
                   </p>
                 </div>

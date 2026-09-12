@@ -18,6 +18,7 @@ import {
   useRevokeMySession,
 } from "@/hooks/useAccountAccess";
 import type { AccountSession } from "@/services/accountAccessService";
+import { formatDateTime } from "@/lib/datetime";
 
 /**
  * Where the signed-in person is signed in, and how to end any of it.
@@ -104,7 +105,7 @@ export function MySessionsCard() {
                       session.login_method ??
                       "Unknown method"}
                     {session.last_accessed_at
-                      ? ` · last used ${new Date(session.last_accessed_at).toLocaleString()}`
+                      ? ` · last used ${formatDateTime(session.last_accessed_at)}`
                       : ""}
                   </p>
                 </div>

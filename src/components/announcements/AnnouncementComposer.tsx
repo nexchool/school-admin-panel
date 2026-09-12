@@ -45,6 +45,7 @@ import type {
 
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
+import { schoolWallClockToIso, toSchoolWallClock } from "@/lib/datetime";
 
 const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
@@ -193,23 +194,11 @@ export function AnnouncementComposer({ announcementId, initialData }: Props) {
   });
 
   const openSchedule = () => {
-    // scheduled_at is a UTC ISO string; a datetime-local input expects LOCAL
-    // wall-clock. Slicing the UTC string fed the wrong time into the picker and
-    // shifted the schedule by the tz offset on re-confirm. Convert UTC -> local.
-    const iso = initialData?.scheduled_at;
-    if (iso) {
-      const d = new Date(iso);
-      if (!Number.isNaN(d.getTime())) {
-        const pad = (n: number) => String(n).padStart(2, "0");
-        setScheduleAt(
-          `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`,
-        );
-      } else {
-        setScheduleAt("");
-      }
-    } else {
-      setScheduleAt("");
-    }
+    // scheduled_at is a UTC ISO string; a datetime-local input expects a
+    // wall-clock. It is shown as the *school's* wall-clock, not the browser's:
+    // an administrator on a laptop set to another zone should still see (and
+    // re-confirm) the time the school will actually send it.
+    setScheduleAt(toSchoolWallClock(initialData?.scheduled_at));
     setScheduleOpen(true);
   };
 
@@ -222,7 +211,7 @@ export function AnnouncementComposer({ announcementId, initialData }: Props) {
       const saved = await persist(values);
       await scheduleMutation.mutateAsync({
         id: saved.id,
-        scheduled_at: new Date(scheduleAt).toISOString(),
+        scheduled_at: schoolWallClockToIso(scheduleAt),
       });
       toastSuccess("Announcement scheduled");
       setScheduleOpen(false);

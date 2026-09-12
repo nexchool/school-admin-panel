@@ -33,6 +33,7 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, ArrowLeft, Download } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
+import { schoolTodayIso } from "@/lib/datetime";
 
 export default function BusDetailPage() {
   const params = useParams();
@@ -41,7 +42,7 @@ export default function BusDetailPage() {
   const { data: academicYears = [], isLoading: academicYearsLoading } = useAcademicYears(true);
   const [timelineAcademicYearId, setTimelineAcademicYearId] = useState("");
   const [timelineDate, setTimelineDate] = useState(() =>
-    new Date().toISOString().slice(0, 10)
+    schoolTodayIso()
   );
 
   const [removeEnr, setRemoveEnr] = useState<{

@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useHostel";
 
 import type { HostelVisitorLog } from "@/services/hostelService";
+import { formatDateTime, formatTime } from "@/lib/datetime";
 
 /**
  * Screen 5 — Visitor log.
@@ -177,11 +178,11 @@ export default function VisitorsPage() {
                   {filteredHistory.map((row) => (
                     <tr key={row.id} className="border-t">
                       <td className="px-4 py-2 tabular-nums">
-                        {new Date(row.check_in_at).toLocaleString()}
+                        {formatDateTime(row.check_in_at)}
                       </td>
                       <td className="px-4 py-2 tabular-nums">
                         {row.check_out_at
-                          ? new Date(row.check_out_at).toLocaleString()
+                          ? formatDateTime(row.check_out_at)
                           : "—"}
                       </td>
                       <td className="px-4 py-2">
@@ -241,7 +242,7 @@ function CurrentlyInsideCard({
         <Badge variant="default">Inside</Badge>
       </div>
       <p className="text-xs text-muted-foreground">
-        Since {new Date(log.check_in_at).toLocaleTimeString()}{" "}
+        Since {formatTime(log.check_in_at)}{" "}
         ({formatDuration(log.check_in_at)})
       </p>
       <p className="text-xs text-muted-foreground">

@@ -4,6 +4,7 @@ import type {
   ExamType,
   SchoolEventType,
 } from "@/services/academicCalendarService";
+import { schoolTodayIso } from "@/lib/datetime";
 
 // Backend-enforced field limits (mirror server EVENT_NAME_MAX / _DESCRIPTION_MAX).
 export const EVENT_NAME_MAX = 120;
@@ -68,14 +69,9 @@ export const WEEKDAY_OPTIONS = [
   { value: 5, label: "Saturday" },
 ] as const;
 
-/** Today's date in the user's local timezone as YYYY-MM-DD. */
+/** Today's date at the school as YYYY-MM-DD. */
 export function todayIso(): string {
-  const now = new Date();
-  return [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-");
+  return schoolTodayIso();
 }
 
 /** Date arithmetic on ISO dates, timezone-safe (computed in UTC). */

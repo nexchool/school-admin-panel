@@ -25,6 +25,7 @@ import { FeatureGate } from "@/components/auth/FeatureGate";
 import { useStudentFeeDetail } from "@/hooks/useStudentFees";
 import { toast } from "sonner";
 import { financeService } from "@/services/financeService";
+import { formatDateTime } from "@/lib/datetime";
 
 function fmtAmount(n: number | undefined | null) {
   if (n == null) return "—";
@@ -43,13 +44,7 @@ function fmtDate(s: string | undefined | null) {
 function fmtDateTime(s: string | undefined | null) {
   if (!s) return "—";
   try {
-    return new Date(s).toLocaleString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatDateTime(s);
   } catch {
     return s;
   }

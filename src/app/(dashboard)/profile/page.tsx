@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Pencil, Camera, KeyRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
+import { formatDateTime as formatSchoolDateTime } from "@/lib/datetime";
 
 const PROFILE_PIC_MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/webp"];
@@ -36,10 +37,7 @@ function formatDateTime(iso: string | null | undefined): string {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "—";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(d);
+    return formatSchoolDateTime(d);
   } catch {
     return "—";
   }

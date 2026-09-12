@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNotificationDetail, useMarkNotificationRead } from "@/hooks/useNotifications";
 import { NOTIFICATION_TYPE } from "@/types/notification";
+import { formatDateTimeFull } from "@/lib/datetime";
 
 const TYPE_ICONS: Record<string, string> = {
   [NOTIFICATION_TYPE.TEACHER_LEAVE_REQUEST]: "📋",
@@ -54,11 +55,7 @@ function getActionLink(
 }
 
 function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleString(undefined, {
-    dateStyle: "full",
-    timeStyle: "short",
-  });
+  return iso ? formatDateTimeFull(iso) : "";
 }
 
 export default function NotificationDetailPage() {

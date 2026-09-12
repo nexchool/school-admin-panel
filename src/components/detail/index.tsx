@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { SCHOOL_TIMEZONE } from "@/lib/datetime";
 
 // ---------------------------------------------------------------------------
 // ProfileHeader
@@ -555,7 +556,10 @@ export function formatDate(value?: string | null): string | undefined {
   if (!value) return undefined;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString(undefined, {
+  // Pinned to the school's zone: a `created_at` instant lands on the right
+  // day, and a `YYYY-MM-DD` date (UTC midnight → 05:30 IST) is unchanged.
+  return d.toLocaleDateString("en-IN", {
+    timeZone: SCHOOL_TIMEZONE,
     year: "numeric",
     month: "short",
     day: "numeric",

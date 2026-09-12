@@ -17,13 +17,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ArrowLeft, Loader2, ShieldAlert } from "lucide-react";
+import { formatDateTime } from "@/lib/datetime";
 
 const PAGE_SIZE = 20;
 
 function formatTimestamp(iso: string | null): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString();
+    return formatDateTime(iso);
   } catch {
     return iso;
   }

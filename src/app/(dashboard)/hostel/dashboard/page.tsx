@@ -31,6 +31,7 @@ import type {
   HostelGatepass,
   OccupancyRow,
 } from "@/services/hostelService";
+import { formatDateTime, schoolTodayIso } from "@/lib/datetime";
 
 /**
  * Screen 9 — Hostel dashboard (occupancy + alerts).
@@ -71,7 +72,7 @@ export default function HostelDashboardPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `hostel-residents-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `hostel-residents-${schoolTodayIso()}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -340,7 +341,7 @@ function OverdueGatepassRow({
       </div>
       <p className="text-rose-900/80 dark:text-rose-200/80">
         Expected return{" "}
-        {new Date(gp.expected_return_datetime).toLocaleString()}
+        {formatDateTime(gp.expected_return_datetime)}
       </p>
       {hostelName && (
         <p className="text-muted-foreground">{hostelName}</p>

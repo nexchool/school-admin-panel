@@ -39,6 +39,7 @@ import type {
   HostelGatepass,
   HostelVisitorLog,
 } from "@/services/hostelService";
+import { formatDateTime, formatDate } from "@/lib/datetime";
 
 /**
  * Screen 4 — Warden's Student Detail.
@@ -212,7 +213,7 @@ export default function HostelStudentDetailPage() {
                       )?.bed_number ?? "Bed"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Since {new Date(allocationQuery.data.check_in_at).toLocaleDateString()}
+                      Since {formatDate(allocationQuery.data.check_in_at)}
                     </p>
                     {allocationQuery.data.notes && (
                       <p className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
@@ -375,12 +376,12 @@ function AllocationHistoryRow({ row }: { row: HostelAllocation }) {
       <div className="flex items-center gap-2">
         <BedDouble className="size-4 text-muted-foreground" />
         <span className="tabular-nums">
-          {new Date(row.check_in_at).toLocaleDateString()}
+          {formatDate(row.check_in_at)}
         </span>
         <span className="text-muted-foreground">→</span>
         <span className="tabular-nums text-muted-foreground">
           {row.check_out_at
-            ? new Date(row.check_out_at).toLocaleDateString()
+            ? formatDate(row.check_out_at)
             : "Present"}
         </span>
       </div>
@@ -401,9 +402,9 @@ function GatepassRow({ gp }: { gp: HostelGatepass }) {
       <div className="flex flex-col">
         <span className="font-medium">{typeLabel}</span>
         <span className="text-xs text-muted-foreground">
-          {new Date(gp.departure_datetime).toLocaleString()}
+          {formatDateTime(gp.departure_datetime)}
           {" → "}
-          {new Date(gp.expected_return_datetime).toLocaleString()}
+          {formatDateTime(gp.expected_return_datetime)}
         </span>
         {gp.reason && (
           <span className="text-xs text-muted-foreground">Reason: {gp.reason}</span>
@@ -442,9 +443,9 @@ function VisitorRow({ log }: { log: HostelVisitorLog }) {
       <div className="flex flex-col">
         <span className="font-medium">{log.purpose ?? "Visit"}</span>
         <span className="text-xs text-muted-foreground">
-          {new Date(log.check_in_at).toLocaleString()}
+          {formatDateTime(log.check_in_at)}
           {log.check_out_at
-            ? ` → ${new Date(log.check_out_at).toLocaleString()}`
+            ? ` → ${formatDateTime(log.check_out_at)}`
             : ""}
         </span>
       </div>

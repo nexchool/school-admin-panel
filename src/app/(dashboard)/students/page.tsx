@@ -85,6 +85,7 @@ import {
 } from "lucide-react";
 import { toastError } from "@/lib/errorToast";
 import { cn } from "@/lib/utils";
+import { schoolTodayIso } from "@/lib/datetime";
 
 const SEARCH_FIELD_OPTIONS: { value: StudentsSearchField; label: string }[] = [
   { value: "all", label: "All fields" },
@@ -476,7 +477,7 @@ export default function StudentsPage() {
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;
-      a.download = `students_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `students_${schoolTodayIso()}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 import type { HostelGatepass } from "@/services/hostelService";
+import { formatDateTime } from "@/lib/datetime";
 
 type GatepassCardProps = {
   gp: HostelGatepass;
@@ -62,12 +63,12 @@ export function GatepassCard({ gp, actions, className }: GatepassCardProps) {
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <CalendarClock className="size-3.5" />
           <span className="tabular-nums">
-            {new Date(gp.departure_datetime).toLocaleString()}
+            {formatDateTime(gp.departure_datetime)}
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="ml-[1.25rem] tabular-nums">
-            → {new Date(gp.expected_return_datetime).toLocaleString()}
+            → {formatDateTime(gp.expected_return_datetime)}
           </span>
         </div>
         {gp.reason && (

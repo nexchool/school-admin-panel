@@ -26,6 +26,7 @@ import type { ClassItem } from "@/types/class";
 import { DataTable, type DataTableColumn } from "@/components/tables/DataTable";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatDateTime } from "@/lib/datetime";
 
 function formatDisplayDate(iso: string) {
   try {
@@ -176,10 +177,7 @@ export default function AttendancePage() {
       cell: (r) => {
         if (!r.recorded_at) return "—";
         try {
-          return new Intl.DateTimeFormat(undefined, {
-            dateStyle: "short",
-            timeStyle: "short",
-          }).format(new Date(r.recorded_at));
+          return formatDateTime(r.recorded_at);
         } catch {
           return r.recorded_at;
         }

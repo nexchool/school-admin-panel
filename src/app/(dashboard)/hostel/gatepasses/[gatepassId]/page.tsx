@@ -22,6 +22,7 @@ import {
 } from "@/hooks/useHostel";
 
 import type { HostelGatepassAudit } from "@/services/hostelService";
+import { formatDateTime } from "@/lib/datetime";
 
 /**
  * Gatepass detail + full audit trail.
@@ -87,7 +88,7 @@ export default function GatepassDetailPage() {
             {gatepass.type === "night_out" ? "Night out" : "Day out"} gatepass
           </h1>
           <p className="text-sm text-muted-foreground">
-            Requested {new Date(gatepass.requested_at).toLocaleString()}
+            Requested {formatDateTime(gatepass.requested_at)}
           </p>
         </div>
         <StatusBadge status={gatepass.status} />
@@ -114,10 +115,10 @@ export default function GatepassDetailPage() {
               ) : null}
             </Row>
             <Row label="Departure">
-              {new Date(gatepass.departure_datetime).toLocaleString()}
+              {formatDateTime(gatepass.departure_datetime)}
             </Row>
             <Row label="Expected return">
-              {new Date(gatepass.expected_return_datetime).toLocaleString()}
+              {formatDateTime(gatepass.expected_return_datetime)}
             </Row>
             <Row label="Reason">{gatepass.reason ?? "—"}</Row>
             <Row label="Parent phone">
@@ -130,12 +131,12 @@ export default function GatepassDetailPage() {
             </Row>
             <Row label="Actual checkout">
               {gatepass.actual_out_at
-                ? new Date(gatepass.actual_out_at).toLocaleString()
+                ? formatDateTime(gatepass.actual_out_at)
                 : "—"}
             </Row>
             <Row label="Actual check-in">
               {gatepass.actual_in_at
-                ? new Date(gatepass.actual_in_at).toLocaleString()
+                ? formatDateTime(gatepass.actual_in_at)
                 : "—"}
             </Row>
             {gatepass.notes && (
@@ -211,7 +212,7 @@ function AuditEntry({ entry }: { entry: HostelGatepassAudit }) {
         </Badge>
       </p>
       <p className="text-xs text-muted-foreground">
-        {new Date(entry.created_at).toLocaleString()}
+        {formatDateTime(entry.created_at)}
       </p>
       {entry.notes && (
         <p className="mt-1 text-xs text-muted-foreground">{entry.notes}</p>

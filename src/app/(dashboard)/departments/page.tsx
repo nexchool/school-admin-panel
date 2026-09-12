@@ -27,6 +27,7 @@ import type {
   DepartmentsListParams,
   DepartmentStatus,
 } from "@/types/department";
+import { formatDate } from "@/lib/datetime";
 
 type DepartmentSortBy = NonNullable<DepartmentsListParams["sortBy"]>;
 type DepartmentSortDir = NonNullable<DepartmentsListParams["sortDir"]>;
@@ -49,7 +50,7 @@ function StatusPill({ status }: { status: DepartmentStatus }) {
 
 function formatCreatedAt(value: string | null): string {
   if (!value) return "—";
-  return new Date(value).toLocaleDateString();
+  return formatDate(value);
 }
 
 export default function DepartmentsPage() {

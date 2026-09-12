@@ -28,6 +28,7 @@ import {
 } from "@/services/transportService";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errorToast";
+import { schoolTodayIso } from "@/lib/datetime";
 
 type Props = {
   bus: TransportBus | null;
@@ -45,7 +46,7 @@ export function AssignRouteDriverModal({ bus, open, onOpenChange, onAssigned }: 
     driver_id: "",
     route_id: "",
     helper_staff_id: "",
-    effective_from: new Date().toISOString().slice(0, 10),
+    effective_from: schoolTodayIso(),
     effective_to: "",
   });
 
@@ -75,7 +76,7 @@ export function AssignRouteDriverModal({ bus, open, onOpenChange, onAssigned }: 
         driver_id: ad?.id ?? "",
         route_id: ar?.id ?? "",
         helper_staff_id: ah?.id ?? "",
-        effective_from: new Date().toISOString().slice(0, 10),
+        effective_from: schoolTodayIso(),
         effective_to: "",
       });
     }

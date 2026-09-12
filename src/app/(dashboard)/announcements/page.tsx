@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAnnouncementsList } from "@/hooks/useAnnouncements";
 import { Plus, Megaphone, Clock, FileEdit } from "lucide-react";
 import type { Announcement, AnnouncementStatus } from "@/types/announcement";
+import { formatDateTime } from "@/lib/datetime";
 
 type TabKey = "published" | "scheduled" | "draft";
 
@@ -30,10 +31,7 @@ const STATUS_BADGE: Record<AnnouncementStatus, string> = {
   recalled: "bg-amber-100 text-amber-700",
 };
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString();
-}
+const formatDate = formatDateTime;
 
 function AnnouncementCard({ a }: { a: Announcement }) {
   const timestamp =

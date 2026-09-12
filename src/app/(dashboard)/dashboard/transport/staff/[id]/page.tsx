@@ -12,21 +12,15 @@ import { transportService } from "@/services/transportService";
 import { ScheduleTimeline } from "@/components/transport/ScheduleTimeline";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { ArrowLeft } from "lucide-react";
+import { schoolTodayIso } from "@/lib/datetime";
 
-function localTodayIso() {
-  const t = new Date();
-  const y = t.getFullYear();
-  const m = String(t.getMonth() + 1).padStart(2, "0");
-  const d = String(t.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 export default function TransportStaffWorkloadPage() {
   const params = useParams();
   const id = params?.id as string | undefined;
   const { data: academicYears = [], isLoading: ayLoading } = useAcademicYears(true);
   const [academicYearId, setAcademicYearId] = useState("");
-  const [day, setDay] = useState(localTodayIso);
+  const [day, setDay] = useState(schoolTodayIso);
 
   useEffect(() => {
     if (!academicYearId && academicYears.length > 0) {

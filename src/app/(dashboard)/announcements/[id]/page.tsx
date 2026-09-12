@@ -41,6 +41,7 @@ import {
   AlertOctagon,
 } from "lucide-react";
 import type { AnnouncementStatus } from "@/types/announcement";
+import { formatDateTime } from "@/lib/datetime";
 
 const STATUS_BADGE: Record<AnnouncementStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -49,10 +50,7 @@ const STATUS_BADGE: Record<AnnouncementStatus, string> = {
   recalled: "bg-amber-100 text-amber-700",
 };
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString();
-}
+const formatDate = formatDateTime;
 
 function formatBytes(bytes: number | null): string {
   if (!bytes) return "";

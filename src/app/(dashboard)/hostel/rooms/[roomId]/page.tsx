@@ -27,6 +27,7 @@ import {
 } from "@/hooks/useHostel";
 
 import type { HostelAllocation, HostelBed } from "@/services/hostelService";
+import { formatDate } from "@/lib/datetime";
 
 /**
  * Screen 3 — Room Detail.
@@ -331,11 +332,11 @@ export default function RoomDetailPage() {
                           </Link>
                         </td>
                         <td className="px-4 py-2 tabular-nums">
-                          {new Date(row.check_in_at).toLocaleDateString()}
+                          {formatDate(row.check_in_at)}
                         </td>
                         <td className="px-4 py-2 tabular-nums">
                           {row.check_out_at
-                            ? new Date(row.check_out_at).toLocaleDateString()
+                            ? formatDate(row.check_out_at)
                             : "—"}
                         </td>
                         <td className="px-4 py-2">
